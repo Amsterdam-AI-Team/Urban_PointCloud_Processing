@@ -1,9 +1,9 @@
 import numpy as np
 import os
+import pathlib
 import pylas
 import re
 from tqdm import tqdm
-from pathlib import Path
 
 from ..utils.las_utils import get_bbox_from_tile_code
 from ..utils.interpolation import SpatialInterpolator
@@ -41,7 +41,7 @@ def clip_ahn_las_tile(ahn_cloud, las_file, out_folder='', buffer=1):
         processing (e.g. interpolation).
     """
     if type(las_file) == str:
-        las_file = Path(las_file)
+        las_file = pathlib.Path(las_file)
     tile_code = re.match(r'.*(\d{4}_\d{4}).*', las_file.name)[1]
 
     ((x_min, y_max), (x_max, y_min)) = get_bbox_from_tile_code(tile_code)
@@ -57,7 +57,7 @@ def clip_ahn_las_tile(ahn_cloud, las_file, out_folder='', buffer=1):
     ahn_tile.points = ahn_cloud.points[clip_idx]
 
     if out_folder != '':
-        Path(out_folder).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(out_folder).mkdir(parents=True, exist_ok=True)
     ahn_tile.write(os.path.join(out_folder, 'ahn_' + tile_code + '.laz'))
 
 
@@ -95,13 +95,13 @@ def clip_ahn_las_folder(ahn_cloud, in_folder, out_folder=None, buffer=1,
         return None
 
     if type(in_folder) == str:
-        in_folder = Path(in_folder)
+        in_folder = pathlib.Path(in_folder)
 
     if out_folder is None:
         out_folder = in_folder
 
     if out_folder != in_folder:
-        Path(out_folder).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(out_folder).mkdir(parents=True, exist_ok=True)
 
     file_types = ('.LAS', '.las', '.LAZ', '.laz')
     files = [f for f in in_folder.glob('filtered_*')
@@ -110,7 +110,7 @@ def clip_ahn_las_folder(ahn_cloud, in_folder, out_folder=None, buffer=1,
     if resume:
         # Find which files have already been processed.
         done = set(file.name[-13:-4]
-                   for file in Path(out_folder).glob('ahn_*.laz'))
+                   for file in pathlib.Path(out_folder).glob('ahn_*.laz'))
         files = [f for f in files if f.name[-13:-4] not in done]
 
     for file in tqdm(files, unit="file", disable=hide_progress):
@@ -243,9 +243,9 @@ def process_ahn_las_tile(ahn_las_file, out_folder='', resolution=0.1):
     -------
     Path of the output file.
     """
-    if type(ahn_las_file) == str:
-        ahn_las_file = Path(ahn_las_file)
-    tile_code = re.match(r'.*(\d{4}_\d{4}).*', ahn_las_file.name)[1]
+    if type(ahn_las_file) == pathlib.PosixPath:
+        ahn_las_file = ahn_las_file.as_posix()
+    tile_code = re.match(r'.*(\d{4}_\d{4}).*', ahn_las_file)[1]
 
     ((x_min, y_max), (x_max, y_min)) = get_bbox_from_tile_code(tile_code)
 
