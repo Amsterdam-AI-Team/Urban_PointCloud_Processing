@@ -1,7 +1,7 @@
-# TODO something like this
+# TODO rethink labelling, e.g. hierarchical?
 class Labels:
     """
-    TODO add docstring
+    Convenience class for label codes.
     """
     UNLABELLED = 0
     GROUND = 1

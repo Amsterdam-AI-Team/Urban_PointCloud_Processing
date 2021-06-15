@@ -1,9 +1,41 @@
-import numpy as np
 import glob
+import pathlib
+import re
 import os
 import pylas
 
 from ..utils.labels import Labels
+
+
+def get_bbox_from_tile_code(tile_code, width=50, height=50):
+    """
+    Get the <X,Y> bounding box for a given tile code. The tile code is assumed
+    to represent the lower left corner of the tile.
+
+    Parameters
+    ----------
+    tile_code : str
+        The tile code, e.g. 2386_9702.
+
+    width : int (default: 50)
+        The width of the tile.
+
+    height : int (default: 50)
+        The height of the tile.
+
+    Returns
+    -------
+    tuple of tuples
+        Bounding box with inverted y-axis: ((x_min, y_max), (x_max, y_min))
+    """
+    tile_split = tile_code.split('_')
+
+    # The tile code of each tile is defined as
+    # 'X-coordinaat/50'_'Y-coordinaat/50'
+    x_min = int(tile_split[0]) * 50
+    y_min = int(tile_split[1]) * 50
+
+    return ((x_min, y_min + height), (x_min + height, y_min))
 
 
 def get_bbox_from_las_file(laz_file):
@@ -13,7 +45,7 @@ def get_bbox_from_las_file(laz_file):
 
     Parameters
     ----------
-    laz_file : str
+    laz_file : Path or str
         the .laz filename, e.g. filtered_2386_9702.laz
 
     Returns
@@ -21,15 +53,11 @@ def get_bbox_from_las_file(laz_file):
     tuple of tuples
         Bounding box with inverted y-axis: ((x_min, y_max), (x_max, y_min))
     """
+    if type(laz_file) == str:
+        laz_file = pathlib.Path(laz_file)
+    tile_code = re.match(r'.*(\d{4}_\d{4}).*', laz_file.name)[1]
 
-    filename_split = laz_file.split('.')[-2].split('_')
-
-    # The file name of each file is structured as
-    # "filtered_[X-coordinaat/50]_[Y-coordinaat/50]"
-    x_min = int(filename_split[-2]) * 50
-    y_min = int(filename_split[-1]) * 50
-
-    return ((x_min, y_min + 50), (x_min + 50, y_min))
+    return get_bbox_from_tile_code(tile_code)
 
 
 def get_bbox_from_las_folder(folder_path, padding=0):
@@ -95,18 +123,3 @@ def label_and_save_las(las, labels, outfile):
     assert len(labels) == len(las.classification)
     las.points['raw_classification'] = labels
     las.write(outfile)
-
-
-def convert_pcd(las):
-    """
-    Stick the las coords together in a nx3 numpy array and convert it to an
-    Open3D pcd format.
-    """
-    import open3d as o3d
-
-    coords = np.vstack((las.x, las.y, las.z)).transpose()
-
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(coords)
-
-    return pcd
