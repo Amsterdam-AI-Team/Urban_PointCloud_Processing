@@ -253,7 +253,6 @@ class SpatialInterpolator:
         positions = np.reshape(positions, (-1, self.coords_ndim))
         npositions = positions.shape[0]
 
-        # TODO: use query_ball_point instead?
         distances, idx = self.kdtree.query(positions, k=n_neighbors,
                                            distance_upper_bound=max_dist, p=2,
                                            eps=eps, workers=workers)

@@ -1,3 +1,12 @@
+"""
+This module provides methods to pre-process AHN data. In particular, starting
+from an AHN point cloud, there are methods to clip specific tiles from this
+point cloud, and further methods to extract ground and building surfaces from
+each tile that can be used for automatic labelling of street-level pointclouds.
+
+For an example, see notebooks/1.AHN_preprocessing.ipynb
+"""
+
 import numpy as np
 import os
 import pathlib
@@ -20,8 +29,8 @@ AHN_ARTIFACT = 26
 
 def clip_ahn_las_tile(ahn_cloud, las_file, out_folder='', buffer=1):
     """
-    Clip a tile from the AHN cloud to match a given CycloMedia LAS tile, and
-    save the result using the same naming convention.
+    Clip a tile from the AHN cloud to match the dimensions of a given
+    CycloMedia LAS tile, and save the result using the same naming convention.
 
     Parameters
     ----------
