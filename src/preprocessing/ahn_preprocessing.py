@@ -274,17 +274,3 @@ def process_ahn_las_tile(ahn_las_file, out_folder='', resolution=0.1):
                         ground=ground_surface,
                         building=building_surface)
     return filename
-
-
-def load_ahn_tile(ahn_file):
-    """
-    Load the ground and building surface grids in a given AHN .npz file and
-    return the results as a dict with keys 'x', 'y', 'ground_surface' and
-    'building_surface'.
-    """
-    ahn = np.load(ahn_file)
-    ahn_tile = {'x': ahn['x'],
-                'y': ahn['y'],
-                'ground_surface': ahn['ground'],
-                'building_surface': ahn['building']}
-    return ahn_tile

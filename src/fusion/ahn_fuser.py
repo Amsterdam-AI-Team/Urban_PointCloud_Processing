@@ -4,7 +4,7 @@ import numpy as np
 import os
 
 from .data_fuser import DataFuser
-from ..preprocessing.ahn_preprocessing import load_ahn_tile
+from ..utils.ahn_utils import load_ahn_tile
 from ..utils.interpolation import FastGridInterpolator
 
 
