@@ -244,8 +244,10 @@ def fill_gaps(ahn_tile, max_gap_size=50, gap_flag=np.nan, inplace=False):
 
 def smoothen_edges(ahn_tile, thickness=1, gap_flag=np.nan, inplace=False):
     """
-    Smoothen the edges of missing AHN ground surface data in the ahn_tile. A
-    copy of the AHN tile will be returned, unless 'inplace' is set to True in
+    Smoothen the edges of missing AHN ground surface data in the ahn_tile. In
+    effect, this 'pads' the ground surface around gaps by the given 'thickness'
+    and prevents small gaps around e.g. buildings when labelling a point cloud.
+    A copy of the AHN tile will be returned, unless 'inplace' is set to True in
     which case None will be returned.
 
     Parameters

@@ -18,11 +18,6 @@ class DataFuser(ABC):
         super().__init__()
 
     @abstractmethod
-    def filter_tile(self, tilecode):
-        """Returns an AHN tile dict for the given CycloMedia tile-code."""
-        pass
-
-    @abstractmethod
     def get_label_mask(self, tilecode, points, mask):
         """
         Returns the label mask for the given pointcloud.
@@ -44,4 +39,5 @@ class DataFuser(ABC):
         pass
 
     def get_label(self):
+        """Returns the label of this DataFuser object."""
         return self.label

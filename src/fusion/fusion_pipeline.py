@@ -56,36 +56,36 @@ class FusionPipeline:
 
         return labels
 
-    def process_file(self, filename, outfile=None, mask=None):
+    def process_file(self, in_file, out_file=None, mask=None):
         """
         Process a single LAS file and save the result as .laz file.
 
         Parameters
         ----------
-        filename : str
+        in_file : str
             The file to process.
-        outfile : str (default: None)
+        out_file : str (default: None)
             The name of the output file. If None, the input will be
             overwritten.
         mask : array of shape (n_points,) with dtype=bool
             Pre-mask used to label only a subset of the points.
         """
-        if not os.path.isfile(filename):
+        if not os.path.isfile(in_file):
             print('The input file specified does not exist')
             return None
 
-        if outfile is None:
-            outfile = filename
+        if out_file is None:
+            out_file = in_file
 
-        tilecode = get_tilecode_from_filename(filename)
-        pointcloud = read_las(filename)
+        tilecode = get_tilecode_from_filename(in_file)
+        pointcloud = read_las(in_file)
         points = {'x': pointcloud.x, 'y': pointcloud.y, 'z': pointcloud.z}
 
         if mask is None:
             mask = np.full((len(points['x']),), True)
 
         labels = self.process_cloud(tilecode, points, mask)
-        label_and_save_las(pointcloud, labels, outfile)
+        label_and_save_las(pointcloud, labels, out_file)
 
     def process_folder(self, in_folder, out_folder=None, suffix='',
                        hide_progress=False):

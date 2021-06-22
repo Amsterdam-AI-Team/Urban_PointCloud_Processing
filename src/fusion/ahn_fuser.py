@@ -72,8 +72,11 @@ class AHNFuser(DataFuser):
             self.smoothen = smoothen
             self.smooth_thickness = smooth_thickness
 
-    def filter_tile(self, tilecode):
-        """Returns an AHN tile dict for the given CycloMedia tile-code."""
+    def _filter_tile(self, tilecode):
+        """
+        Returns an AHN tile dict for the area represented by the given
+        CycloMedia tile-code.
+        """
         if self.method == 'npz':
             return ahn_utils.load_ahn_tile(
                 os.path.join(self.data_folder, 'ahn_' + tilecode + '.npz'))
@@ -98,7 +101,7 @@ class AHNFuser(DataFuser):
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
-        ahn_tile = self.filter_tile(tilecode)
+        ahn_tile = self._filter_tile(tilecode)
         pos = np.vstack((points['x'], points['y'])).T
         if self.target == 'ground':
             if self.method == 'geotiff':
