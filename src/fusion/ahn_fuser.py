@@ -4,7 +4,7 @@ import numpy as np
 import os
 
 from .data_fuser import DataFuser
-from ..utils.ahn_utils import load_ahn_tile
+from ..utils import ahn_utils as ahn_utils
 from ..utils.interpolation import FastGridInterpolator
 
 
@@ -29,13 +29,24 @@ class AHNFuser(DataFuser):
         either 'ground' or 'building' points.
     epsilon : float (default: 0.2)
         Precision of the fuser.
+    fill_gaps : bool (default: True)
+        Whether to fill gaps in the AHN data. Only used when method='geotiff'.
+    max_gap_size : int (default: 50)
+        Max gap size for gap filling. Only used when method='geotiff'.
+    smoothen : bool (default: True)
+        Whether to smoothen edges in the AHN data. Only used when
+        method='geotiff'.
+    smooth_thickness : int (default: 1)
+        Thickness for edge smoothening. Only used when method='geotiff'.
     """
 
     METHODS = ('npz', 'geotiff')
     TARGETS = ('ground', 'building')
 
     def __init__(self, label, data_folder,
-                 method='npz', target='ground', epsilon=0.2):
+                 method='npz', target='ground', epsilon=0.2,
+                 fill_gaps=True, max_gap_size=50,
+                 smoothen=True, smooth_thickness=1):
         super().__init__(label)
         if not os.path.isdir(data_folder):
             print('The data folder specified does not exist')
@@ -54,15 +65,20 @@ class AHNFuser(DataFuser):
         self.method = method
         self.target = target
         self.epsilon = epsilon
+        if self.method == 'geotiff':
+            self.reader = ahn_utils.GeoTIFFReader(data_folder)
+            self.fill_gaps = fill_gaps
+            self.max_gap_size = max_gap_size
+            self.smoothen = smoothen
+            self.smooth_thickness = smooth_thickness
 
     def filter_tile(self, tilecode):
         """Returns an AHN tile dict for the given CycloMedia tile-code."""
         if self.method == 'npz':
-            return load_ahn_tile(os.path.join(self.data_folder,
-                                              'ahn_' + tilecode + '.npz'))
+            return ahn_utils.load_ahn_tile(
+                os.path.join(self.data_folder, 'ahn_' + tilecode + '.npz'))
         elif self.method == 'geotiff':
-            # TODO implement this
-            pass
+            return self.reader.filter_tile(tilecode)
 
     def get_label_mask(self, tilecode, points, mask):
         """
@@ -85,6 +101,15 @@ class AHNFuser(DataFuser):
         ahn_tile = self.filter_tile(tilecode)
         pos = np.vstack((points['x'], points['y'])).T
         if self.target == 'ground':
+            if self.method == 'geotiff':
+                if self.fill_gaps:
+                    ahn_utils.fill_gaps(ahn_tile,
+                                        max_gap_size=self.max_gap_size,
+                                        inplace=True)
+                if self.smoothen:
+                    ahn_utils.smoothen_edges(ahn_tile,
+                                             thickness=self.smooth_thickness,
+                                             inplace=True)
             surface = ahn_tile['ground_surface']
         elif self.target == 'building':
             surface = ahn_tile['building_surface']
@@ -94,7 +119,8 @@ class AHNFuser(DataFuser):
         target_z = fast_z(pos)
 
         if self.target == 'ground':
-            mask = np.abs(points['z'] - target_z) < self.epsilon
+            label_mask = np.abs(points['z'] - target_z) < self.epsilon
         elif self.target == 'building':
-            mask = points['z'] < target_z + self.epsilon
-        return mask
+            label_mask = points['z'] < target_z + self.epsilon
+        label_mask[~mask] = False
+        return label_mask
