@@ -4,7 +4,10 @@ import re
 import os
 import pylas
 
-from ..utils.labels import Labels
+
+def get_tilecode_from_filename(filename):
+    """Extract the tile code from a file name."""
+    return re.match(r'.*(\d{4}_\d{4}).*', filename)[1]
 
 
 def get_bbox_from_tile_code(tile_code, width=50, height=50):
@@ -55,7 +58,7 @@ def get_bbox_from_las_file(laz_file):
     """
     if type(laz_file) == str:
         laz_file = pathlib.Path(laz_file)
-    tile_code = re.match(r'.*(\d{4}_\d{4}).*', laz_file.name)[1]
+    tile_code = get_tilecode_from_filename(laz_file.name)
 
     return get_bbox_from_tile_code(tile_code)
 
@@ -91,35 +94,15 @@ def get_bbox_from_las_folder(folder_path, padding=0):
     return ((x_min-padding, y_max+padding), (x_max+padding, y_min-padding))
 
 
-def save_las(mask_dict, las, laz_file, outfile=None, filter_noise=False):
-    # TODO docstring
-    if outfile is None:
-        # Update .laz file in place.
-        las.points['raw_classification'][mask_dict['ground_mask']] \
-            = Labels.GROUND
-        las.points['raw_classification'][mask_dict['building_mask']] \
-            = Labels.BUILDING
-        if filter_noise:
-            las.points['raw_classification'][mask_dict['noise_mask']] \
-                = Labels.NOISE
-        las.write(laz_file)
-    else:
-        # Make a copy.
-        las_labelled = pylas.create(point_format_id=3)
-        las_labelled.header = las.header
-        las_labelled.points = las.points
-        las_labelled.points['raw_classification'][mask_dict['ground_mask']] \
-            = Labels.GROUND
-        las_labelled.points['raw_classification'][mask_dict['building_mask']] \
-            = Labels.BUILDING
-        if filter_noise:
-            las_labelled.points['raw_classification'][mask_dict['noise_mask']]\
-                = Labels.NOISE
-        las_labelled.write(outfile)
+def read_las(las_file):
+    """Read a las file and return the las object."""
+    return pylas.read(las_file)
 
 
 def label_and_save_las(las, labels, outfile):
     """Label a las file using the provided class labels and save to outfile."""
-    assert len(labels) == len(las.classification)
-    las.points['raw_classification'] = labels
+    assert len(labels) == las.header.point_count
+    if 'label' not in las.point_format.extra_dimension_names:
+        las.add_extra_dim(name="label", type="uint16", description="Labels")
+    las.label = labels
     las.write(outfile)
