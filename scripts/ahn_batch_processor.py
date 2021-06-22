@@ -7,7 +7,9 @@ import glob
 from pathlib import Path
 from tqdm.contrib.concurrent import process_map  # or thread_map
 
-from src.ahn_preprocessing import process_ahn_las_tile
+# Helper script to allow importing from parent folder.
+import set_path  # noqa: F401
+from src.preprocessing.ahn_preprocessing import process_ahn_las_tile
 
 
 def _process_file(file):
