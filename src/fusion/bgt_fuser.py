@@ -12,8 +12,7 @@ from ..utils.las_utils import get_bbox_from_tile_code
 class BGTBuildingFuser(DataFuser):
     """Convenience class for loading building polygons from Dutch BGT data."""
 
-    def __init__(self, label, bgt_file=None, bgt_folder=None,
-                 building_offset=1):
+    def __init__(self, label, building_offset, bgt_file=None, bgt_folder=None):
         if (bgt_file is None) and (bgt_folder is None):
             print("Provide either a bgt_file or bgt_folder to load.")
 
