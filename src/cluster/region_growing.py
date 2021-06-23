@@ -21,22 +21,19 @@ class RegionGrowing:
         list_of_indices = np.where(las_labels == seed_point_label)[0]
         return list_of_indices
 
-    def _convert_pcd(self, las, exclude_label):
+    def _convert_pcd(self, las):
         """ Stick the las coordinates together in a nx3 numpy array and
         convert it to a Open3D pcd format. """
-        subset_pc = self._get_label_indices(las.label, exclude_label)
-
-        coords = np.vstack((las.x[subset_pc], las.y[subset_pc],
-                            las.z[subset_pc])).transpose()
+        coords = np.vstack((las.x, las.y, las.z)).transpose()
 
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(coords)
 
         return pcd
 
-    def set_input_cloud(self, las, unlabelled):
+    def set_input_cloud(self, las):
         """ Function to convert to o3d point cloud. """
-        pcd = self._convert_pcd(las, unlabelled)
+        pcd = self._convert_pcd(las)
         self.pcd = pcd
 
     def set_initial_seed_points(self, las_labels, seed_point_label):
