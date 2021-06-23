@@ -3,6 +3,7 @@
 import ast
 import pandas as pd
 from pathlib import Path
+import numpy as np
 
 from .data_fuser import DataFuser
 from ..utils.clip_utils import poly_offset, poly_clip
@@ -105,12 +106,16 @@ class BGTBuildingFuser(DataFuser):
         else:
             xy_points = {'x': points['x'][mask], 'y': points['y'][mask]}
 
-        label_mask = []
+        building_mask = []
         for _, polygon in building_polygons.items():
             # TODO if there are multiple buildings we could mask the points
             # iteratively to ignore points already labelled.
             building_with_offset = poly_offset(polygon, self.building_offset)
             building_points = poly_clip(xy_points, building_with_offset)
-            label_mask.extend(building_points)
+            building_mask.extend(building_points)
+
+        mask_indices = np.where(mask)[0]
+        label_mask = np.zeros(len(points['x']), dtype=bool)
+        label_mask[mask_indices[building_mask]] = True
 
         return label_mask

@@ -3,7 +3,8 @@ from numba import vectorize, bool_, float64
 from shapely.geometry import Polygon
 import pyclipper
 
-# These are some modified lower level clipping functions from
+# Some modifications are performed on the function square_clip, ray_trace and
+# poly_clip, copied from:
 # https://github.com/brycefrank/pyfor/blob/master/pyfor/clip.py
 
 
