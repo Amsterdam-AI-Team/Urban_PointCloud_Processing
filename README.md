@@ -1,6 +1,6 @@
 # Urban PointCloud Processing
 
-This repository contains methods for the (pre-)processing of Urban PointClouds. The tools can serve as inspiration, or can be applied as-is under some specific assumptions:
+This repository contains methods for the **automatic classification and labeling of Urban PointClouds** using data fusion. The methods can serve as inspiration, or can be applied as-is under some specific assumptions:
 
 1. Usage in The Netherlands (The "[Rijksdriehoek coordinate system](https://nl.wikipedia.org/wiki/Rijksdriehoeksco%C3%B6rdinaten)");
 2. Point clouds in LAS format and tiled following [specific rules](datasets); and
@@ -8,28 +8,32 @@ This repository contains methods for the (pre-)processing of Urban PointClouds. 
 
 Example [notebooks](notebooks) are provided to demonstrate the tools.
 
-
-![](media/examples/demo.gif)
+<figure>
+  <img
+  src="media/examples/demo.gif"
+  alt="Example: automatic labeling of ground and buildings.">
+  <figcaption class="figure-caption text-center"><b>Example:</b> automatic labeling of ground and buildings.</figcaption>
+</figure>
 
 ---
 
 ## Project Folder Structure
 
-```buildoutcfg
-├── datasets
-│   ├── ahn
-│   └── pointcloud
-├── media
-│   └── examples
-├── notebooks
-├── scripts
-└── src
-    ├── fusion
-    ├── preprocessing
-    └── utils
-```
+[//]: # (en-space: )
+[//]: # (em-space: )
 
-[//]: # (Generate tree with $ tree -d -I __* --noreport)
+ * [datasets](./datasets)       # Demo dataset to get started
+   * [ahn](./datasets/ahn)       # AHN data
+   * [pointcloud](./datasets/pointcloud)    # Example urban point cloud
+ * [media](./media)        # Visuals
+   * [examples](./media/examples)
+ * [notebooks](./notebooks)      # Jupyter notebook tutorials
+ * [scripts](./scripts)         # Python scripts
+ * [src](./src)          # Python source code
+     * [fusion](./src/fusion)      # Data fusion code
+     * [preprocessing](./src/preprocessing)   # Pre-processing code
+     * [utils](./src/utils)       # Utility functions
+
 
 ---
 
