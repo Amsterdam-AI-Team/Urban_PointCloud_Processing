@@ -19,20 +19,17 @@ Example [notebooks](notebooks) are provided to demonstrate the tools.
 
 ## Project Folder Structure
 
-[//]: # (en-space: )
-[//]: # (em-space: )
-
- * [datasets](./datasets)       # Demo dataset to get started
-   * [ahn](./datasets/ahn)       # AHN data
-   * [pointcloud](./datasets/pointcloud)    # Example urban point cloud
- * [media](./media)        # Visuals
-   * [examples](./media/examples)
- * [notebooks](./notebooks)      # Jupyter notebook tutorials
- * [scripts](./scripts)         # Python scripts
- * [src](./src)          # Python source code
-     * [fusion](./src/fusion)      # Data fusion code
-     * [preprocessing](./src/preprocessing)   # Pre-processing code
-     * [utils](./src/utils)       # Utility functions
+ * [`datasets`](./datasets) _Demo dataset to get started_
+   * [`ahn`](./datasets/ahn) _AHN data_
+   * [`pointcloud`](./datasets/pointcloud) _Example urban point cloud_
+ * [`media`](./media) _Visuals_
+   * [`examples`](./media/examples)
+ * [`notebooks`](./notebooks) _Jupyter notebook tutorials_
+ * [`scripts`](./scripts) _Python scripts_
+ * [`src`](./src) _Python source code_
+   * [`fusion`](./src/fusion) _Data fusion code_
+   * [`preprocessing`](./src/preprocessing) _Pre-processing code_
+   * [`utils`](./src/utils) _Utility functions_
 
 
 ---
