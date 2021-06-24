@@ -34,11 +34,11 @@ class RegionGrowing:
     def _compute_point_curvature(self, coords, pcd_tree, seed_point, method):
         """ Compute the curvature for a given a cluster of points. """
         if method == 'radius':
-            _, idx, _ = pcd_tree.search_radius_vector_3d(seed_point,
-                                                         self.grow_region_radius)
+            _, idx, _ = (pcd_tree.search_radius_vector_3d(
+                         seed_point, self.grow_region_radius))
         else:
-            _, idx, _ = pcd_tree.search_knn_vector_3d(seed_point,
-                                                      self.grow_region_knn)
+            _, idx, _ = (pcd_tree.search_knn_vector_3d(
+                         seed_point, self.grow_region_knn))
 
         neighbors = o3d.utility.Vector3dVector(coords[idx])
         pcd = o3d.geometry.PointCloud(neighbors)
@@ -59,9 +59,9 @@ class RegionGrowing:
         pcd_tree = o3d.geometry.KDTreeFlann(self.pcd)
 
         # Compute the normals for each point
-        self.pcd.estimate_normals(
-                            search_param=o3d.geometry.KDTreeSearchParamHybrid(
-                            radius=self.grow_region_radius, max_nn=self.max_nn))
+        self.pcd.estimate_normals(search_param=o3d.geometry
+                                  .KDTreeSearchParamHybrid(radius=self.grow_region_radius,
+                                  max_nn=self.max_nn))
 
         seed_length = len(self.list_of_seed_ids)
         region = copy.deepcopy(self.list_of_seed_ids)
@@ -77,11 +77,11 @@ class RegionGrowing:
 
             # For every seed point, the algorithm finds its neighboring points
             if method == 'radius':
-                k, neighbor_idx, _ = pcd_tree.search_radius_vector_3d(seed_point,
-                                                                      self.grow_region_radius)
+                k, neighbor_idx, _ = (pcd_tree.search_radius_vector_3d(
+                                      seed_point, self.grow_region_radius))
             else:
-                k, neighbor_idx, _ = pcd_tree.search_knn_vector_3d(seed_point,
-                                                                   self.grow_region_knn)
+                k, neighbor_idx, _ = (pcd_tree.search_knn_vector_3d(seed_point,
+                                      self.grow_region_knn))
 
             # Remove index seed point itself
             neighbor_idx = neighbor_idx[1:k]
@@ -99,13 +99,12 @@ class RegionGrowing:
                     region.append(neighbor_id)
                     processed[neighbor_id] = True
 
-                    # Here we compute the curvature for a neighbor_id and its neighbors.
-                    curvature = self._compute_point_curvature(np.asarray(self.pcd.points),
-                                                              pcd_tree,
-                                                              self.pcd.points[neighbor_id],
-                                                              method)
+                    # Compute the curvature for a neighbor_id and its neighbors
+                    curvature = (self._compute_point_curvature(
+                                 np.asarray(self.pcd.points), pcd_tree,
+                                 self.pcd.points[neighbor_id], method))
 
-                    # If result is below threshold, we add it to the seed points
+                    # Result is below threshold, we add it to the seed points
                     if curvature < self.threshold_curve:
                         self.list_of_seed_ids.append(neighbor_id)
 
