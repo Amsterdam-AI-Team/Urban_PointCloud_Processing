@@ -47,7 +47,7 @@ class RegionGrowing:
 
         return (eig_val[0]/(eig_val.sum()))
 
-    def region_growing(self, method='knn'):
+    def region_growing(self, seed_point_label, las_label, method='knn'):
         """
         The work of this region growing algorithm is based on the comparison
         of the angles between the points normals.
@@ -113,4 +113,9 @@ class RegionGrowing:
         print('There are {} points added'.format(len(region) - seed_length))
 
         self.label_mask[self.mask_indices[region]] = True
-        return self.label_mask
+
+        # Add label to the regions
+        labels = las_label
+        labels[self.label_mask] = seed_point_label
+
+        return labels
