@@ -16,33 +16,20 @@ class RegionGrowing:
         self.grow_region_knn = grow_region_knn
         self.grow_region_radius = grow_region_radius
 
-    def _get_label_indices(self, las_labels, seed_point_label):
-        """ Function to get all indices of a label in a point cloud. """
-        list_of_indices = np.where(las_labels == seed_point_label)[0]
-        return list_of_indices
-
-    def _convert_pcd(self, las):
-        """ Stick the las coordinates together in a nx3 numpy array and
-        convert it to a Open3D pcd format. """
-        coords = np.vstack((las.x, las.y, las.z)).transpose()
-
+    def set_input_cloud(self, las, seed_point_label, mask):
+        """ Function to convert to o3d point cloud. """
+        coords = np.vstack((las.x[mask], las.y[mask], las.z[mask])).transpose()
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(coords)
-
-        return pcd
-
-    def set_input_cloud(self, las):
-        """ Function to convert to o3d point cloud. """
-        pcd = self._convert_pcd(las)
         self.pcd = pcd
 
-    def set_initial_seed_points(self, las_labels, seed_point_label):
-        """ Function to set list with indices of initial seed points. """
-        list_of_indices = self._get_label_indices(las_labels, seed_point_label)
+        list_of_indices = np.where(las.label[mask] == seed_point_label)[0]
         if len(list_of_indices) == 0:
             print('NOTE: Input point cloud does not contain any seed points.')
-
         self.list_of_seed_ids = list_of_indices.tolist()
+
+        self.mask_indices = np.where(mask)[0]
+        self.label_mask = np.zeros(len(mask), dtype=bool)
 
     def _compute_point_curvature(self, coords, pcd_tree, seed_point, method):
         """ Compute the curvature for a given a cluster of points. """
@@ -126,4 +113,5 @@ class RegionGrowing:
 
         print('There are {} points added'.format(len(region) - seed_length))
 
-        return region
+        self.label_mask[self.mask_indices[region]] = True
+        return self.label_mask
