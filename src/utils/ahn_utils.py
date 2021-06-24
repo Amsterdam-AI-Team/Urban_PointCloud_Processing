@@ -5,6 +5,7 @@ import pandas as pd
 import zarr
 import copy
 import warnings
+import os
 from tifffile import TiffFile, imread
 from pathlib import Path
 from scipy import interpolate
@@ -136,6 +137,10 @@ def load_ahn_tile(ahn_file):
     return the results as a dict with keys 'x', 'y', 'ground_surface' and
     'building_surface'.
     """
+    if not os.path.isfile(ahn_file):
+        msg = f'Tried loading {ahn_file} but file does not exist.'
+        raise AHNFileNotFoundError(msg)
+
     ahn = np.load(ahn_file)
     ahn_tile = {'x': ahn['x'],
                 'y': ahn['y'],
@@ -293,3 +298,7 @@ def smoothen_edges(ahn_tile, thickness=1, gap_flag=np.nan, inplace=False):
         smoothened_ahn = copy.deepcopy(ahn_tile)
         smoothened_ahn['ground_surface'][edges] = smoother[edges]
         return smoothened_ahn
+
+
+class AHNFileNotFoundError(Exception):
+    """Exception raised for missing AHN files."""
