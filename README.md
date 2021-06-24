@@ -54,6 +54,8 @@ Example [notebooks](notebooks) are provided to demonstrate the tools.
 
 We provide tutorial [notebooks](notebooks) that demonstrate how the tools can be used.
 
+For visualisation of the resulting labelled point clouds we suggest [CloudCompare](https://www.danielgm.net/cc/). Simply open the labelled .laz in CloudCompare, select the cloud, and set `Colors` to the custom `Scalar Field` named `label`.
+
 ---
 
 ## Acknowledgements
