@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 
-# CloudCompare Python wrapper libraries
-# Installation inctrsuctions in notebook [3. Label connected comp]
+# Two libraries necessary for the CloudCompare Python wrapper
+# Installation instructions in notebook [3. Clustering based region growing]
 import pycc
 import cccorelib
 
