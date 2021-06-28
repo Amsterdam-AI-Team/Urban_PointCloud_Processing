@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 
 # Two libraries necessary for the CloudCompare Python wrapper
 # Installation instructions in notebook [3. Clustering based region growing]
@@ -8,10 +7,10 @@ import cccorelib
 
 
 class LabelConnectedComp:
-    def __init__(self, octree_level=9, min_points=100):
+    def __init__(self, octree_level=9, min_component_size=100):
         """ Init variables. """
         self.octree_level = octree_level
-        self.min_points = min_points
+        self.min_component_size = min_component_size
 
     def set_input_cloud(self, las, mask):
         """ Function to convert to CloudCompare point cloud. """
@@ -52,35 +51,7 @@ class LabelConnectedComp:
         self.point_components = labels_sf.asArray()
 
     def fill_components(self, las_label, unlabelled_label, seed_point_label,
-                        mask):
-        """ When one initial seed point is found inside a component,
-        make the whole component this label. """
-        seed_list = las_label.astype("float")[mask]
-        seed_list[seed_list == unlabelled_label] = np.nan
-        dataset = pd.DataFrame({'labels': self.point_components,
-                               'seed_points': seed_list})
-        dataset['seed_points'] = (dataset.groupby(['labels'],
-                                  sort=False)['seed_points']
-                                  .apply(lambda x: x.ffill().bfill()))
-
-        seed_list_grown = (dataset['seed_points'].fillna(unlabelled_label)
-                           .to_numpy())
-
-        label_mask = np.zeros(len(mask), dtype=bool)
-        mask_indices = np.where(mask)[0]
-
-        label_mask[mask_indices[seed_list_grown == seed_point_label]] = True
-
-        # Add label to the regions
-        labels = las_label
-        labels[label_mask] = seed_point_label
-
-        print('Filled components with labels based on initial seed points')
-
-        return labels
-
-    def fill_components_2(self, las_label, unlabelled_label, seed_point_label,
-                          mask, threshold=0.1):
+                        mask, threshold=0.1):
         """ When one initial seed point is found inside a component,
         make the whole component this label. """
         label_mask = np.zeros(len(mask), dtype=bool)
@@ -92,14 +63,14 @@ class LabelConnectedComp:
         cc_labels, counts = np.unique(self.point_components,
                                       return_counts=True)
 
-        cc_labels_filtered = cc_labels[counts >= self.min_points]
+        cc_labels_filtered = cc_labels[counts >= self.min_component_size]
 
         for cc in cc_labels_filtered:
             # select points that belong to the cluster
             cc_mask = (self.point_components == cc)
             # cluster size
             cc_size = np.count_nonzero(cc_mask)
-            if cc_size < self.min_points:
+            if cc_size < self.min_component_size:
                 continue
             # number of point in teh cluster that are labelled as seed point
             seed_count = np.count_nonzero(
@@ -117,12 +88,3 @@ class LabelConnectedComp:
         print(f'{post_seed_count - pre_seed_count} points added.')
 
         return labels
-
-    def min_points_per_component(self, noise_label, min_component_size=1000):
-        """ Ignore the components with less than a specified number of points.
-        Similar to the option "Min. points per component" in CloudCompare. """
-        all_labels, counts = np.unique(self.point_components,
-                                       return_counts=True)
-        small_labels = all_labels[counts < min_component_size]
-        self.point_components[np.in1d(self.point_components,
-                                      small_labels)] = noise_label
