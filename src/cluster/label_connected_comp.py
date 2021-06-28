@@ -55,8 +55,7 @@ class LabelConnectedComp:
         labels_sf = self.point_cloud.getScalarField(self.labels_sf_idx)
         self.point_components = labels_sf.asArray()
 
-    def fill_components(self, unlabelled_label, seed_point_label,
-                        threshold=0.1):
+    def fill_components(self, seed_point_label, threshold=0.1):
         """ When one initial seed point is found inside a component,
         make the whole component this label. """
         label_mask = np.zeros(len(self.mask), dtype=bool)
