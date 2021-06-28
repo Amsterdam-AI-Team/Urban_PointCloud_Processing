@@ -8,4 +8,4 @@ These jupyter notebooks serve as a tutorial and demonstration of the tools in th
 
 [2. Data fusion](2.%20Data%20fusion.ipynb) -- different data fusers and the data fusion pipeline.
 
-[3. Region growing](2.%20Region%20growing.ipynb) -- two region growing implementations.
+[3. Region growing](3.%20Region%20growing.ipynb) -- two region growing implementations.
