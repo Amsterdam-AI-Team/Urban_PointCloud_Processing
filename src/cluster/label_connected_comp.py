@@ -7,6 +7,9 @@ import cccorelib
 
 
 class LabelConnectedComp:
+    """
+    Clustering based region growing implementation using label connected comp.
+    """
     def __init__(self, octree_level=9, min_component_size=100):
         """ Init variables. """
         self.octree_level = octree_level

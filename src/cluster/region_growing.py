@@ -6,6 +6,10 @@ from ..utils.math_utils import angle_between
 
 
 class RegionGrowing:
+    """
+    Region growing implementation based on:
+    https://pcl.readthedocs.io/projects/tutorials/en/latest/region_growing_segmentation.html
+    """
     def __init__(self, threshold_angle=20, threshold_curve=1.0, max_nn=30,
                  grow_region_knn=15, grow_region_radius=0.2):
         """ Init variables. """
