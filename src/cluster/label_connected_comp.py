@@ -41,6 +41,8 @@ class LabelConnectedComp:
 
         self.labels_sf_idx = labels_sf_idx
         self.point_cloud = point_cloud
+        self.mask = mask
+        self.las_label = las.label
 
     def label_connected_comp(self):
         """ Perform Label Connected Components. """
@@ -53,15 +55,15 @@ class LabelConnectedComp:
         labels_sf = self.point_cloud.getScalarField(self.labels_sf_idx)
         self.point_components = labels_sf.asArray()
 
-    def fill_components(self, las_label, unlabelled_label, seed_point_label,
-                        mask, threshold=0.1):
+    def fill_components(self, unlabelled_label, seed_point_label,
+                        threshold=0.1):
         """ When one initial seed point is found inside a component,
         make the whole component this label. """
-        label_mask = np.zeros(len(mask), dtype=bool)
+        label_mask = np.zeros(len(self.mask), dtype=bool)
 
-        pre_seed_count = np.count_nonzero(las_label == seed_point_label)
+        pre_seed_count = np.count_nonzero(self.las_label == seed_point_label)
 
-        mask_indices = np.where(mask)[0]
+        mask_indices = np.where(self.mask)[0]
 
         cc_labels, counts = np.unique(self.point_components,
                                       return_counts=True)
@@ -77,13 +79,13 @@ class LabelConnectedComp:
                 continue
             # number of point in teh cluster that are labelled as seed point
             seed_count = np.count_nonzero(
-                las_label[mask_indices[cc_mask]] == seed_point_label)
+                self.las_label[mask_indices[cc_mask]] == seed_point_label)
             # at least X% of the cluster should be seed points
             if (float(seed_count) / cc_size) > threshold:
                 label_mask[mask_indices[cc_mask]] = True
 
         # Add label to the regions
-        labels = las_label
+        labels = self.las_label
         labels[label_mask] = seed_point_label
 
         post_seed_count = np.count_nonzero(labels == seed_point_label)
