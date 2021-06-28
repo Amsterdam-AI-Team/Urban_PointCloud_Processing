@@ -6,3 +6,4 @@ scipy==1.6.2
 tifffile==2021.6.14
 tqdm==4.61.0
 zarr==2.8.3
+open3d==0.13.0
