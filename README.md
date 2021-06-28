@@ -42,6 +42,8 @@ For a quick dive into this repository take a look at our [complete solution note
    * [`fusion`](./src/fusion) _Data fusion code_
    * [`preprocessing`](./src/preprocessing) _Pre-processing code_
    * [`utils`](./src/utils) _Utility functions_
+   * [`region_growing`](./src/region_growing) _Region growing code_
+
 
 
 ---
