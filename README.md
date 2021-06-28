@@ -25,7 +25,7 @@ However, since we are working with urban street level data, we do have access to
 
 We also provide some **post-processing** methods that further fine-tune the labels. For example, we use region growing to extend the facade of buildings to include protruding elements such as balconies and canopies that are not included in the building footprint.
 
-For a quick dive into this repository take a look at our [complete solution notebook](notebooks/0.%20Complete%20colution.ipynb).
+For a quick dive into this repository take a look at our [complete solution notebook](notebooks/0.%20Complete%20solution.ipynb).
 
 ---
 
