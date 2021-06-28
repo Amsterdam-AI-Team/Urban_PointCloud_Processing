@@ -1,6 +1,8 @@
 # Adapted from https://photutils.readthedocs.io/en/stable/_modules/photutils/
 #              utils/interpolation.html#ShepardIDWInterpolator
 #
+# Licensed under a 3-clause BSD style license
+#
 # Copyright (c) 2011-2020, Photutils developers
 #
 # All rights reserved.
