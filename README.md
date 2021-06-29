@@ -17,7 +17,19 @@ Example [notebooks](notebooks) are provided to demonstrate the tools.
 
 ---
 
-## Project Folder Structure
+## Project Goal
+
+The goal of this project is to automatically locate and classify various assets such as street lights, traffic signs, and trees in street level point clouds. A typical approach would be to build and train a machine learning classier, but this requires a rich labeled dataset to train on. One of the main challenges in working with 3D point cloud data is that, in contrast to 2D computer vision, _no general-purpose training sets are available_. Moreover, the sparsity and non-uniform density of typical point clouds makes transferring results form one task to another difficult.
+
+However, since we are working with urban street level data, we do have access to a large number of public datasets and registries that we can use to start labeling and create an initial training set. This repository contains several **data fusion** methods that combine public datasets and registries such as elevation data and building footprints to automatically label point clouds.
+
+We also provide some **post-processing** methods that further fine-tune the labels. For example, we use region growing to extend the facade of buildings to include protruding elements such as balconies and canopies that are not included in the building footprint.
+
+For a quick dive into this repository take a look at our [complete solution notebook](notebooks/0.%20Complete%20solution.ipynb).
+
+---
+
+## Folder Structure
 
  * [`datasets`](./datasets) _Demo dataset to get started_
    * [`ahn`](./datasets/ahn) _AHN data_
@@ -29,7 +41,9 @@ Example [notebooks](notebooks) are provided to demonstrate the tools.
  * [`src`](./src) _Python source code_
    * [`fusion`](./src/fusion) _Data fusion code_
    * [`preprocessing`](./src/preprocessing) _Pre-processing code_
+   * [`region_growing`](./src/region_growing) _Region growing code_
    * [`utils`](./src/utils) _Utility functions_
+
 
 
 ---
