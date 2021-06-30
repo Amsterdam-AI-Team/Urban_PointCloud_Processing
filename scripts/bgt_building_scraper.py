@@ -65,7 +65,7 @@ def parse_BGT_data(json_response):
     for item in json_response['features']:
         pand_id = item['properties']['identificatieBAGPND']
         pand_polygon = item['geometry']['coordinates'][0]
-        x_min, y_max, x_max, y_min = compute_bounding_box(pand_polygon)
+        ((x_min, y_max), (x_max, y_min)) = compute_bounding_box(pand_polygon)
 
         output_list.append([str(pand_id), pand_polygon, x_min, y_max, x_max,
                            y_min])
