@@ -152,7 +152,7 @@ def parse_buildings(building_file, bbox=None, out_folder='',
                         polygon = list(zip(*(iter(points),) * 2))
                         if (len(ext_poly_list) > 0
                                 and (polygon[0] == ext_poly_list[-1])):
-                            ext_poly_list = ext_poly_list[1:]
+                            polygon = polygon[1:]
                         ext_poly_list.extend(polygon)
                     buildings[bag_id] = {'Type': 'exterior',
                                          'Date': date,
@@ -165,7 +165,7 @@ def parse_buildings(building_file, bbox=None, out_folder='',
                         polygon = list(zip(*(iter(points),) * 2))
                         if (len(int_poly_list) > 0
                                 and (polygon[0] == int_poly_list[-1])):
-                            int_poly_list = int_poly_list[1:]
+                            polygon = polygon[1:]
                         int_poly_list.extend(polygon)
                     buildings[bag_id] = {'Type': 'interior',
                                          'Date': date,
