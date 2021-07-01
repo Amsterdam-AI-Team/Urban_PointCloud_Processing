@@ -1,12 +1,17 @@
+"""
+Clipping tools for point clouds and polygons.
+
+The methods square_clip() and poly_clip() are taken from:
+https://github.com/brycefrank/pyfor/blob/master/pyfor/clip.py
+
+The method _point_inside_poly is adapted from:
+https://github.com/sasamil/PointInPolygon_Py
+"""
 import numpy as np
 from numba import jit
 import numba
 from shapely.geometry import Polygon
 import pyclipper
-
-# Some modifications are performed on the function square_clip, ray_trace and
-# poly_clip, copied from:
-# https://github.com/brycefrank/pyfor/blob/master/pyfor/clip.py
 
 
 def square_clip(xy_points, bounds):
