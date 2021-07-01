@@ -1,5 +1,5 @@
 import numpy as np
-from numba import jit, njit, vectorize, bool_, float64
+from numba import jit
 import numba
 from shapely.geometry import Polygon
 import pyclipper
@@ -24,22 +24,11 @@ def square_clip(xy_points, bounds):
 
 
 @jit(nopython=True)
-def is_inside_sm(polygon, point):
+def _point_inside_poly(polygon, point):
     """
     Improved version of the Crossing Number algorithm that checks if a point is
     inside a polygon.
     Implementation taken from https://github.com/sasamil/PointInPolygon_Py
-
-    Parameters
-    ----------
-    polygon : list of tuples
-        Polygon as linear ring.
-    point : tuple
-        Point.
-
-    Returns
-    -------
-    True if point is inside polygon, else False.
     """
     length = len(polygon) - 1
     dy2 = point[1] - polygon[0][1]
@@ -82,70 +71,36 @@ def is_inside_sm(polygon, point):
     return intersections & 1
 
 
-@njit(parallel=True)
-def is_inside_sm_parallel(x, y, polygon):
-    """
-    Parallelized version of is_inside_sm(), works on a list of points and
-    returns a list of booleans.
-    """
-    ln = len(x)
-    D = np.empty(ln, dtype=numba.boolean)
-    for i in numba.prange(ln):
-        D[i] = is_inside_sm(polygon, (x[i], y[i]))
-    return D
-
-
 @jit(nopython=True)
-def is_inside_sm_single(x, y, polygon):
+def is_inside(x, y, polygon):
     """
-    Non-parallelized version of is_inside_sm(), works on a list of points and
-    returns a list of booleans.
+    Checks for each point in a list whether that point is inside a polygon.
+
+    Parameters
+    ----------
+    x : list
+        X-coordinates.
+    y : list
+        Y-coordinates.
+    polygon : list of tuples
+        Polygon as linear ring.
+
+    Returns
+    -------
+    An array of shape (len(x),) with dtype bool, where each entry indicates
+    whether the corresponding point is inside the polygon.
     """
     n = len(x)
-    D = np.empty(n, dtype=numba.boolean)
-    # D = [is_inside_sm(polygon, (x[i], y[i])) for i in range(n)]
+    mask = np.empty((n,), dtype=numba.boolean)
+    # Can be parallelized by replacing this line with <for i in
+    # numba.prange(ln):> and decorating the function with
+    # <@njit(parallel=True)>
     for i in range(n):
-        D[i] = is_inside_sm(polygon, (x[i], y[i]))
-    return D
+        mask[i] = _point_inside_poly(polygon, (x[i], y[i]))
+    return mask
 
 
-def ray_trace(x, y, poly):
-    """
-    Determines for some set of x and y coordinates, which of those coordinates
-    is within `poly`. Ray trace is generally called as an internal function,
-    see :func:`.poly_clip`
-    :param x: A 1D numpy array of x coordinates.
-    :param y: A 1D numpy array of y coordinates.
-    :param poly: The coordinates of a polygon as a numpy array (i.e. from
-    geo_json['coordinates']
-    :return: A 1D boolean numpy array, true values are those points that are
-    within `poly`.
-    """
-    @vectorize([bool_(float64, float64)])
-    def ray(x, y):
-        # where xy is a coordinate
-        n = len(poly)
-        inside = False
-        p2x = 0.0
-        p2y = 0.0
-        xints = 0.0
-        p1x, p1y = poly[0]
-        for i in range(n + 1):
-            p2x, p2y = poly[i % n]
-            if y > min(p1y, p2y):
-                if y <= max(p1y, p2y):
-                    if x <= max(p1x, p2x):
-                        if p1y != p2y:
-                            xints = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
-                        if p1x == p2x or x <= xints:
-                            inside = not inside
-            p1x, p1y = p2x, p2y
-        return inside
-
-    return ray(x, y)
-
-
-def poly_clip(xy_points, poly, method='sm'):
+def poly_clip(xy_points, poly):
     """
     Returns the indices of `points` that are within a given polygon. This
     differs from :func:`.ray_trace` in that it enforces a small "pre-clip"
@@ -165,17 +120,9 @@ def poly_clip(xy_points, poly, method='sm'):
     # Clip the preclip
     poly_coords = np.stack((shapely_poly.exterior.coords.xy[0],
                             shapely_poly.exterior.coords.xy[1]), axis=1)
-    if method == 'ray':
-        full_clip_mask = ray_trace(xy_points['x'][pre_clip_inds],
-                                   xy_points['y'][pre_clip_inds], poly_coords)
-    elif method == 'sm':
-        full_clip_mask = is_inside_sm_parallel(xy_points['x'][pre_clip_inds],
-                                               xy_points['y'][pre_clip_inds],
-                                               poly_coords)
-    elif method == 'sm_single':
-        full_clip_mask = is_inside_sm_single(xy_points['x'][pre_clip_inds],
-                                             xy_points['y'][pre_clip_inds],
-                                             poly_coords)
+    full_clip_mask = is_inside(xy_points['x'][pre_clip_inds],
+                               xy_points['y'][pre_clip_inds],
+                               poly_coords)
     clipped = pre_clip_inds[full_clip_mask]
 
     return clipped
