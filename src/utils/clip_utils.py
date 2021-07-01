@@ -95,6 +95,20 @@ def is_inside_sm_parallel(x, y, polygon):
     return D
 
 
+@jit(nopython=True)
+def is_inside_sm_single(x, y, polygon):
+    """
+    Non-parallelized version of is_inside_sm(), works on a list of points and
+    returns a list of booleans.
+    """
+    n = len(x)
+    D = np.empty(n, dtype=numba.boolean)
+    # D = [is_inside_sm(polygon, (x[i], y[i])) for i in range(n)]
+    for i in range(n):
+        D[i] = is_inside_sm(polygon, (x[i], y[i]))
+    return D
+
+
 def ray_trace(x, y, poly):
     """
     Determines for some set of x and y coordinates, which of those coordinates
@@ -158,6 +172,10 @@ def poly_clip(xy_points, poly, method='sm'):
         full_clip_mask = is_inside_sm_parallel(xy_points['x'][pre_clip_inds],
                                                xy_points['y'][pre_clip_inds],
                                                poly_coords)
+    elif method == 'sm_single':
+        full_clip_mask = is_inside_sm_single(xy_points['x'][pre_clip_inds],
+                                             xy_points['y'][pre_clip_inds],
+                                             poly_coords)
     clipped = pre_clip_inds[full_clip_mask]
 
     return clipped
