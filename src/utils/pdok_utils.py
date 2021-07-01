@@ -1,10 +1,11 @@
-"""This module provides utility methods for BGT data."""
+"""This module provides utility methods for extracting PDOK BGT data."""
 
 import json
 from datetime import datetime
 import time
 import requests
 import os
+import pandas as pd
 from requests.exceptions import HTTPError
 import xml.etree.ElementTree as ET
 
@@ -72,7 +73,7 @@ def scrape_pdok_bgt(poly_list=None, bbox=None,
 
 
 def parse_vegetation(vegetation_file, bbox=None, out_folder='',
-                     out_file_suffix=''):
+                     out_file='bgt_trees.csv'):
     root = ET.parse(vegetation_file).getroot()
     trees = []
     hedges = []
@@ -95,15 +96,14 @@ def parse_vegetation(vegetation_file, bbox=None, out_folder='',
                  if math_utils.point_in_bbox(tree[1:3], bbox)]
 
     csv_headers = ['Type', 'X', 'Y']
-    out_file = os.path.join(out_folder,
-                            'bgt_vegetation_trees' + out_file_suffix + '.csv')
-    csv_utils.write_csv(out_file, trees, csv_headers)
+    csv_utils.write_csv(os.path.join(out_folder, out_file), trees, csv_headers)
 
     # TODO iets doen met de "haag" objecten?
     # Wat kan er verder nog voorkomen in de BGT?
+    return os.path.join(out_folder, out_file)
 
 
-def parse_poles(pole_file, bbox=None, out_folder='', out_file_suffix=''):
+def parse_poles(pole_file, bbox=None, out_folder='', out_file='bgt_poles.csv'):
     root = ET.parse(pole_file).getroot()
     poles = []
     for item in root:
@@ -119,13 +119,12 @@ def parse_poles(pole_file, bbox=None, out_folder='', out_file_suffix=''):
                  if math_utils.point_in_bbox(pole[1:3], bbox)]
 
     csv_headers = ['Type', 'X', 'Y']
-    out_file = os.path.join(out_folder,
-                            'bgt_poles' + out_file_suffix + '.csv')
-    csv_utils.write_csv(out_file, poles, csv_headers)
+    csv_utils.write_csv(os.path.join(out_folder, out_file), poles, csv_headers)
+    return os.path.join(out_folder, out_file)
 
 
 def parse_buildings(building_file, bbox=None, out_folder='',
-                    out_file_suffix=''):
+                    out_file='bgt_buildings.csv'):
     root = ET.parse(building_file).getroot()
     buildings = dict()
     for obj in root:
@@ -177,6 +176,13 @@ def parse_buildings(building_file, bbox=None, out_folder='',
                      if math_utils.poly_overlaps_bbox(v['Polygon'], bbox)]
 
     csv_headers = ['BAG_ID', 'Type', 'Polygon']
-    out_file = os.path.join(out_folder,
-                            'bgt_buildings' + out_file_suffix + '.csv')
-    csv_utils.write_csv(out_file, buildings, csv_headers)
+    csv_utils.write_csv(os.path.join(out_folder, out_file),
+                        buildings, csv_headers)
+    return os.path.join(out_folder, out_file)
+
+
+def merge_point_files(point_files, out_folder='', out_file='bgt_points.csv'):
+    dfs = (pd.read_csv(f, sep=',') for f in point_files)
+    df_merged = pd.concat(dfs, ignore_index=True)
+    df_merged.to_csv(os.path.join(out_folder, out_file), index=False)
+    return os.path.join(out_folder, out_file)
