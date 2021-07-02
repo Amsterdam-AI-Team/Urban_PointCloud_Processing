@@ -55,9 +55,9 @@ class FusionPipeline:
             labels[label_mask] = fuser.get_label()
             mask[label_mask] = False
 
-        for fuser in self.region_growing:
-            label_mask = fuser.get_label_mask(tilecode, points, mask, labels)
-            labels[label_mask] = fuser.get_label()
+        for grower in self.region_growing:
+            label_mask = grower.get_label_mask(points, labels)
+            labels[label_mask] = grower.get_label()
 
         return labels
 

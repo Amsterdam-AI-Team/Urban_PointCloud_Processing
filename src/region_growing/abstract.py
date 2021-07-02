@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 
 
-class DataFuser(ABC):
+class AbstractRegionGrowing(ABC):
     """
     Data Fuser abstract base class for automatic labelling point clouds.
 
@@ -18,7 +18,7 @@ class DataFuser(ABC):
         super().__init__()
 
     @abstractmethod
-    def get_label_mask(self, tilecode, points, mask):
+    def get_label_mask(self, points):
         """
         Returns the label mask for the given pointcloud.
 

@@ -1,16 +1,24 @@
-from .data_fuser import DataFuser
-from ..region_growing.region_growing import RegionGrowing
+"""Data Fuser Abstract Base Class"""
+
+from abc import ABC, abstractmethod
 
 
-class RegionGrowingFuser(DataFuser):
+class AbstractFuser(ABC):
     """
-    Region growing implementation based on:
-    https://pcl.readthedocs.io/projects/tutorials/en/latest/region_growing_segmentation.html
+    Data Fuser abstract base class for automatic labelling point clouds.
+
+    Parameters
+    ----------
+    label : int
+        Class label to use for this fuser.
     """
+
     def __init__(self, label):
-        super().__init__(label)
+        self.label = label
+        super().__init__()
 
-    def get_label_mask(self, tilecode, points, mask, labels):
+    @abstractmethod
+    def get_label_mask(self, tilecode, points, mask):
         """
         Returns the label mask for the given pointcloud.
 
@@ -28,9 +36,8 @@ class RegionGrowingFuser(DataFuser):
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
-        seed_point_label = 2
-        reg = RegionGrowing()
-        reg.set_input_cloud(points, labels, seed_point_label, mask)
-        labels = reg.region_growing()
+        pass
 
-        return labels
+    def get_label(self):
+        """Returns the label of this DataFuser object."""
+        return self.label

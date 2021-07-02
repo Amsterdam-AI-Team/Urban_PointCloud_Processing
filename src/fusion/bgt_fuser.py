@@ -5,12 +5,12 @@ import pandas as pd
 from pathlib import Path
 import numpy as np
 
-from .data_fuser import DataFuser
+from .abstract import AbstractFuser
 from ..utils.clip_utils import poly_offset, poly_clip
 from ..utils.las_utils import get_bbox_from_tile_code
 
 
-class BGTBuildingFuser(DataFuser):
+class BGTBuildingFuser(AbstractFuser):
     """Convenience class for loading building polygons from Dutch BGT data."""
 
     def __init__(self, label, building_offset, bgt_file=None, bgt_folder=None):

@@ -3,12 +3,12 @@
 import numpy as np
 import os
 
-from .data_fuser import DataFuser
+from .abstract import AbstractFuser
 from ..utils import ahn_utils as ahn_utils
 from ..utils.interpolation import FastGridInterpolator
 
 
-class AHNFuser(DataFuser):
+class AHNFuser(AbstractFuser):
     """
     Data Fuser class for automatic labelling of ground and building points
     using AHN data. The class can handle both pre-processed surfaces in .npz
