@@ -24,8 +24,9 @@ class FusionPipeline:
         The fusers to apply, in order.
     """
 
-    def __init__(self, fusers):
+    def __init__(self, fusers, region_growing):
         self.fusers = fusers
+        self.region_growing = region_growing
 
     def process_cloud(self, tilecode, points, mask=None):
         """
@@ -50,9 +51,13 @@ class FusionPipeline:
 
         labels = np.zeros((len(points),), dtype='uint16')
         for fuser in self.fusers:
-            label_mask = fuser.get_label_mask(tilecode, points, mask)
+            label_mask = fuser.get_label_mask(tilecode, points, mask, labels)
             labels[label_mask] = fuser.get_label()
             mask[label_mask] = False
+
+        for fuser in self.region_growing:
+            label_mask = fuser.get_label_mask(tilecode, points, mask, labels)
+            labels[label_mask] = fuser.get_label()
 
         return labels
 

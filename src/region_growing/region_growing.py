@@ -20,14 +20,16 @@ class RegionGrowing:
         self.grow_region_knn = grow_region_knn
         self.grow_region_radius = grow_region_radius
 
-    def set_input_cloud(self, las, seed_point_label, mask):
+    def set_input_cloud(self, las, las_labels, seed_point_label, mask):
         """ Function to convert to o3d point cloud. """
-        coords = np.vstack((las.x[mask], las.y[mask], las.z[mask])).transpose()
+        mask = (las_labels != 1)
+
+        coords = np.vstack((las['x'][mask], las['y'][mask], las['z'][mask])).transpose() # todo
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(coords)
         self.pcd = pcd
 
-        list_of_indices = np.where(las.label[mask] == seed_point_label)[0]
+        list_of_indices = np.where(las_labels[mask] == seed_point_label)[0]
         if len(list_of_indices) == 0:
             print('NOTE: Input point cloud does not contain any seed points.')
         self.list_of_seed_ids = list_of_indices.tolist()
@@ -51,7 +53,7 @@ class RegionGrowing:
 
         return (eig_val[0]/(eig_val.sum()))
 
-    def region_growing(self, seed_point_label, las_label, method='knn'):
+    def region_growing(self, method='knn'):
         """
         The work of this region growing algorithm is based on the comparison
         of the angles between the points normals.
@@ -118,8 +120,4 @@ class RegionGrowing:
 
         self.label_mask[self.mask_indices[region]] = True
 
-        # Add label to the regions
-        labels = las_label
-        labels[self.label_mask] = seed_point_label
-
-        return labels
+        return self.label_mask

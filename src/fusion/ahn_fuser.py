@@ -83,7 +83,7 @@ class AHNFuser(DataFuser):
         elif self.method == 'geotiff':
             return self.reader.filter_tile(tilecode)
 
-    def get_label_mask(self, tilecode, points, mask):
+    def get_label_mask(self, tilecode, points, mask, labels):
         """
         Returns the label mask for the given pointcloud.
 

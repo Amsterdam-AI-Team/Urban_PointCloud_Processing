@@ -79,7 +79,7 @@ class BGTBuildingFuser(DataFuser):
 
         return building_polygons
 
-    def get_label_mask(self, tilecode, points, mask):
+    def get_label_mask(self, tilecode, points, mask, labels):
         """
         Returns the building mask for the given pointcloud.
 
