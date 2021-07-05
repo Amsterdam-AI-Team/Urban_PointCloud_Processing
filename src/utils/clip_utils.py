@@ -29,6 +29,57 @@ def square_clip(xy_points, bounds):
 
 
 @jit(nopython=True)
+def circle_clip(points, center, radius):
+    """
+    Clip all points within a circle (or unbounded cylinder).
+
+    Parameters
+    ----------
+    points : array of shape (n_points, 2)
+        The points.
+    center : tuple (x, y)
+        Center point of the circle.
+    radius : float
+        Radius of the circle.
+
+    Returns
+    -------
+    A boolean mask with True entries for all points within the circle.
+    """
+    clip_mask = (np.power((points[:, 0] - center[0]), 2)
+                 + np.power((points[:, 1] - center[1]), 2)
+                 <= np.power(radius, 2))
+    return clip_mask
+
+
+@jit(nopython=True)
+def cylinder_clip(points, center, radius, bottom=-np.inf, top=np.inf):
+    """
+    Clip all points within a cylinder.
+
+    Parameters
+    ----------
+    points : array of shape (n_points, 2)
+        The points.
+    center : tuple (x, y)
+        Center point of the circle.
+    radius : float
+        Radius of the circle.
+    bottom : float (default: -inf)
+        Bottom of the cylinder.
+    top : float (default: inf)
+        Top of the cylinder.
+
+    Returns
+    -------
+    A boolean mask with True entries for all points within the circle.
+    """
+    clip_mask = circle_clip(points, center, radius)
+    clip_mask = clip_mask & ((points[:, 2] <= top) & (points[:, 2] >= bottom))
+    return clip_mask
+
+
+@jit(nopython=True)
 def _point_inside_poly(polygon, point):
     """
     Improved version of the Crossing Number algorithm that checks if a point is
