@@ -5,8 +5,9 @@ import os
 import pathlib
 from tqdm import tqdm
 
-from .utils.las_utils import (get_tilecode_from_filename, read_las,
-                              label_and_save_las)
+from ..utils.las_utils import (get_tilecode_from_filename,
+                               read_las,
+                               label_and_save_las)
 
 
 class FusionPipeline:
@@ -23,11 +24,10 @@ class FusionPipeline:
         The fusers to apply, in order.
     """
 
-    def __init__(self, fusers=[], region_growing=[]): # TODO =None kan niet vanwege de for loop
+    def __init__(self, fusers):
         self.fusers = fusers
-        self.region_growing = region_growing
 
-    def process_cloud(self, tilecode, points, labels, header, mask=None):
+    def process_cloud(self, tilecode, points, mask=None):
         """
         Process a single point cloud.
 
@@ -48,17 +48,11 @@ class FusionPipeline:
         if mask is None:
             mask = np.ones((len(points),), dtype=bool)
 
-        if self.fusers:  # TODO kan dit mooier?
-            labels = np.zeros((len(points),), dtype='uint16')  # TODO vgm moet de comma hier weg
-
+        labels = np.zeros((len(points),), dtype='uint16')
         for fuser in self.fusers:
             label_mask = fuser.get_label_mask(tilecode, points, mask)
             labels[label_mask] = fuser.get_label()
             mask[label_mask] = False
-
-        for grower in self.region_growing:
-            label_mask = grower.get_label_mask(points, labels, header) # TODO eigenlijk geef ik hier gewoon "las" mee
-            labels[label_mask] = grower.get_label()
 
         return labels
 
@@ -90,8 +84,7 @@ class FusionPipeline:
         if mask is None:
             mask = np.ones((len(points),), dtype=bool)
 
-        labels = self.process_cloud(tilecode, points, pointcloud.label,
-                                    pointcloud.header, mask)
+        labels = self.process_cloud(tilecode, points, mask)
         label_and_save_las(pointcloud, labels, out_file)
 
     def process_folder(self, in_folder, out_folder=None, suffix='',
