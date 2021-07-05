@@ -79,7 +79,7 @@ class BGTBuildingFuser(AbstractFuser):
 
         return building_polygons
 
-    def get_label_mask(self, tilecode, points, mask, labels):
+    def get_label_mask(self, tilecode, points, mask):
         """
         Returns the building mask for the given pointcloud.
 
@@ -115,5 +115,7 @@ class BGTBuildingFuser(AbstractFuser):
         mask_indices = np.where(mask)[0]
         label_mask = np.zeros(len(points), dtype=bool)
         label_mask[mask_indices[building_mask]] = True
+
+        print('[BGT fusion] Building fused.')  # TODO use better text
 
         return label_mask

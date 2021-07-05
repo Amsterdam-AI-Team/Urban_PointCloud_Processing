@@ -83,7 +83,7 @@ class AHNFuser(AbstractFuser):
         elif self.method == 'geotiff':
             return self.reader.filter_tile(tilecode)
 
-    def get_label_mask(self, tilecode, points, mask, labels):
+    def get_label_mask(self, tilecode, points, mask):
         """
         Returns the label mask for the given pointcloud.
 
@@ -126,4 +126,7 @@ class AHNFuser(AbstractFuser):
                                 < self.epsilon)
         elif self.target == 'building':
             label_mask[mask] = points[mask, 2] < target_z + self.epsilon
+
+        print('[AHN fusion] {} fused.'.format(self.target))  # TODO use better text
+
         return label_mask
