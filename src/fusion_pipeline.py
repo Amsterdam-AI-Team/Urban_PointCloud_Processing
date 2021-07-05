@@ -49,7 +49,7 @@ class FusionPipeline:
             mask = np.ones((len(points),), dtype=bool)
 
         if self.fusers:  # TODO kan dit mooier?
-            labels = np.zeros((len(points['x']),), dtype='uint16')  # TODO vgm moet de comma hier weg
+            labels = np.zeros((len(points),), dtype='uint16')  # TODO vgm moet de comma hier weg
 
         for fuser in self.fusers:
             label_mask = fuser.get_label_mask(tilecode, points, mask)
