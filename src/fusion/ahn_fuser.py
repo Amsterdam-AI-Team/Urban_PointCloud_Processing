@@ -102,7 +102,6 @@ class AHNFuser(DataFuser):
         should be labelled according to this fuser.
         """
         ahn_tile = self._filter_tile(tilecode)
-        pos = np.vstack((points['x'], points['y'])).T
         if self.target == 'ground':
             if self.method == 'geotiff':
                 if self.fill_gaps:
@@ -119,11 +118,12 @@ class AHNFuser(DataFuser):
 
         # Set-up and run interpolator.
         fast_z = FastGridInterpolator(ahn_tile['x'], ahn_tile['y'], surface)
-        target_z = fast_z(pos)
+        target_z = fast_z(points[mask, :])
 
+        label_mask = np.zeros((len(points),), dtype=bool)
         if self.target == 'ground':
-            label_mask = np.abs(points['z'] - target_z) < self.epsilon
+            label_mask[mask] = (np.abs(points[mask, 2] - target_z)
+                                < self.epsilon)
         elif self.target == 'building':
-            label_mask = points['z'] < target_z + self.epsilon
-        label_mask[~mask] = False
+            label_mask[mask] = points[mask, 2] < target_z + self.epsilon
         return label_mask

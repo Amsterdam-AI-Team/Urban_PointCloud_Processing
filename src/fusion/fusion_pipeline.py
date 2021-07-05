@@ -46,9 +46,9 @@ class FusionPipeline:
         for each point.
         """
         if mask is None:
-            mask = np.full((len(points['x']),), True)
+            mask = np.ones((len(points),), dtype=bool)
 
-        labels = np.zeros((len(points['x']),), dtype='uint16')
+        labels = np.zeros((len(points),), dtype='uint16')
         for fuser in self.fusers:
             label_mask = fuser.get_label_mask(tilecode, points, mask)
             labels[label_mask] = fuser.get_label()
@@ -79,10 +79,10 @@ class FusionPipeline:
 
         tilecode = get_tilecode_from_filename(in_file)
         pointcloud = read_las(in_file)
-        points = {'x': pointcloud.x, 'y': pointcloud.y, 'z': pointcloud.z}
+        points = np.vstack((pointcloud.x, pointcloud.y, pointcloud.z)).T
 
         if mask is None:
-            mask = np.full((len(points['x']),), True)
+            mask = np.ones((len(points),), dtype=bool)
 
         labels = self.process_cloud(tilecode, points, mask)
         label_and_save_las(pointcloud, labels, out_file)

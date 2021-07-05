@@ -1,7 +1,7 @@
 """
 Clipping tools for point clouds and polygons.
 
-The methods square_clip() and poly_clip() are taken from:
+The method poly_clip() is adapted from:
 https://github.com/brycefrank/pyfor/blob/master/pyfor/clip.py
 
 The method _point_inside_poly is adapted from:
@@ -10,22 +10,81 @@ https://github.com/sasamil/PointInPolygon_Py
 import numpy as np
 from numba import jit
 import numba
-from shapely.geometry import Polygon
 import pyclipper
 
+from ..utils import math_utils
 
-def square_clip(xy_points, bounds):
-    """
-    Clips a square from a tuple describing the position of the square.
-    :param points: A N x 2 numpy array of x and y coordinates, x is column 0
-    :param bounds: A tuple of length 4, min and max y coordinates of the square
-    :return: a list of indices of points within the square.
-    """
-    inds = np.where((xy_points['x'] >= bounds[0]) & (xy_points['x'] <=
-                    bounds[2]) & (xy_points['y'] >= bounds[1]) &
-                    (xy_points['y'] <= bounds[3]))[0]
 
-    return inds
+@jit(nopython=True)
+def rectangle_clip(points, box):
+    """
+    Clip all points within a rectangle.
+
+    Parameters
+    ----------
+    points : array of shape (n_points, 2)
+        The points.
+    box : tuple of floats
+        (x_min, y_min, x_max, y_max)
+
+    Returns
+    -------
+    A boolean mask with True entries for all points within the rectangle.
+    """
+    clip_mask = ((points[:, 0] >= box[0]) & (points[:, 0] <= box[2])
+                 & (points[:, 1] >= box[1]) & (points[:, 1] <= box[3]))
+    return clip_mask
+
+
+@jit(nopython=True)
+def circle_clip(points, center, radius):
+    """
+    Clip all points within a circle (or unbounded cylinder).
+
+    Parameters
+    ----------
+    points : array of shape (n_points, 2)
+        The points.
+    center : tuple of floats (x, y)
+        Center point of the circle.
+    radius : float
+        Radius of the circle.
+
+    Returns
+    -------
+    A boolean mask with True entries for all points within the circle.
+    """
+    clip_mask = (np.power((points[:, 0] - center[0]), 2)
+                 + np.power((points[:, 1] - center[1]), 2)
+                 <= np.power(radius, 2))
+    return clip_mask
+
+
+@jit(nopython=True)
+def cylinder_clip(points, center, radius, bottom=-np.inf, top=np.inf):
+    """
+    Clip all points within a cylinder.
+
+    Parameters
+    ----------
+    points : array of shape (n_points, 2)
+        The points.
+    center : tuple of floats (x, y)
+        Center point of the circle.
+    radius : float
+        Radius of the circle.
+    bottom : float (default: -inf)
+        Bottom of the cylinder.
+    top : float (default: inf)
+        Top of the cylinder.
+
+    Returns
+    -------
+    A boolean mask with True entries for all points within the circle.
+    """
+    clip_mask = circle_clip(points, center, radius)
+    clip_mask = clip_mask & ((points[:, 2] <= top) & (points[:, 2] >= bottom))
+    return clip_mask
 
 
 @jit(nopython=True)
@@ -105,32 +164,38 @@ def is_inside(x, y, polygon):
     return mask
 
 
-def poly_clip(xy_points, poly):
+def poly_clip(points, poly):
     """
-    Returns the indices of `points` that are within a given polygon. This
-    differs from :func:`.ray_trace` in that it enforces a small "pre-clip"
-    optimization by first clipping to the polygon bounding box. This function
-    is directly called by :meth:`.Cloud.clip`.
-    :param cloud: A cloud object.
-    :param poly: A polygon list, with coordinates in the same CRS as the pc.
-    :return: A 1D numpy array of indices corresponding to points within the
-    given polygon.
+    Clip all points within a polygon.
+
+    Parameters
+    ----------
+    points : array of shape (n_points, 2)
+        The points.
+    poly : list of tuples
+        Coordinates of polygon (closed ring).
+
+    Returns
+    -------
+    A boolean mask with True entries for all points within the polygon.
     """
-    shapely_poly = Polygon(poly)
+    # Convert to numpy to work with numba jit in nopython mode.
+    np_poly = np.array(poly)
 
     # Clip to bounding box
-    bbox = shapely_poly.bounds
-    pre_clip_inds = square_clip(xy_points, bbox)
+    x_min, y_max, x_max, y_min = math_utils.compute_bounding_box(poly)
+    pre_clip_mask = rectangle_clip(points, (x_min, y_min, x_max, y_max))
 
-    # Clip the preclip
-    poly_coords = np.stack((shapely_poly.exterior.coords.xy[0],
-                            shapely_poly.exterior.coords.xy[1]), axis=1)
-    full_clip_mask = is_inside(xy_points['x'][pre_clip_inds],
-                               xy_points['y'][pre_clip_inds],
-                               poly_coords)
-    clipped = pre_clip_inds[full_clip_mask]
+    # Clip to poly
+    post_clip_mask = is_inside(points[pre_clip_mask, 0],
+                               points[pre_clip_mask, 1],
+                               np_poly)
 
-    return clipped
+    clip_mask = np.zeros((len(points),), dtype=bool)
+    pre_clip_inds = np.where(pre_clip_mask)[0]
+    clip_mask[pre_clip_inds[post_clip_mask]] = True
+
+    return clip_mask
 
 
 def poly_offset(polygon, offset_meter):
