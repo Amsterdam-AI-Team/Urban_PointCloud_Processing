@@ -3,15 +3,18 @@ import open3d as o3d
 import copy
 
 from ..utils.math_utils import angle_between
+from .abstract import AbstractRegionGrowing
 
 
-class RegionGrowing:
+class RegionGrowing(AbstractRegionGrowing):
     """
     Region growing implementation based on:
     https://pcl.readthedocs.io/projects/tutorials/en/latest/region_growing_segmentation.html
     """
-    def __init__(self, threshold_angle=20, threshold_curve=1.0, max_nn=30,
-                 grow_region_knn=15, grow_region_radius=0.2):
+    def __init__(self, label, exclude_labels, threshold_angle=20,
+                 threshold_curve=1.0, max_nn=30, grow_region_knn=15,
+                 grow_region_radius=0.2):
+        super().__init__(label)
         """ Init variables. """
         self.threshold_angle = threshold_angle
         self.threshold_curve = threshold_curve
@@ -20,20 +23,31 @@ class RegionGrowing:
         self.grow_region_knn = grow_region_knn
         self.grow_region_radius = grow_region_radius
 
-    def set_input_cloud(self, las, seed_point_label, mask):
-        """ Function to convert to o3d point cloud. """
-        coords = np.vstack((las.x[mask], las.y[mask], las.z[mask])).transpose()
-        pcd = o3d.geometry.PointCloud()
-        pcd.points = o3d.utility.Vector3dVector(coords)
-        self.pcd = pcd
+        self.exclude_labels = exclude_labels
 
-        list_of_indices = np.where(las.label[mask] == seed_point_label)[0]
+    def _set_mask(self, las_labels):
+        """ Configure the points that we want to perform region growing on. """
+        mask = np.ones((len(las_labels),), dtype=bool)
+
+        for exclude_label in self.exclude_labels:
+            mask = mask & (las_labels != exclude_label)
+
+        list_of_indices = np.where(las_labels[mask] == self.label)[0]
         if len(list_of_indices) == 0:
             print('NOTE: Input point cloud does not contain any seed points.')
         self.list_of_seed_ids = list_of_indices.tolist()
 
         self.mask_indices = np.where(mask)[0]
         self.label_mask = np.zeros(len(mask), dtype=bool)
+        self.mask = mask
+
+    def _convert_input_cloud(self, las):
+        """ Function to convert to o3d point cloud. """
+        coords = np.vstack((las[self.mask, 0], las[self.mask, 1],
+                            las[self.mask, 2])).transpose()
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(coords)
+        self.pcd = pcd
 
     def _compute_point_curvature(self, coords, pcd_tree, seed_point, method):
         """ Compute the curvature for a given a cluster of points. """
@@ -51,7 +65,7 @@ class RegionGrowing:
 
         return (eig_val[0]/(eig_val.sum()))
 
-    def region_growing(self, seed_point_label, las_label, method='knn'):
+    def _region_growing(self, method='knn'):
         """
         The work of this region growing algorithm is based on the comparison
         of the angles between the points normals.
@@ -59,6 +73,9 @@ class RegionGrowing:
         The same can also be performed in Python using scipy.spatial.cKDTree
         with query_ball_tree or query.
         """
+        pre_seed_count = len(self.list_of_seed_ids)
+        region = copy.deepcopy(self.list_of_seed_ids)
+
         # Compute the KDTree
         pcd_tree = o3d.geometry.KDTreeFlann(self.pcd)
 
@@ -66,9 +83,6 @@ class RegionGrowing:
         self.pcd.estimate_normals(search_param=o3d.geometry
                                   .KDTreeSearchParamHybrid(radius=self.grow_region_radius,
                                   max_nn=self.max_nn))
-
-        seed_length = len(self.list_of_seed_ids)
-        region = copy.deepcopy(self.list_of_seed_ids)
 
         # Initialize the indexes of all seed points as processed
         processed = np.full(len(self.pcd.points), False)
@@ -114,12 +128,35 @@ class RegionGrowing:
 
             idx = idx+1
 
-        print('There are {} points added'.format(len(region) - seed_length))
+        # Calculate the number of points grown
+        points_added = len(region) - pre_seed_count
 
+        # Set the region grown points to True
         self.label_mask[self.mask_indices[region]] = True
 
-        # Add label to the regions
-        labels = las_label
-        labels[self.label_mask] = seed_point_label
+        return self.label_mask, points_added
 
-        return labels
+    def get_label_mask(self, points, las_labels):
+        """
+        Returns the label mask for the given pointcloud.
+
+        Parameters
+        ----------
+        points : array of shape (n_points, 3)
+            The point cloud <x, y, z>.
+        labels : array of shape (n_points, 1)
+            All labels as int values
+
+        Returns
+        -------
+        An array of shape (n_points,) with dtype=bool indicating which points
+        should be labelled according to this fuser.
+        """
+        self._set_mask(las_labels)
+        self._convert_input_cloud(points)
+        label_mask, points_added = self._region_growing()
+
+        print(f'Region Growing => {points_added} points added '
+              f'(label={self.label}).')
+
+        return label_mask

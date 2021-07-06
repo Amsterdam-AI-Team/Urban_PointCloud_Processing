@@ -7,12 +7,12 @@ import os
 import numpy as np
 from abc import ABC, abstractmethod
 
-from .data_fuser import DataFuser
+from .abstract import AbstractFuser
 from ..utils.clip_utils import poly_offset, poly_clip
 from ..utils.las_utils import get_bbox_from_tile_code
 
 
-class BGTFuser(DataFuser, ABC):
+class BGTFuser(AbstractFuser, ABC):
     """
     Abstract class for automatic labelling of points using BGT data.
 
@@ -158,21 +158,21 @@ class BGTBuildingFuser(BGTFuser):
         building_polygons = self._filter_tile(tilecode)
 
         if mask is None:
-            xy_points = {'x': points['x'], 'y': points['y']}
-        else:
-            xy_points = {'x': points['x'][mask], 'y': points['y'][mask]}
+            mask = np.ones((len(points),), dtype=bool)
 
-        building_mask = []
+        building_mask = np.zeros((np.count_nonzero(mask),), dtype=bool)
         for polygon in building_polygons:
             # TODO if there are multiple buildings we could mask the points
             # iteratively to ignore points already labelled.
             building_with_offset = poly_offset(polygon, self.building_offset)
-            building_points = poly_clip(xy_points, building_with_offset)
-            building_mask.extend(building_points)
+            building_points = poly_clip(points[mask, :], building_with_offset)
+            building_mask = building_mask | building_points
 
         mask_indices = np.where(mask)[0]
-        label_mask = np.zeros(len(points['x']), dtype=bool)
+        label_mask = np.zeros(len(points), dtype=bool)
         label_mask[mask_indices[building_mask]] = True
+
+        print(f'BGT building fuser => processed (label={self.label}).')
 
         return label_mask
 

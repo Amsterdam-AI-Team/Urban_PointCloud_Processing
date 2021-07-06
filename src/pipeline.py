@@ -5,12 +5,11 @@ import os
 import pathlib
 from tqdm import tqdm
 
-from ..utils.las_utils import (get_tilecode_from_filename,
-                               read_las,
-                               label_and_save_las)
+from .utils.las_utils import (get_tilecode_from_filename, read_las,
+                              label_and_save_las)
 
 
-class FusionPipeline:
+class Pipeline:
     """
     Pipeline for data fusion. The class accepts a list of DataFuser objects and
     processes a single point cloud or a folder of pointclouds by applying the
@@ -24,10 +23,11 @@ class FusionPipeline:
         The fusers to apply, in order.
     """
 
-    def __init__(self, fusers):
+    def __init__(self, fusers=None, region_growing=None):
         self.fusers = fusers
+        self.region_growing = region_growing
 
-    def process_cloud(self, tilecode, points, mask=None):
+    def process_cloud(self, tilecode, points, labels, mask=None):
         """
         Process a single point cloud.
 
@@ -37,6 +37,8 @@ class FusionPipeline:
             The CycloMedia tile-code for the given pointcloud.
         points : array of shape (n_points, 3)
             The point cloud <x, y, z>.
+        labels : array of shape (n_points, 1)
+            All labels as int values
         mask : array of shape (n_points,) with dtype=bool
             Pre-mask used to label only a subset of the points.
 
@@ -46,13 +48,20 @@ class FusionPipeline:
         for each point.
         """
         if mask is None:
-            mask = np.full((len(points['x']),), True)
+            mask = np.ones((len(points),), dtype=bool)
 
-        labels = np.zeros((len(points['x']),), dtype='uint16')
+        self.fusers = [] if self.fusers is None else self.fusers
+        self.region_growing = ([] if self.region_growing is None else
+                               self.region_growing)
+
         for fuser in self.fusers:
             label_mask = fuser.get_label_mask(tilecode, points, mask)
             labels[label_mask] = fuser.get_label()
             mask[label_mask] = False
+
+        for grower in self.region_growing:
+            label_mask = grower.get_label_mask(points, labels)
+            labels[label_mask] = grower.get_label()
 
         return labels
 
@@ -79,12 +88,17 @@ class FusionPipeline:
 
         tilecode = get_tilecode_from_filename(in_file)
         pointcloud = read_las(in_file)
-        points = {'x': pointcloud.x, 'y': pointcloud.y, 'z': pointcloud.z}
+        points = np.vstack((pointcloud.x, pointcloud.y, pointcloud.z)).T
 
         if mask is None:
-            mask = np.full((len(points['x']),), True)
+            mask = np.ones((len(points),), dtype=bool)
 
-        labels = self.process_cloud(tilecode, points, mask)
+        if 'label' not in pointcloud.point_format.extra_dimension_names:
+            labels = np.zeros((len(points),), dtype='uint16')
+        else:
+            labels = pointcloud.label
+
+        labels = self.process_cloud(tilecode, points, labels, mask)
         label_and_save_las(pointcloud, labels, out_file)
 
     def process_folder(self, in_folder, out_folder=None, suffix='',
