@@ -37,6 +37,10 @@ class FusionPipeline:
             The CycloMedia tile-code for the given pointcloud.
         points : array of shape (n_points, 3)
             The point cloud <x, y, z>.
+        labels : array of shape (n_points, 1)
+            All labels as int values
+        header : pylas object
+            Las point cloud information
         mask : array of shape (n_points,) with dtype=bool
             Pre-mask used to label only a subset of the points.
 
@@ -49,7 +53,7 @@ class FusionPipeline:
             mask = np.ones((len(points),), dtype=bool)
 
         if self.fusers:  # TODO kan dit mooier?
-            labels = np.zeros((len(points),), dtype='uint16')  # TODO vgm moet de comma hier weg
+            labels = np.zeros((len(points),), dtype='uint16')
 
         for fuser in self.fusers:
             label_mask = fuser.get_label_mask(tilecode, points, mask)
