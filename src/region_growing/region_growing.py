@@ -28,7 +28,7 @@ class RegionGrowing(AbstractRegionGrowing):
 
     def _set_mask(self, las_labels):
         """ Configure the points that we want to perform region growing on. """
-        mask = np.full(len(las_labels), True)
+        mask = np.ones((len(las_labels),), dtype=bool)
 
         for exclude_label in self.exclude_labels:
             mask = mask & (las_labels != exclude_label)
