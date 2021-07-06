@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 
 
-class DataFuser(ABC):
+class AbstractFuser(ABC):
     """
     Data Fuser abstract base class for automatic labelling point clouds.
 
