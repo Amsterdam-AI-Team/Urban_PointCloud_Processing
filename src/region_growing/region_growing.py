@@ -74,7 +74,7 @@ class RegionGrowing(AbstractRegionGrowing):
         with query_ball_tree or query.
         """
         pre_seed_count = len(self.list_of_seed_ids)
-        region = copy.deepcopy(self.list_of_seed_ids) # TODO miss niet nodig
+        region = copy.deepcopy(self.list_of_seed_ids)
 
         # Compute the KDTree
         pcd_tree = o3d.geometry.KDTreeFlann(self.pcd)

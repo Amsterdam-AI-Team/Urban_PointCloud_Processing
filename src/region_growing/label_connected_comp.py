@@ -103,7 +103,7 @@ class LabelConnectedComp(AbstractRegionGrowing):
 
         return label_mask, points_added
 
-    def get_label_mask(self, points, las_labels, header):
+    def get_label_mask(self, points, las_labels):
         """
         Returns the label mask for the given pointcloud.
 
@@ -120,7 +120,7 @@ class LabelConnectedComp(AbstractRegionGrowing):
         should be labelled according to this fuser.
         """
         self._set_mask(las_labels)
-        self._convert_input_cloud(points, header)
+        self._convert_input_cloud(points)
         self._label_connected_comp()
         label_mask, points_added = self._fill_components()
 
