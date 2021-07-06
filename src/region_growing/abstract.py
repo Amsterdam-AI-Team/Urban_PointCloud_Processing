@@ -24,12 +24,8 @@ class AbstractRegionGrowing(ABC):
 
         Parameters
         ----------
-        tilecode : str
-            The CycloMedia tile-code for the given pointcloud.
         points : array of shape (n_points, 3)
             The point cloud <x, y, z>.
-        mask : array of shape (n_points,) with dtype=bool
-            Pre-mask used to label only a subset of the points.
 
         Returns
         -------

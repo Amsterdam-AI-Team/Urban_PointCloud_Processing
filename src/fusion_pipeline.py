@@ -45,7 +45,7 @@ class FusionPipeline:
         An array of shape (n_points,) with dtype=uint16 indicating the label
         for each point.
         """
-        if mask is None:  # TODO dit wordt 2 keer uitgevoerd (ook in process_file)
+        if mask is None:
             mask = np.ones((len(points),), dtype=bool)
 
         if self.fusers:  # TODO kan dit mooier?
