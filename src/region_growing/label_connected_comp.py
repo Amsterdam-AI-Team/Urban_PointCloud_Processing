@@ -20,7 +20,6 @@ class LabelConnectedComp(AbstractRegionGrowing):
         self.min_component_size = min_component_size
 
         self.exclude_labels = exclude_labels
-        self.seed_point_label = label
 
     def _set_mask(self, las_labels):
         """ Configure the points that we want to perform region growing on. """
@@ -32,23 +31,16 @@ class LabelConnectedComp(AbstractRegionGrowing):
         self.las_label = las_labels
         self.mask = mask
 
-    def _convert_input_cloud(self, las, header):
+    def _convert_input_cloud(self, las):
         """ Function to convert to CloudCompare point cloud. """
         # Be aware that CloudCompare stores coordinates on 32 bit floats.
         # To avoid losing too much precision you should 'shift' your
         # coordinates if they are 64 bit floats (which is the default in
         # python land)
-        xs = (las['x'][self.mask] -
-              header.x_min).astype(pycc.PointCoordinateType)
-        ys = (las['y'][self.mask] -
-              header.y_min).astype(pycc.PointCoordinateType)
-        zs = (las['z'][self.mask] -
-              header.z_min).astype(pycc.PointCoordinateType)
+        xs = (las[self.mask, 0]).astype(pycc.PointCoordinateType)
+        ys = (las[self.mask, 1]).astype(pycc.PointCoordinateType)
+        zs = (las[self.mask, 2]).astype(pycc.PointCoordinateType)
         point_cloud = pycc.ccPointCloud(xs, ys, zs)
-        # Add the global shift to CloudCompare so that it can use it,
-        # for example to display the real coordinates in point picking tool
-        point_cloud.setGlobalShift(-header.x_min, -header.y_min,
-                                   -header.z_min)
 
         # (Optional) Create (if it does not exists already)
         # a scalar field where we store the Labels
@@ -66,7 +58,7 @@ class LabelConnectedComp(AbstractRegionGrowing):
         component_count = (cccorelib.AutoSegmentationTools
                            .labelConnectedComponents(self.point_cloud,
                                                      level=self.octree_level))
-        print('There are {} components found'.format(component_count))
+        print(f'There are {component_count} components found')
 
         # Get the scalar field with labels and points coords as numpy array
         labels_sf = self.point_cloud.getScalarField(self.labels_sf_idx)
@@ -77,7 +69,7 @@ class LabelConnectedComp(AbstractRegionGrowing):
         point is found inside a component, make the whole component this
         label. """
         pre_seed_count = np.count_nonzero(self.las_label ==
-                                          self.seed_point_label)
+                                          self.label)
 
         mask_indices = np.where(self.mask)[0]
         label_mask = np.zeros(len(self.mask), dtype=bool)
@@ -96,15 +88,15 @@ class LabelConnectedComp(AbstractRegionGrowing):
                 continue
             # number of point in teh cluster that are labelled as seed point
             seed_count = np.count_nonzero(
-                self.las_label[mask_indices[cc_mask]] == self.seed_point_label)
+                self.las_label[mask_indices[cc_mask]] == self.label)
             # at least X% of the cluster should be seed points
             if (float(seed_count) / cc_size) > threshold:
                 label_mask[mask_indices[cc_mask]] = True
 
-        # Add label to the regions TODO kan dit niet makkelijker??
+        # Add label to the regions
         labels = self.las_label
-        labels[label_mask] = self.seed_point_label
-        post_seed_count = np.count_nonzero(labels == self.seed_point_label)
+        labels[label_mask] = self.label
+        post_seed_count = np.count_nonzero(labels == self.label)
 
         # Calculate the number of points grown
         points_added = post_seed_count - pre_seed_count
@@ -132,7 +124,7 @@ class LabelConnectedComp(AbstractRegionGrowing):
         self._label_connected_comp()
         label_mask, points_added = self._fill_components()
 
-        print('[Clustering based Region Growing] There are {} points'
-              'added'.format(points_added))
+        print(f'Clustering based Region Growing => {points_added} '
+              f'points added (label={self.label}).')
 
         return label_mask

@@ -127,6 +127,7 @@ class AHNFuser(AbstractFuser):
         elif self.target == 'building':
             label_mask[mask] = points[mask, 2] < target_z + self.epsilon
 
-        print('[AHN fusion] {} fused.'.format(self.target))  # TODO use better text
+        print(f'AHN [{self.method}] fuser => {self.target} processed '
+              f'(label={self.label}).')
 
         return label_mask

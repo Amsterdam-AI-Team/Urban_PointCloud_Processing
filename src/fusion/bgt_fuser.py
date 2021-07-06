@@ -116,6 +116,6 @@ class BGTBuildingFuser(AbstractFuser):
         label_mask = np.zeros(len(points), dtype=bool)
         label_mask[mask_indices[building_mask]] = True
 
-        print('[BGT fusion] Building fused.')  # TODO use better text
+        print(f'BGT building fuser => processed (label={self.label}).')
 
         return label_mask

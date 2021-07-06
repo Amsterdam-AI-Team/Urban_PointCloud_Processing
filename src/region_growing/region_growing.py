@@ -24,7 +24,6 @@ class RegionGrowing(AbstractRegionGrowing):
         self.grow_region_radius = grow_region_radius
 
         self.exclude_labels = exclude_labels
-        self.seed_point_label = label  # TODO misschien is het mooier om .get_label() te gebruiken.
 
     def _set_mask(self, las_labels):
         """ Configure the points that we want to perform region growing on. """
@@ -33,8 +32,7 @@ class RegionGrowing(AbstractRegionGrowing):
         for exclude_label in self.exclude_labels:
             mask = mask & (las_labels != exclude_label)
 
-        # TODO kan dit eerder gesolved worden in process_cloud met mask meegeven
-        list_of_indices = np.where(las_labels[mask] == self.seed_point_label)[0]
+        list_of_indices = np.where(las_labels[mask] == self.label)[0]
         if len(list_of_indices) == 0:
             print('NOTE: Input point cloud does not contain any seed points.')
         self.list_of_seed_ids = list_of_indices.tolist()
@@ -45,8 +43,8 @@ class RegionGrowing(AbstractRegionGrowing):
 
     def _convert_input_cloud(self, las):
         """ Function to convert to o3d point cloud. """
-        coords = np.vstack((las['x'][self.mask], las['y'][self.mask],
-                            las['z'][self.mask])).transpose()
+        coords = np.vstack((las[self.mask, 0], las[self.mask, 1],
+                            las[self.mask, 2])).transpose()
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(coords)
         self.pcd = pcd
@@ -158,7 +156,7 @@ class RegionGrowing(AbstractRegionGrowing):
         self._convert_input_cloud(points)
         label_mask, points_added = self._region_growing()
 
-        print('[Region Growing] There are {} points'
-              'added'.format(points_added))
+        print(f'Region Growing => {points_added} points added '
+              f'(label={self.label}).')
 
         return label_mask
