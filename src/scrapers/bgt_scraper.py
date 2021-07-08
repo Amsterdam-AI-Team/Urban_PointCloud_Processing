@@ -68,6 +68,9 @@ def parse_buildings(json_response, out_folder='',
                    'y_min']
     write_csv(os.path.join(out_folder, out_file), output_list, csv_headers)
 
+    return csv_headers
+
+
 def parse_points(json_response, out_folder='',
                  out_file='bgt_points.csv'):
     """

@@ -13,15 +13,14 @@ from ..utils.las_utils import get_bbox_from_tile_code
 class BGTBuildingFuser(AbstractFuser):
     """Convenience class for loading building polygons from Dutch BGT data."""
 
-    def __init__(self, label, building_offset, bgt_file=None, bgt_folder=None):
+    def __init__(self, label, csv_headers, building_offset, bgt_file=None,
+                 bgt_folder=None):
         if (bgt_file is None) and (bgt_folder is None):
             print("Provide either a bgt_file or bgt_folder to load.")
 
         super().__init__(label)
 
-        self.bgt_df = (pd.DataFrame(columns=['pand_id', 'pand_polygon',
-                       'x_min', 'y_max', 'x_max', 'y_min'])
-                       .set_index('pand_id'))
+        self.bgt_df = (pd.DataFrame(columns=csv_headers))
 
         if bgt_file is not None:
             self._read_file(Path(bgt_file))
@@ -43,7 +42,7 @@ class BGTBuildingFuser(AbstractFuser):
         CSV files in that folder.
         """
         file_match = "*.csv"
-        frames = [pd.read_csv(file).set_index('pand_id') for file in
+        frames = [pd.read_csv(file) for file in
                   path.glob(file_match)]
         self.bgt_df = pd.concat(frames)
 
@@ -53,7 +52,7 @@ class BGTBuildingFuser(AbstractFuser):
         detailing the polygons and bounding boxes of each building found in the
         CSV files in that folder.
         """
-        self.bgt_df = pd.read_csv(path).set_index('pand_id')
+        self.bgt_df = pd.read_csv(path)
 
     def _filter_building_area(self, bbox):
         """
