@@ -68,11 +68,9 @@ def parse_buildings(json_response, out_folder='',
                    'y_min']
     write_csv(os.path.join(out_folder, out_file), output_list, csv_headers)
 
-    return csv_headers
 
-
-def parse_points(json_response, out_folder='',
-                 out_file='bgt_points.csv'):
+def parse_points_bgtplus(json_response, out_folder='',
+                         out_file='bgt_points.csv'):
     """
     Parse the JSON content and transform it into a table structure.
 
@@ -84,7 +82,7 @@ def parse_points(json_response, out_folder='',
     output_list = []
 
     for item in json_response['features']:
-        name = item['properties']['plus_type'][0] # TODO dit is niet generiek
+        name = item['properties']['plus_type'][0]
         point = item['geometry']['coordinates']
 
         output_list.append([name, point[0], point[1]])
