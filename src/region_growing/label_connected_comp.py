@@ -13,12 +13,12 @@ class LabelConnectedComp(AbstractRegionGrowing):
     Clustering based region growing implementation using label connected comp.
     """
     def __init__(self, label, exclude_labels, octree_level=9,
-                 min_component_size=100):
+                 min_component_size=100, threshold=0.1):
         super().__init__(label)
         """ Init variables. """
         self.octree_level = octree_level
         self.min_component_size = min_component_size
-
+        self.threshold = threshold
         self.exclude_labels = exclude_labels
 
     def _set_mask(self, las_labels):
@@ -64,7 +64,7 @@ class LabelConnectedComp(AbstractRegionGrowing):
         labels_sf = self.point_cloud.getScalarField(self.labels_sf_idx)
         self.point_components = labels_sf.asArray()
 
-    def _fill_components(self, threshold=0.1):
+    def _fill_components(self):
         """ Clustering based region growing process. When one initial seed
         point is found inside a component, make the whole component this
         label. """
@@ -90,7 +90,7 @@ class LabelConnectedComp(AbstractRegionGrowing):
             seed_count = np.count_nonzero(
                 self.las_label[mask_indices[cc_mask]] == self.label)
             # at least X% of the cluster should be seed points
-            if (float(seed_count) / cc_size) > threshold:
+            if (float(seed_count) / cc_size) > self.threshold:
                 label_mask[mask_indices[cc_mask]] = True
 
         # Add label to the regions
