@@ -6,7 +6,8 @@ class Labels:
     UNLABELLED = 0
     GROUND = 1
     BUILDING = 2
-    CAR = 3
+    TREE = 3
     STREET_LIGHT = 4
-    TREE = 5
+    TRAFFIC_SIGN = 5
+    CAR = 6
     NOISE = 99
