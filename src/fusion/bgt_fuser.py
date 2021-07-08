@@ -28,9 +28,6 @@ class BGTBuildingFuser(AbstractFuser):
             print('No data folder or file specified. Aborting...')
             return None
 
-        # TODO will this speedup the process
-        self.bgt_df.sort_values(by=['x_max', 'y_min'], inplace=True)
-
         self.building_offset = building_offset
 
     def _read_folder(self, path):
