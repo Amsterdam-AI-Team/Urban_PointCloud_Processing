@@ -79,17 +79,18 @@ def parse_vegetation(vegetation_file, bbox=None, out_folder='',
     hedges = []
     for item in root:
         for obj in item:
-            plus_type = obj.find('imgeo:plus-type', CITYGML_NS).text
-            bgt_status = obj.find('imgeo:bgt-status', CITYGML_NS).text
-            if bgt_status == 'bestaand' and plus_type == 'boom':
-                pos = obj.find('.//gml:pos', CITYGML_NS).text.split(' ')
-                trees.append([plus_type, float(pos[0]), float(pos[1])])
-            elif bgt_status == 'bestaand' and plus_type == 'haag':
-                points = [float(x) for x
-                          in obj.find('.//gml:posList',
-                                      CITYGML_NS).text.split(' ')]
-                polygon = list(zip(*(iter(points),) * 2))
-                hedges.append([plus_type, polygon])
+            plus_type = obj.find('imgeo:plus-type', CITYGML_NS)
+            bgt_status = obj.find('imgeo:bgt-status', CITYGML_NS)
+            if plus_type is not None and plus_type is not None:
+                if bgt_status.text == 'bestaand' and plus_type.text == 'boom':
+                    pos = obj.find('.//gml:pos', CITYGML_NS).text.split(' ')
+                    trees.append([plus_type.text, float(pos[0]), float(pos[1])])
+                elif bgt_status.text == 'bestaand' and plus_type.text == 'haag':
+                    points = [float(x) for x
+                              in obj.find('.//gml:posList',
+                                          CITYGML_NS).text.split(' ')]
+                    polygon = list(zip(*(iter(points),) * 2))
+                    hedges.append([plus_type.text, polygon])
 
     if bbox is not None:
         trees = [tree for tree in trees
@@ -108,11 +109,12 @@ def parse_poles(pole_file, bbox=None, out_folder='', out_file='bgt_poles.csv'):
     poles = []
     for item in root:
         for obj in item:
-            plus_type = obj.find('imgeo:plus-type', CITYGML_NS).text
-            bgt_status = obj.find('imgeo:bgt-status', CITYGML_NS).text
-            if bgt_status == 'bestaand':
-                pos = obj.find('.//gml:pos', CITYGML_NS).text.split(' ')
-                poles.append([plus_type, float(pos[0]), float(pos[1])])
+            plus_type = obj.find('imgeo:plus-type', CITYGML_NS)
+            bgt_status = obj.find('imgeo:bgt-status', CITYGML_NS)
+            if plus_type is not None and plus_type is not None:
+                if bgt_status.text == 'bestaand':
+                    pos = obj.find('.//gml:pos', CITYGML_NS).text.split(' ')
+                    poles.append([plus_type.text, float(pos[0]), float(pos[1])])
 
     if bbox is not None:
         poles = [pole for pole in poles
