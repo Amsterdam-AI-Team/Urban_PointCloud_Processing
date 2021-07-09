@@ -6,7 +6,18 @@ URL = 'https://data.ndw.nu/api/rest/static-road-data/traffic-signs/v1/current-st
 
 
 def scrape_ndw(town_code='GM0363'):
-    """ Scrape traffic sign locations from the NDW API. """
+    """
+    Scrape traffic sign locations from the NDW API.
+
+    Parameters
+    ----------
+    town_code : str
+        Municipality code.
+
+    Returns
+    -------
+    The API response in JSON format or a dict.
+    """
     base_url = URL + 'town-code={}'.format(town_code)
 
     response = requests.get(base_url)
