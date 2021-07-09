@@ -28,7 +28,7 @@ def scrape_amsterdam_bgt(layer_name, bbox=None):
     """
     params = 'REQUEST=GetFeature&' \
              'SERVICE=wfs&' \
-             'VERSION=1.0.0&' \
+             'VERSION=2.0.0&' \
              'TYPENAME=' \
              + layer_name + '&'
 
@@ -48,6 +48,11 @@ def parse_buildings(json_response, out_folder='',
     """
     Parse the JSON content and transform it into a table structure.
     Dutch-English translation of pand is building.
+
+    Parameters
+    ----------
+    json_response : dict
+        JSON response from a WFS request.
     """
     output_list = []
 
