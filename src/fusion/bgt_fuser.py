@@ -69,7 +69,7 @@ class BGTBuildingFuser(AbstractFuser):
         df = self.bgt_df.query('(x_min < @bx_max) & (x_max > @bx_min)' +
                                ' & (y_min < @by_max) & (y_max > @by_min)')
         building_polygons = {pand_id: ast.literal_eval(poly) for pand_id,
-                             poly in zip(df.index, df.pand_polygon)}
+                             poly in zip(df.building_id, df.polygon)}
 
         return building_polygons
 

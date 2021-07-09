@@ -1,5 +1,5 @@
 """
-This script scrapes building footprint data from the BGT API.
+This script scrapes building footprint data from the Amsterdam BGT API.
 The documentation can be found at:
 https://www.amsterdam.nl/stelselpedia/bgt-index/producten-bgt/prodspec-bgt-dgn-imgeo/
 """
@@ -19,8 +19,9 @@ def scrape_amsterdam_bgt(layer_name, bbox=None):
 
     Parameters
     ----------
-    bbox_region : str (with a list inside)
-        Minimum and maximum dimensions of the search space.
+    layer_name : str
+        Information about the different layers can be found at:
+        https://www.amsterdam.nl/stelselpedia/bgt-index/producten-bgt/prodspec-bgt-dgn-imgeo/
 
     Returns
     -------
