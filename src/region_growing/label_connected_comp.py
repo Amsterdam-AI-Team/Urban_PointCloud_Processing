@@ -106,7 +106,7 @@ class LabelConnectedComp(AbstractRegionGrowing):
 
         return label_mask, points_added
 
-    def _overlapping_components(self, road_polygons, max_z_thresh, min_area_thresh=6, max_area_thresh=16):
+    def _overlapping_polygons(self, road_polygons, max_z_thresh, min_area_thresh=6, max_area_thresh=16):
         mask_indices = np.where(self.mask)[0]
         label_mask = np.zeros(len(self.mask), dtype=bool)
 
