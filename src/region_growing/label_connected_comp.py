@@ -1,10 +1,12 @@
 import numpy as np
+from shapely.geometry import Polygon
 
 # Two libraries necessary for the CloudCompare Python wrapper
 # Installation instructions in notebook [3. Clustering based region growing]
 import pycc
 import cccorelib
 
+from ..utils.math_utils import minimum_bounding_rectangle
 from .abstract import AbstractRegionGrowing
 
 
@@ -52,6 +54,7 @@ class LabelConnectedComp(AbstractRegionGrowing):
         self.labels_sf_idx = labels_sf_idx
         # You can access the x,y,z fields using self.point_cloud.points()
         self.point_cloud = point_cloud
+        self.las = las
 
     def _label_connected_comp(self):
         """ Perform the clustering algorithm: Label Connected Components. """
@@ -103,6 +106,41 @@ class LabelConnectedComp(AbstractRegionGrowing):
 
         return label_mask, points_added
 
+    def _overlapping_components(self, road_polygons, max_z_thresh, min_area_thresh=6, max_area_thresh=16):
+        mask_indices = np.where(self.mask)[0]
+        label_mask = np.zeros(len(self.mask), dtype=bool)
+
+        cc_labels, counts = np.unique(self.point_components,
+                                      return_counts=True)
+
+        cc_labels_filtered = cc_labels[counts >= self.min_component_size]
+
+        for cc in cc_labels_filtered:
+            # select points that belong to the cluster
+            cc_mask = (self.point_components == cc)
+
+
+            #xy_points = self.point_cloud.points()[mask_indices[cc_mask]][:,:2] # TODO check time, Miss deze gewoon gebruiken
+            xy_points = self.las[mask_indices[cc_mask]][:,:2]
+            max_z = np.amax(xy_points)
+            if max_z < max_z_thresh:  # TODO miss ook met min max hoogte
+                min_bounding_rect, area, hull_points = minimum_bounding_rectangle(xy_points)
+
+                if min_area_thresh < area < max_area_thresh: # TODO miss min_bounding_rect dims gebruiken
+                    p1 = Polygon(hull_points)
+                    for road_polygon in road_polygons:
+                        p2 = Polygon(road_polygon)
+
+                        do_overlap = p1.intersects(p2)
+                        if do_overlap:
+                            label_mask[mask_indices[cc_mask]] = True
+                            break
+
+        labels = self.las_label
+        labels[label_mask] = self.label
+
+        return labels
+
     def get_label_mask(self, points, las_labels):
         """
         Returns the label mask for the given pointcloud.
@@ -128,3 +166,4 @@ class LabelConnectedComp(AbstractRegionGrowing):
               f'points added (label={self.label}).')
 
         return label_mask
+
