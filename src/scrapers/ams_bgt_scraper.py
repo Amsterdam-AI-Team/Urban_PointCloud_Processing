@@ -8,6 +8,7 @@ import os
 import requests
 
 from ..utils.csv_utils import write_csv
+from ..utils.clip_utils import poly_offset
 from ..utils.math_utils import compute_bounding_box
 
 WFS_URL = 'https://map.data.amsterdam.nl/maps/bgtobjecten?'
@@ -70,6 +71,27 @@ def parse_buildings(json_response, out_folder='',
     write_csv(os.path.join(out_folder, out_file), output_list, csv_headers)
 
 
+def parse_polygons(json_response, offset_meter, out_folder='',
+                   out_file='bgt_polygons.csv'):
+    """
+    Parse the JSON content and transform it into a table structure.
+    Dutch-English translation of pand is building.
+
+    Parameters
+    ----------
+    json_response : dict
+        JSON response from a WFS request.
+    """
+    output_list = []
+    for item in json_response['features']:
+        polygon = item['geometry']['coordinates'][0]
+        polygon_w_offset = poly_offset(polygon, offset_meter)
+
+        output_list.append(polygon_w_offset)
+
+    return output_list
+
+
 def parse_points_bgtplus(json_response, out_folder='',
                          out_file='bgt_points.csv'):
     """
@@ -83,7 +105,7 @@ def parse_points_bgtplus(json_response, out_folder='',
     output_list = []
 
     for item in json_response['features']:
-        name = item['properties']['plus_type'][0]
+        name = item['properties']['plus_type']
         point = item['geometry']['coordinates']
 
         output_list.append([name, point[0], point[1]])
