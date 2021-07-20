@@ -8,6 +8,7 @@ import cccorelib
 
 from ..utils.math_utils import minimum_bounding_rectangle
 from .abstract import AbstractRegionGrowing
+from ..utils.interpolation import FastGridInterpolator
 
 
 class LabelConnectedComp(AbstractRegionGrowing):
@@ -106,7 +107,7 @@ class LabelConnectedComp(AbstractRegionGrowing):
 
         return label_mask, points_added
 
-    def _overlapping_polygons(self, road_polygons, max_z_thresh, min_area_thresh=6, max_area_thresh=16):
+    def _fill_car_like_components(self, road_polygons, m_above_ground, ahn_tile, min_area_thresh=6, max_area_thresh=16):
         mask_indices = np.where(self.mask)[0]
         label_mask = np.zeros(len(self.mask), dtype=bool)
 
@@ -115,26 +116,33 @@ class LabelConnectedComp(AbstractRegionGrowing):
 
         cc_labels_filtered = cc_labels[counts >= self.min_component_size]
 
+        surface = ahn_tile['ground_surface']
+        fast_z = FastGridInterpolator(ahn_tile['x'], ahn_tile['y'], surface)
+
         for cc in cc_labels_filtered:
             # select points that belong to the cluster
             cc_mask = (self.point_components == cc)
 
+            target_z = fast_z(self.las[mask_indices[cc_mask]])
+            valid_values = target_z[np.isfinite(target_z)]
 
-            #xy_points = self.point_cloud.points()[mask_indices[cc_mask]][:,:2] # TODO check time, Miss deze gewoon gebruiken
-            xy_points = self.las[mask_indices[cc_mask]][:,:2]
-            max_z = np.amax(xy_points)
-            if max_z < max_z_thresh:  # TODO miss ook met min max hoogte
-                min_bounding_rect, area, hull_points = minimum_bounding_rectangle(xy_points)
+            if valid_values.size != 0:
+                max_z_thresh = np.mean(valid_values) + m_above_ground
 
-                if min_area_thresh < area < max_area_thresh: # TODO miss min_bounding_rect dims gebruiken
-                    p1 = Polygon(hull_points)
-                    for road_polygon in road_polygons:
-                        p2 = Polygon(road_polygon)
+                #xy_points = self.point_cloud.points()[mask_indices[cc_mask]][:,2] # TODO check time, Miss deze gewoon gebruiken
+                max_z = np.amax(self.las[mask_indices[cc_mask]][:,2])
+                if max_z < max_z_thresh:  # TODO miss ook met min max hoogte
+                    min_bounding_rect, area, hull_points = minimum_bounding_rectangle(self.las[mask_indices[cc_mask]][:,:2])
 
-                        do_overlap = p1.intersects(p2)
-                        if do_overlap:
-                            label_mask[mask_indices[cc_mask]] = True
-                            break
+                    if min_area_thresh < area < max_area_thresh: # TODO miss min_bounding_rect dims gebruiken
+                        p1 = Polygon(hull_points)
+                        for road_polygon in road_polygons:
+                            p2 = Polygon(road_polygon)
+
+                            do_overlap = p1.intersects(p2)
+                            if do_overlap:
+                                label_mask[mask_indices[cc_mask]] = True
+                                break
 
         labels = self.las_label
         labels[label_mask] = self.label
