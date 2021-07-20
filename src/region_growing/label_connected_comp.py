@@ -16,13 +16,18 @@ class LabelConnectedComp(AbstractRegionGrowing):
     Clustering based region growing implementation using label connected comp.
     """
     def __init__(self, label, exclude_labels, octree_level=9,
-                 min_component_size=100):
+                 min_component_size=100, max_above_ground=3,
+                 min_area_thresh=6, max_area_thresh=16):
         super().__init__(label)
         """ Init variables. """
         self.octree_level = octree_level
         self.min_component_size = min_component_size
 
         self.exclude_labels = exclude_labels
+        
+        self.max_above_ground = max_above_ground
+        self.min_area_thresh = min_area_thresh
+        self.max_area_thresh = max_area_thresh
 
     def _set_mask(self, las_labels):
         """ Configure the points that we want to perform region growing on. """
@@ -107,7 +112,8 @@ class LabelConnectedComp(AbstractRegionGrowing):
 
         return label_mask, points_added
 
-    def _fill_car_like_components(self, road_polygons, m_above_ground, ahn_tile, min_area_thresh=6, max_area_thresh=16):
+    def _fill_car_like_components(self, road_polygons, ahn_tile):
+        """ TODO. """
         mask_indices = np.where(self.mask)[0]
         label_mask = np.zeros(len(self.mask), dtype=bool)
 
@@ -127,14 +133,14 @@ class LabelConnectedComp(AbstractRegionGrowing):
             valid_values = target_z[np.isfinite(target_z)]
 
             if valid_values.size != 0:
-                max_z_thresh = np.mean(valid_values) + m_above_ground
+                max_z_thresh = np.mean(valid_values) + self.max_above_ground
 
                 #xy_points = self.point_cloud.points()[mask_indices[cc_mask]][:,2] # TODO check time, Miss deze gewoon gebruiken
                 max_z = np.amax(self.las[mask_indices[cc_mask]][:,2])
                 if max_z < max_z_thresh:  # TODO miss ook met min max hoogte
                     min_bounding_rect, area, hull_points = minimum_bounding_rectangle(self.las[mask_indices[cc_mask]][:,:2])
 
-                    if min_area_thresh < area < max_area_thresh: # TODO miss min_bounding_rect dims gebruiken
+                    if self.min_area_thresh < area < self.max_area_thresh: # TODO miss min_bounding_rect dims gebruiken
                         p1 = Polygon(hull_points)
                         for road_polygon in road_polygons:
                             p2 = Polygon(road_polygon)
