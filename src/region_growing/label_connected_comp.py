@@ -14,7 +14,7 @@ from ..utils.interpolation import FastGridInterpolator
 class LabelConnectedComp(AbstractRegionGrowing):
     """
     Clustering based region growing implementation using label connected comp.
-    General information of cars in the netherlands can be found here:
+    General information of cars in the Netherlands can be found here:
     https://auto-en-vervoer.infonu.nl/transport/10162-verkeer-auto-afmetingen-lading-aanhangwagen.html
     """
     def __init__(self, label, exclude_labels, octree_level=9,
