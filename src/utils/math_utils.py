@@ -86,10 +86,13 @@ def minimum_bounding_rectangle(points):
     y2 = min_y[best_idx]
     r = rotations[best_idx]
 
-    rval = np.zeros((4, 2))
-    rval[0] = np.dot([x1, y2], r)
-    rval[1] = np.dot([x2, y2], r)
-    rval[2] = np.dot([x2, y1], r)
-    rval[3] = np.dot([x1, y1], r)
+    min_bounding_rect = np.zeros((4, 2))
+    min_bounding_rect[0] = np.dot([x1, y2], r)
+    min_bounding_rect[1] = np.dot([x2, y2], r)
+    min_bounding_rect[2] = np.dot([x2, y1], r)
+    min_bounding_rect[3] = np.dot([x1, y1], r)
 
-    return rval, areas[best_idx], hull_points
+    # Compute the dims of the min bounding rectangle
+    dims = [(x1 - x2), (y1 - y2)]
+
+    return hull_points, min(dims), max(dims)
