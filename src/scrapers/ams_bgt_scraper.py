@@ -4,10 +4,8 @@ The documentation can be found at:
 https://www.amsterdam.nl/stelselpedia/bgt-index/producten-bgt/prodspec-bgt-dgn-imgeo/
 """
 
-import os
 import requests
 
-from ..utils.csv_utils import write_csv
 from ..utils.clip_utils import poly_offset
 from ..utils.math_utils import compute_bounding_box
 
@@ -69,11 +67,11 @@ def parse_buildings(json_response, prepare_csv=False):
 
     csv_headers = ['building_id', 'polygon', 'x_min', 'y_max', 'x_max',
                    'y_min']
-                  
+
     return parsed_content, csv_headers
 
 
-def parse_polygons(json_response, offset_meter=-0.1, prepare_csv=False):
+def parse_polygons(json_response, offset_meter=0.0, prepare_csv=False):
     """
     Parse the JSON content and transform it into a table structure.
 
@@ -89,7 +87,7 @@ def parse_polygons(json_response, offset_meter=-0.1, prepare_csv=False):
         name = item['properties']['bgt_functie']
         polygon = item['geometry']['coordinates'][0]
         polygon_w_offset = poly_offset(polygon, offset_meter)
-        
+
         if prepare_csv:
             x_min, y_max, x_max, y_min = compute_bounding_box(polygon_w_offset)
             parsed_content.append([name, polygon_w_offset, x_min, y_max,
@@ -123,4 +121,3 @@ def parse_points_bgtplus(json_response, prepare_csv=False):
     csv_headers = ['Type', 'X', 'Y']
 
     return parsed_content, csv_headers
-
