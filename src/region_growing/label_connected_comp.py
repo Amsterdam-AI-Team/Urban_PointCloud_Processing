@@ -1,6 +1,5 @@
 import numpy as np
 from shapely.geometry import Polygon
-import matplotlib.pyplot as plt
 
 # Two libraries necessary for the CloudCompare Python wrapper
 # Installation instructions in notebook [3. Clustering based region growing]
