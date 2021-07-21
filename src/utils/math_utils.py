@@ -95,4 +95,4 @@ def minimum_bounding_rectangle(points):
     # Compute the dims of the min bounding rectangle
     dims = [(x1 - x2), (y1 - y2)]
 
-    return hull_points, min(dims), max(dims)
+    return min_bounding_rect, hull_points, min(dims), max(dims)

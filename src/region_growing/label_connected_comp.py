@@ -142,9 +142,11 @@ class LabelConnectedComp(AbstractRegionGrowing):
 
                 max_z = np.amax(self.las[mask_indices[cc_mask]][:,2])  # TODO miss de cc cloud gebruiken?
                 if max_z < max_z_thresh:
-                    hull_points, mbr_width, mbr_length = minimum_bounding_rectangle(self.las[mask_indices[cc_mask]][:,:2])
+                    _, hull_points, mbr_width, mbr_length = minimum_bounding_rectangle(self.las[mask_indices[cc_mask]][:,:2])
 
-                    if self.min_width_thresh < mbr_width < self.max_width_thresh and self.min_length_thresh < mbr_length < self.max_length_thresh: # TODO too long
+                    if (self.min_width_thresh < mbr_width <
+                            self.max_width_thresh and self.min_length_thresh
+                            < mbr_length < self.max_length_thresh):
                         p1 = Polygon(hull_points)
                         for road_polygon in road_polygons:
                             p2 = Polygon(road_polygon)
