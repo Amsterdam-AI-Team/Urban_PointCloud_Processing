@@ -144,8 +144,8 @@ def load_ahn_tile(ahn_file):
     ahn = np.load(ahn_file)
     ahn_tile = {'x': ahn['x'],
                 'y': ahn['y'],
-                'ground_surface': ahn['ground'],
-                'building_surface': ahn['building']}
+                'ground_surface': ahn['ground'].astype(float),
+                'building_surface': ahn['building'].astype(float)}
     return ahn_tile
 
 
