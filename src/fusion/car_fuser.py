@@ -44,8 +44,8 @@ class CarFuser(AbstractFuser):  # TODO of wel gewoon abstractfuser
         return load_ahn_tile(os.path.join(self.data_folder, 'ahn_' + tilecode
                                           + '.npz'))
 
-    def _fill_car_like_components(self, ahn_tile, maskje, point_components,
-                                  min_component_size, points, las_labels):
+    def _fill_car_like_components(self, fast_z, maskje, point_components,
+                                  min_component_size, points):
         """ Label car like clusters.  """  # TODO text
 
         mask_indices = np.where(maskje)[0]
@@ -55,9 +55,6 @@ class CarFuser(AbstractFuser):  # TODO of wel gewoon abstractfuser
                                       return_counts=True)
 
         cc_labels_filtered = cc_labels[counts >= min_component_size]
-
-        surface = ahn_tile['ground_surface']
-        fast_z = FastGridInterpolator(ahn_tile['x'], ahn_tile['y'], surface)
 
         for cc in cc_labels_filtered:
             # select points that belong to the cluster
@@ -87,22 +84,26 @@ class CarFuser(AbstractFuser):  # TODO of wel gewoon abstractfuser
                                 label_mask[mask_indices[cc_mask]] = True
                                 break
 
-        labels = las_labels
-        labels[label_mask] = self.label
+        return label_mask
 
-        return labels
-
-    def get_label_mask(self, tilecode, points, las_labels):
+    def get_label_mask(self, tilecode, points, mask, las_labels):
         """TODO"""
+        # Get the interpolated ground points of the tile
         ahn_tile = self._filter_tile(tilecode)
-
+        surface = ahn_tile['ground_surface']
+        fast_z = FastGridInterpolator(ahn_tile['x'], ahn_tile['y'], surface)
+        
+        # Create lcc object and perform lcc
         lcc = LabelConnectedComp(self.label, self.exclude_labels,
                                  octree_level=self.octree_level,
                                  min_component_size=self.min_component_size)
         lcc.perform_lcc_tasks(points, las_labels)
-        las_labels = self._fill_car_like_components(ahn_tile, lcc.mask,
+        
+        # Label car like clusters 
+        label_mask = self._fill_car_like_components(fast_z, lcc.mask,
                                                     lcc.point_components,
                                                     lcc.min_component_size,
-                                                    points, las_labels)
+                                                    points)
 
-        return las_labels
+        return label_mask
+
