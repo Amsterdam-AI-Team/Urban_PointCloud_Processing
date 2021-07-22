@@ -8,8 +8,8 @@ from tqdm import tqdm
 from .utils.las_utils import (get_tilecode_from_filename, read_las,
                               label_and_save_las)
 
-from .fusion.abstract import AbstractFuser # TODO liever deze niet importen
-from .region_growing.abstract import AbstractRegionGrowing # TODO liever deze niet importen
+from .fusion.abstract import AbstractFuser  # TODO because the temp for loop
+from .region_growing.abstract import AbstractRegionGrowing  # TODO because the temp for loop
 
 
 class Pipeline:
@@ -55,6 +55,7 @@ class Pipeline:
         self.process_sequence = ([] if self.process_sequence is None
                                  else self.process_sequence)
 
+        # TODO this for loop is a temp solution
         for obj in self.process_sequence:
             if isinstance(obj, AbstractFuser):
                 label_mask = obj.get_label_mask(tilecode, points, mask,
@@ -144,4 +145,3 @@ class Pipeline:
             filename, extension = os.path.splitext(file)
             outfile = filename + suffix + extension
             self.process_file(file.as_posix(), outfile)
-

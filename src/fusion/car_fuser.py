@@ -40,7 +40,6 @@ class CarFuser(AbstractFuser):
             print('No data folder or file specified. Aborting...')
             return None
 
-
     def _filter_tile(self, tilecode):
         """
         Returns an AHN tile dict for the area represented by the given
@@ -48,6 +47,7 @@ class CarFuser(AbstractFuser):
         """
         return load_ahn_tile(os.path.join(self.data_folder, 'ahn_' + tilecode
                                           + '.npz'))
+
     def _read_folder(self, path):
         """
         Read the contents of the folder. Internally, a DataFrame is created
@@ -58,7 +58,7 @@ class CarFuser(AbstractFuser):
         frames = [pd.read_csv(file) for file in
                   path.glob(file_match)]
         self.bgt_df = pd.concat(frames)
-        
+
     def _read_file(self, path):
         """
         Read the contents of a file. Internally, a DataFrame is created
@@ -69,8 +69,8 @@ class CarFuser(AbstractFuser):
 
     def _filter_road_area(self, bbox):
         """
-        Return a list of polygons representing each of the road or parking spots
-        found in the specified area.
+        Return a list of polygons representing each of the road or parking
+        spots found in the specified area.
         Parameters
         ----------
         bbox : tuple of tuples
@@ -88,13 +88,13 @@ class CarFuser(AbstractFuser):
         road_polygons = df['polygon'].apply(ast.literal_eval).tolist()
 
         return road_polygons
-  
-    def _fill_car_like_components(self, fast_z, maskje, point_components,
-                                  min_component_size, points, bgt_road_polygons):
-        """ Label car like clusters.  """  # TODO text
 
-        mask_indices = np.where(maskje)[0]
-        label_mask = np.zeros(len(maskje), dtype=bool)
+    def _fill_car_like_components(self, fast_z, mask, point_components,
+                                  min_component_size, points, road_polygons):
+        """ Based on certain properties of a car we label clusters.  """
+
+        mask_indices = np.where(mask)[0]
+        label_mask = np.zeros(len(mask), dtype=bool)
 
         cc_labels, counts = np.unique(point_components,
                                       return_counts=True)
@@ -121,7 +121,7 @@ class CarFuser(AbstractFuser):
                             self.max_width_thresh and self.min_length_thresh <
                             mbr_length < self.max_length_thresh):
                         p1 = Polygon(hull_points)
-                        for road_polygon in bgt_road_polygons:
+                        for road_polygon in road_polygons:
                             p2 = Polygon(road_polygon)
 
                             do_overlap = p1.intersects(p2)
@@ -132,27 +132,44 @@ class CarFuser(AbstractFuser):
         return label_mask
 
     def get_label_mask(self, tilecode, points, mask, las_labels):
-        """TODO"""
+        """
+        Returns the car mask for the given pointcloud.
+
+        Parameters
+        ----------
+        tilecode : str
+            The CycloMedia tile-code for the given pointcloud.
+        points : array of shape (n_points, 3)
+            The point cloud <x, y, z>.
+        mask : array of shape (n_points,) with dtype=bool
+            Pre-mask used to label only a subset of the points.
+        las_labels : array of shape (n_points, 1)
+            All labels as int values
+
+        Returns
+        -------
+        An array of shape (n_points,) with indices indicating which points
+        should be labelled according to this fuser.
+        """
         bbox = get_bbox_from_tile_code(tilecode) # TODO also performed in BGTBuildingFuser...
 
         road_polygons = self._filter_road_area(bbox)
-        
+
         # Get the interpolated ground points of the tile
         ahn_tile = self._filter_tile(tilecode)
         surface = ahn_tile['ground_surface']
         fast_z = FastGridInterpolator(ahn_tile['x'], ahn_tile['y'], surface)
-        
+
         # Create lcc object and perform lcc
         lcc = LabelConnectedComp(self.label, self.exclude_labels,
                                  octree_level=self.octree_level,
                                  min_component_size=self.min_component_size)
         lcc.perform_lcc_tasks(points, las_labels)
-        
-        # Label car like clusters 
+
+        # Label car like clusters
         label_mask = self._fill_car_like_components(fast_z, lcc.mask,
                                                     lcc.point_components,
                                                     lcc.min_component_size,
                                                     points, road_polygons)
 
         return label_mask
-
