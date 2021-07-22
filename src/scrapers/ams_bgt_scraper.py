@@ -86,14 +86,15 @@ def parse_polygons(json_response, offset_meter=0.0, prepare_csv=False):
     for item in json_response['features']:
         name = item['properties']['bgt_functie']
         polygon = item['geometry']['coordinates'][0]
-        polygon_w_offset = poly_offset(polygon, offset_meter)
+
+        if offset_meter:
+            polygon = poly_offset(polygon, offset_meter)
 
         if prepare_csv:
-            x_min, y_max, x_max, y_min = compute_bounding_box(polygon_w_offset)
-            parsed_content.append([name, polygon_w_offset, x_min, y_max,
-                                  x_max, y_min])
+            x_min, y_max, x_max, y_min = compute_bounding_box(polygon)
+            parsed_content.append([name, polygon, x_min, y_max, x_max, y_min])
         else:
-            parsed_content.append(polygon_w_offset)
+            parsed_content.append(polygon)
 
     csv_headers = ['bgt_name', 'polygon', 'x_min', 'y_max', 'x_max',
                    'y_min']

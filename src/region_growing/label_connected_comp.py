@@ -106,6 +106,12 @@ class LabelConnectedComp(AbstractRegionGrowing):
 
         return label_mask, points_added
 
+    def perform_lcc_tasks(self, points, las_labels):
+        """ TODO """
+        self._set_mask(las_labels)
+        self._convert_input_cloud(points)
+        self._label_connected_comp()
+
     def get_label_mask(self, points, las_labels):
         """
         Returns the label mask for the given pointcloud.
@@ -122,9 +128,7 @@ class LabelConnectedComp(AbstractRegionGrowing):
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
-        self._set_mask(las_labels)
-        self._convert_input_cloud(points)
-        self._label_connected_comp()
+        self.perform_lcc_tasks(points, las_labels)
         label_mask, points_added = self._fill_components()
 
         print(f'Clustering based Region Growing => {points_added} '

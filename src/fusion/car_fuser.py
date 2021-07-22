@@ -12,6 +12,7 @@ from ..utils.ahn_utils import load_ahn_tile
 class CarFuser(AbstractFuser):  # TODO of wel gewoon abstractfuser
     def __init__(self, label, exclude_labels, data_folder, octree_level,
                  min_component_size, max_above_ground=3,
+                 bgt_file=None, bgt_road_polygons=None,
                  min_width_thresh=1.5, max_width_thresh=2.55,
                  min_length_thresh=2.0, max_length_thresh=7.0):
         super().__init__(label)
@@ -27,17 +28,24 @@ class CarFuser(AbstractFuser):  # TODO of wel gewoon abstractfuser
         self.min_length_thresh = min_length_thresh
         self.max_length_thresh = max_length_thresh
 
+        if bgt_file is not None:
+            print('TODO this part, get all polygons for a tile')
+        elif bgt_road_polygons is not None:
+            self.bgt_road_polygons = bgt_road_polygons
+        else:
+            print('No data file or list content specified. Aborting...')
+            return None
+
     def _filter_tile(self, tilecode):
         """
         Returns an AHN tile dict for the area represented by the given
         CycloMedia tile-code. TODO also implement geotiff?
         """
         return load_ahn_tile(os.path.join(self.data_folder, 'ahn_' + tilecode
-                             + '.npz'))
+                                          + '.npz'))
 
-    def _fill_car_like_components(self, road_polygons, ahn_tile, maskje,
-                                  point_components, min_component_size, points,
-                                  las_labels):
+    def _fill_car_like_components(self, ahn_tile, maskje, point_components,
+                                  min_component_size, points, las_labels):
         """ Label car like clusters.  """  # TODO text
 
         mask_indices = np.where(maskje)[0]
@@ -71,7 +79,7 @@ class CarFuser(AbstractFuser):  # TODO of wel gewoon abstractfuser
                             self.max_width_thresh and self.min_length_thresh <
                             mbr_length < self.max_length_thresh):
                         p1 = Polygon(hull_points)
-                        for road_polygon in road_polygons:
+                        for road_polygon in self.bgt_road_polygons:
                             p2 = Polygon(road_polygon)
 
                             do_overlap = p1.intersects(p2)
@@ -84,18 +92,15 @@ class CarFuser(AbstractFuser):  # TODO of wel gewoon abstractfuser
 
         return labels
 
-    def get_label_mask(self, tilecode, points, las_labels, bgt_road_polygons):
+    def get_label_mask(self, tilecode, points, las_labels):
         """TODO"""
         ahn_tile = self._filter_tile(tilecode)
 
         lcc = LabelConnectedComp(self.label, self.exclude_labels,
                                  octree_level=self.octree_level,
                                  min_component_size=self.min_component_size)
-        lcc._set_mask(las_labels)
-        lcc._convert_input_cloud(points)
-        lcc._label_connected_comp()
-        las_labels = self._fill_car_like_components(bgt_road_polygons,
-                                                    ahn_tile, lcc.mask,
+        lcc.perform_lcc_tasks(points, las_labels)
+        las_labels = self._fill_car_like_components(ahn_tile, lcc.mask,
                                                     lcc.point_components,
                                                     lcc.min_component_size,
                                                     points, las_labels)
