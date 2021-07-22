@@ -8,6 +8,9 @@ from tqdm import tqdm
 from .utils.las_utils import (get_tilecode_from_filename, read_las,
                               label_and_save_las)
 
+from .fusion.abstract import AbstractFuser # TODO liever deze niet importen
+from .region_growing.abstract import AbstractRegionGrowing # TODO liever deze niet importen
+
 
 class Pipeline:
     """
@@ -23,9 +26,8 @@ class Pipeline:
         The fusers to apply, in order.
     """
 
-    def __init__(self, fusers=None, region_growing=None):
-        self.fusers = fusers
-        self.region_growing = region_growing
+    def __init__(self, process_sequence=None):
+        self.process_sequence = process_sequence
 
     def process_cloud(self, tilecode, points, labels, mask=None):
         """
@@ -50,18 +52,21 @@ class Pipeline:
         if mask is None:
             mask = np.ones((len(points),), dtype=bool)
 
-        self.fusers = [] if self.fusers is None else self.fusers
-        self.region_growing = ([] if self.region_growing is None else
-                               self.region_growing)
+        self.process_sequence = ([] if self.process_sequence is None
+                                 else self.process_sequence)
 
-        for fuser in self.fusers:
-            label_mask = fuser.get_label_mask(tilecode, points, mask)
-            labels[label_mask] = fuser.get_label()
-            mask[label_mask] = False
-
-        for grower in self.region_growing:
-            label_mask = grower.get_label_mask(points, labels)
-            labels[label_mask] = grower.get_label()
+        for obj in self.process_sequence:
+            if isinstance(obj, AbstractFuser):
+                label_mask = obj.get_label_mask(tilecode, points, mask,
+                                                labels)
+                labels[label_mask] = obj.get_label()
+                mask[label_mask] = False
+            elif isinstance(obj, AbstractRegionGrowing):
+                label_mask = obj.get_label_mask(points, labels)
+                labels[label_mask] = obj.get_label()
+                mask[label_mask] = False
+            else:
+                print("No valid fuser or region growing object provided.")
 
         return labels
 
@@ -139,3 +144,4 @@ class Pipeline:
             filename, extension = os.path.splitext(file)
             outfile = filename + suffix + extension
             self.process_file(file.as_posix(), outfile)
+
