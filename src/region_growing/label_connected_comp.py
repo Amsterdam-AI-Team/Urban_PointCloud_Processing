@@ -1,7 +1,7 @@
 import numpy as np
 
 # Two libraries necessary for the CloudCompare Python wrapper
-# Installation instructions in notebook [3. Clustering based region growing]
+# Installation instructions in notebook [3. Region growing.ipynb]
 import pycc
 import cccorelib
 
@@ -107,7 +107,7 @@ class LabelConnectedComp(AbstractRegionGrowing):
         return label_mask, points_added
 
     def perform_lcc_tasks(self, points, las_labels):
-        """ TODO """
+        """ The functions that performs Label Connected Components. """
         self._set_mask(las_labels)
         self._convert_input_cloud(points)
         self._label_connected_comp()
@@ -120,7 +120,7 @@ class LabelConnectedComp(AbstractRegionGrowing):
         ----------
         points : array of shape (n_points, 3)
             The point cloud <x, y, z>.
-        labels : array of shape (n_points, 1)
+        las_labels : array of shape (n_points, 1)
             All labels as int values
 
         Returns

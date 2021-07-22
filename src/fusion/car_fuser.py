@@ -111,7 +111,7 @@ class CarFuser(AbstractFuser):
             if valid_values.size != 0:
                 max_z_thresh = np.mean(valid_values) + self.max_above_ground
 
-                max_z = np.amax(points[mask_indices[cc_mask]][:, 2])  # TODO miss de cc cloud gebruiken?
+                max_z = np.amax(points[mask_indices[cc_mask]][:, 2])
                 if max_z < max_z_thresh:
                     hull_points, mbr_width, mbr_length =\
                         minimum_bounding_rectangle(
@@ -151,7 +151,7 @@ class CarFuser(AbstractFuser):
         An array of shape (n_points,) with indices indicating which points
         should be labelled according to this fuser.
         """
-        bbox = get_bbox_from_tile_code(tilecode) # TODO also performed in BGTBuildingFuser...
+        bbox = get_bbox_from_tile_code(tilecode)  # TODO perform earlier, this is also performed in BGTBuildingFuser...
 
         road_polygons = self._filter_road_area(bbox)
 
