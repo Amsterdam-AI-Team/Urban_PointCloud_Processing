@@ -1,14 +1,16 @@
 import numpy as np
+import os
 from shapely.geometry import Polygon
 
 from .abstract import AbstractFuser
 from ..region_growing.label_connected_comp import LabelConnectedComp
 from ..utils.interpolation import FastGridInterpolator
 from ..utils.math_utils import minimum_bounding_rectangle
+from ..utils.ahn_utils import load_ahn_tile
 
 
 class CarFuser(AbstractFuser):  # TODO of wel gewoon abstractfuser
-    def __init__(self, label, exclude_labels, octree_level,
+    def __init__(self, label, exclude_labels, data_folder, octree_level,
                  min_component_size, max_above_ground=3,
                  min_width_thresh=1.5, max_width_thresh=2.55,
                  min_length_thresh=2.0, max_length_thresh=7.0):
@@ -17,12 +19,21 @@ class CarFuser(AbstractFuser):  # TODO of wel gewoon abstractfuser
         self.min_component_size = min_component_size
 
         self.exclude_labels = exclude_labels
+        self.data_folder = data_folder
 
         self.max_above_ground = max_above_ground
         self.min_width_thresh = min_width_thresh
         self.max_width_thresh = max_width_thresh
         self.min_length_thresh = min_length_thresh
         self.max_length_thresh = max_length_thresh
+
+    def _filter_tile(self, tilecode):
+        """
+        Returns an AHN tile dict for the area represented by the given
+        CycloMedia tile-code. TODO also implement geotiff?
+        """
+        return load_ahn_tile(os.path.join(self.data_folder, 'ahn_' + tilecode
+                             + '.npz'))
 
     def _fill_car_like_components(self, road_polygons, ahn_tile, maskje,
                                   point_components, min_component_size, points,
@@ -73,8 +84,10 @@ class CarFuser(AbstractFuser):  # TODO of wel gewoon abstractfuser
 
         return labels
 
-    def get_label_mask(self, points, las_labels, ahn_tile, bgt_road_polygons):  # TODO waar moet ahn_tile
+    def get_label_mask(self, tilecode, points, las_labels, bgt_road_polygons):
         """TODO"""
+        ahn_tile = self._filter_tile(tilecode)
+
         lcc = LabelConnectedComp(self.label, self.exclude_labels,
                                  octree_level=self.octree_level,
                                  min_component_size=self.min_component_size)
