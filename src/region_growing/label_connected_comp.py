@@ -1,14 +1,11 @@
 import numpy as np
-from shapely.geometry import Polygon
 
 # Two libraries necessary for the CloudCompare Python wrapper
 # Installation instructions in notebook [3. Clustering based region growing]
 import pycc
 import cccorelib
 
-from ..utils.math_utils import minimum_bounding_rectangle
 from .abstract import AbstractRegionGrowing
-from ..utils.interpolation import FastGridInterpolator
 
 
 class LabelConnectedComp(AbstractRegionGrowing):
@@ -18,21 +15,13 @@ class LabelConnectedComp(AbstractRegionGrowing):
     https://auto-en-vervoer.infonu.nl/transport/10162-verkeer-auto-afmetingen-lading-aanhangwagen.html
     """
     def __init__(self, label, exclude_labels, octree_level=9,
-                 min_component_size=100, max_above_ground=3,
-                 min_width_thresh=1.5, max_width_thresh=2.55,
-                 min_length_thresh=2.0, max_length_thresh=7.0):  # TODO validate with Daan
+                 min_component_size=100):
         super().__init__(label)
         """ Init variables. """
         self.octree_level = octree_level
         self.min_component_size = min_component_size
 
         self.exclude_labels = exclude_labels
-
-        self.max_above_ground = max_above_ground
-        self.min_width_thresh = min_width_thresh
-        self.max_width_thresh = max_width_thresh
-        self.min_length_thresh = min_length_thresh
-        self.max_length_thresh = max_length_thresh
 
     def _set_mask(self, las_labels):
         """ Configure the points that we want to perform region growing on. """
@@ -100,7 +89,7 @@ class LabelConnectedComp(AbstractRegionGrowing):
             cc_size = np.count_nonzero(cc_mask)
             if cc_size < self.min_component_size:
                 continue
-            # number of point in teh cluster that are labelled as seed point
+            # number of point in the cluster that are labelled as seed point
             seed_count = np.count_nonzero(
                 self.las_label[mask_indices[cc_mask]] == self.label)
             # at least X% of the cluster should be seed points
@@ -116,50 +105,6 @@ class LabelConnectedComp(AbstractRegionGrowing):
         points_added = post_seed_count - pre_seed_count
 
         return label_mask, points_added
-
-    def _fill_car_like_components(self, road_polygons, ahn_tile):
-        """ Label car like clusters.  """  # TODO text
-        mask_indices = np.where(self.mask)[0]
-        label_mask = np.zeros(len(self.mask), dtype=bool)
-
-        cc_labels, counts = np.unique(self.point_components,
-                                      return_counts=True)
-
-        cc_labels_filtered = cc_labels[counts >= self.min_component_size]
-
-        surface = ahn_tile['ground_surface']
-        fast_z = FastGridInterpolator(ahn_tile['x'], ahn_tile['y'], surface)
-
-        for cc in cc_labels_filtered:
-            # select points that belong to the cluster
-            cc_mask = (self.point_components == cc)
-
-            target_z = fast_z(self.las[mask_indices[cc_mask]])
-            valid_values = target_z[np.isfinite(target_z)]
-
-            if valid_values.size != 0:
-                max_z_thresh = np.mean(valid_values) + self.max_above_ground
-
-                max_z = np.amax(self.las[mask_indices[cc_mask]][:,2])  # TODO miss de cc cloud gebruiken?
-                if max_z < max_z_thresh:
-                    _, hull_points, mbr_width, mbr_length = minimum_bounding_rectangle(self.las[mask_indices[cc_mask]][:,:2])
-
-                    if (self.min_width_thresh < mbr_width <
-                            self.max_width_thresh and self.min_length_thresh
-                            < mbr_length < self.max_length_thresh):
-                        p1 = Polygon(hull_points)
-                        for road_polygon in road_polygons:
-                            p2 = Polygon(road_polygon)
-
-                            do_overlap = p1.intersects(p2)
-                            if do_overlap:
-                                label_mask[mask_indices[cc_mask]] = True
-                                break
-
-        labels = self.las_label
-        labels[label_mask] = self.label
-
-        return labels
 
     def get_label_mask(self, points, las_labels):
         """
