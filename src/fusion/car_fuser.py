@@ -1,18 +1,18 @@
 import numpy as np
 from shapely.geometry import Polygon
 
+from .abstract import AbstractFuser
 from ..region_growing.label_connected_comp import LabelConnectedComp
 from ..utils.interpolation import FastGridInterpolator
 from ..utils.math_utils import minimum_bounding_rectangle
 
 
-class CarFuser(LabelConnectedComp):
+class CarFuser(AbstractFuser):  # TODO of wel gewoon abstractfuser
     def __init__(self, label, exclude_labels, octree_level,
                  min_component_size, max_above_ground=3,
                  min_width_thresh=1.5, max_width_thresh=2.55,
                  min_length_thresh=2.0, max_length_thresh=7.0):
-        super().__init__(label, exclude_labels, octree_level,
-                         min_component_size)
+        super().__init__(label)
         self.octree_level = octree_level
         self.min_component_size = min_component_size
 
@@ -50,11 +50,15 @@ class CarFuser(LabelConnectedComp):
             if valid_values.size != 0:
                 max_z_thresh = np.mean(valid_values) + self.max_above_ground
 
-                max_z = np.amax(points[mask_indices[cc_mask]][:,2]) # TODO miss de cc cloud gebruiken?
+                max_z = np.amax(points[mask_indices[cc_mask]][:, 2])  # TODO miss de cc cloud gebruiken?
                 if max_z < max_z_thresh:
-                    hull_points, mbr_width, mbr_length = minimum_bounding_rectangle(points[mask_indices[cc_mask]][:,:2])
+                    hull_points, mbr_width, mbr_length =\
+                        minimum_bounding_rectangle(
+                            points[mask_indices[cc_mask]][:, :2])
 
-                    if self.min_width_thresh < mbr_width < self.max_width_thresh and self.min_length_thresh < mbr_length < self.max_length_thresh:
+                    if (self.min_width_thresh < mbr_width <
+                            self.max_width_thresh and self.min_length_thresh <
+                            mbr_length < self.max_length_thresh):
                         p1 = Polygon(hull_points)
                         for road_polygon in road_polygons:
                             p2 = Polygon(road_polygon)
