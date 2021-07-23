@@ -58,8 +58,7 @@ class Pipeline:
         # TODO this for loop is a temp solution
         for obj in self.process_sequence:
             if isinstance(obj, AbstractFuser):
-                label_mask = obj.get_label_mask(tilecode, points, mask,
-                                                labels)
+                label_mask = obj.get_label_mask(tilecode, points, mask)
                 labels[label_mask] = obj.get_label()
                 mask[label_mask] = False
             elif isinstance(obj, AbstractRegionGrowing):
