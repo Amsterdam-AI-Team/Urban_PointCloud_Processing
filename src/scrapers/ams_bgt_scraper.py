@@ -4,10 +4,9 @@ The documentation can be found at:
 https://www.amsterdam.nl/stelselpedia/bgt-index/producten-bgt/prodspec-bgt-dgn-imgeo/
 """
 
-import os
 import requests
 
-from ..utils.csv_utils import write_csv
+from ..utils.clip_utils import poly_offset
 from ..utils.math_utils import compute_bounding_box
 
 WFS_URL = 'https://map.data.amsterdam.nl/maps/bgtobjecten?'
@@ -44,8 +43,7 @@ def scrape_amsterdam_bgt(layer_name, bbox=None):
     return response.json()
 
 
-def parse_buildings(json_response, out_folder='',
-                    out_file='bgt_buildings.csv'):
+def parse_buildings(json_response, prepare_csv=False):
     """
     Parse the JSON content and transform it into a table structure.
     Dutch-English translation of pand is building.
@@ -55,23 +53,56 @@ def parse_buildings(json_response, out_folder='',
     json_response : dict
         JSON response from a WFS request.
     """
-    output_list = []
-
+    parsed_content = []
     for item in json_response['features']:
         pand_id = item['properties']['identificatieBAGPND']
         pand_polygon = item['geometry']['coordinates'][0]
-        x_min, y_max, x_max, y_min = compute_bounding_box(pand_polygon)
 
-        output_list.append([str(pand_id), pand_polygon, x_min, y_max, x_max,
-                           y_min])
+        if prepare_csv:
+            x_min, y_max, x_max, y_min = compute_bounding_box(pand_polygon)
+            parsed_content.append([str(pand_id), pand_polygon, x_min, y_max,
+                                  x_max, y_min])
+        else:
+            parsed_content.append(pand_polygon)
 
     csv_headers = ['building_id', 'polygon', 'x_min', 'y_max', 'x_max',
                    'y_min']
-    write_csv(os.path.join(out_folder, out_file), output_list, csv_headers)
+
+    return parsed_content, csv_headers
 
 
-def parse_points_bgtplus(json_response, out_folder='',
-                         out_file='bgt_points.csv'):
+def parse_polygons(json_response, offset_meter=0.0, prepare_csv=False):
+    """
+    Parse the JSON content and transform it into a table structure.
+
+    Parameters
+    ----------
+    json_response : dict
+        JSON response from a WFS request.
+    offset_meter : int
+        Offset to inflate/deflate the polygon.
+    """
+    parsed_content = []
+    for item in json_response['features']:
+        name = item['properties']['bgt_functie']
+        polygon = item['geometry']['coordinates'][0]
+
+        if offset_meter:
+            polygon = poly_offset(polygon, offset_meter)
+
+        if prepare_csv:
+            x_min, y_max, x_max, y_min = compute_bounding_box(polygon)
+            parsed_content.append([name, polygon, x_min, y_max, x_max, y_min])
+        else:
+            parsed_content.append(polygon)
+
+    csv_headers = ['bgt_name', 'polygon', 'x_min', 'y_max', 'x_max',
+                   'y_min']
+
+    return parsed_content, csv_headers
+
+
+def parse_points_bgtplus(json_response, prepare_csv=False):
     """
     Parse the JSON content and transform it into a table structure.
 
@@ -80,13 +111,14 @@ def parse_points_bgtplus(json_response, out_folder='',
     json_response : dict
         JSON response from a WFS request.
     """
-    output_list = []
+    parsed_content = []
 
     for item in json_response['features']:
-        name = item['properties']['plus_type'][0]
+        name = item['properties']['plus_type']
         point = item['geometry']['coordinates']
 
-        output_list.append([name, point[0], point[1]])
+        parsed_content.append([name, point[0], point[1]])
 
     csv_headers = ['Type', 'X', 'Y']
-    write_csv(os.path.join(out_folder, out_file), output_list, csv_headers)
+
+    return parsed_content, csv_headers

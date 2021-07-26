@@ -144,7 +144,7 @@ class RegionGrowing(AbstractRegionGrowing):
         ----------
         points : array of shape (n_points, 3)
             The point cloud <x, y, z>.
-        labels : array of shape (n_points, 1)
+        las_labels : array of shape (n_points, 1)
             All labels as int values
 
         Returns

@@ -9,4 +9,7 @@ class Labels:
     CAR = 3
     STREET_LIGHT = 4
     TREE = 5
+    TRAFFIC_SIGN = 6
+    TRAFFIC_LIGHT = 7
+    CAR = 8
     NOISE = 99

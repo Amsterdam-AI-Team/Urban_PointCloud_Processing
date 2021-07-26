@@ -33,6 +33,7 @@ For a quick dive into this repository take a look at our [complete solution note
 
  * [`datasets`](./datasets) _Demo dataset to get started_
    * [`ahn`](./datasets/ahn) _AHN data_
+   * [`bgt`](./datasets/bgt) _BGT data_
    * [`pointcloud`](./datasets/pointcloud) _Example urban point cloud_
  * [`media`](./media) _Visuals_
    * [`examples`](./media/examples)
