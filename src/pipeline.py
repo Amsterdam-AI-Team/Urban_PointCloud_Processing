@@ -22,12 +22,15 @@ class Pipeline:
 
     Parameters
     ----------
-    fusers : iterable of type DataFuser
-        The fusers to apply, in order.
+    process_sequence : iterable of type AbstractFuser or AbstractRegionGrowing
+        The processors to apply, in order.
+    exclude_labels : list
+        List of labels to exclude from processing.
     """
 
-    def __init__(self, process_sequence=None):
+    def __init__(self, process_sequence=[], exclude_labels=[]):
         self.process_sequence = process_sequence
+        self.exclude_labels = exclude_labels
 
     def process_cloud(self, tilecode, points, labels, mask=None):
         """
@@ -52,9 +55,6 @@ class Pipeline:
         if mask is None:
             mask = np.ones((len(points),), dtype=bool)
 
-        self.process_sequence = ([] if self.process_sequence is None
-                                 else self.process_sequence)
-
         # TODO this for loop is a temp solution
         for obj in self.process_sequence:
             if isinstance(obj, AbstractFuser):
@@ -70,7 +70,7 @@ class Pipeline:
 
         return labels
 
-    def process_file(self, in_file, out_file=None, mask=None, exclude_labels=None):
+    def process_file(self, in_file, out_file=None, mask=None):
         """
         Process a single LAS file and save the result as .laz file.
 
@@ -97,14 +97,14 @@ class Pipeline:
 
         if mask is None:
             mask = np.ones((len(points),), dtype=bool)
-    
+
         if 'label' not in pointcloud.point_format.extra_dimension_names:
             labels = np.zeros((len(points),), dtype='uint16')
         else:
             labels = pointcloud.label
 
-        if exclude_labels is not None:
-            for exclude_label in exclude_labels:
+        if len(self.exclude_labels) > 0:
+            for exclude_label in self.exclude_labels:
                 mask = mask & (labels != exclude_label)
 
         labels = self.process_cloud(tilecode, points, labels, mask)
