@@ -149,6 +149,8 @@ class CarFuser(AbstractFuser):
         An array of shape (n_points,) with indices indicating which points
         should be labelled according to this fuser.
         """
+        label_mask = np.zeros((len(points),), dtype=bool)
+
         bbox = get_bbox_from_tile_code(tilecode)  # TODO perform earlier, this is also performed in BGTBuildingFuser...
 
         road_polygons = self._filter_road_area(bbox)
