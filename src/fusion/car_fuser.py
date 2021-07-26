@@ -154,7 +154,7 @@ class CarFuser(AbstractFuser):
         bbox = get_bbox_from_tile_code(tilecode)  # TODO perform earlier, this is also performed in BGTBuildingFuser...
 
         road_polygons = self._filter_road_area(bbox)
-        if len(road_polygons) > 0:
+        if len(road_polygons) == 0:
             return label_mask
 
         # Get the interpolated ground points of the tile

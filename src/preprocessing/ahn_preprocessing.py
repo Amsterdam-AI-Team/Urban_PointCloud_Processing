@@ -10,7 +10,7 @@ For an example, see notebooks/1.AHN_preprocessing.ipynb
 import numpy as np
 import os
 import pathlib
-import pylas
+import laspy
 import re
 from tqdm import tqdm
 
@@ -34,7 +34,7 @@ def clip_ahn_las_tile(ahn_cloud, las_file, out_folder='', buffer=1):
 
     Parameters
     ----------
-    ahn_cloud : pylas point cloud
+    ahn_cloud : laspy point cloud
         The full AHN point cloud. This is assumed to include the full area of
         the given CycloMedia tile.
 
@@ -59,10 +59,10 @@ def clip_ahn_las_tile(ahn_cloud, las_file, out_folder='', buffer=1):
     y_min -= buffer
     y_max += buffer
 
-    clip_idx = np.where((x_min <= ahn_cloud.x) & (ahn_cloud.x <= x_max)
-                        & (y_min <= ahn_cloud.y) & (ahn_cloud.y <= y_max))[0]
+    clip_idx = np.where((x_min <= ahn_cloud.X) & (ahn_cloud.X <= x_max)
+                        & (y_min <= ahn_cloud.Y) & (ahn_cloud.Y <= y_max))[0]
 
-    ahn_tile = pylas.create(point_format_id=ahn_cloud.header.point_format_id)
+    ahn_tile = laspy.LasData(ahn_cloud.header)
     ahn_tile.points = ahn_cloud.points[clip_idx]
 
     if out_folder != '':
@@ -78,7 +78,7 @@ def clip_ahn_las_folder(ahn_cloud, in_folder, out_folder=None, buffer=1,
 
     Parameters
     ----------
-    ahn_cloud : pylas point cloud
+    ahn_cloud : laspy point cloud
         The full AHN point cloud. This is assumed to include the full area of
         the given CycloMedia tiles.
 
@@ -138,7 +138,7 @@ def _get_ground_surface(ahn_las, grid_x, grid_y, n_neighbors=8, max_dist=1,
 
     Parameters
     ----------
-    ahn_las : pylas point cloud
+    ahn_las : laspy point cloud
         The AHN point cloud.
 
     grid_x : list of floats
@@ -169,8 +169,8 @@ def _get_ground_surface(ahn_las, grid_x, grid_y, n_neighbors=8, max_dist=1,
     if np.count_nonzero(mask) <= 1:
         return np.full(grid_x.shape, np.nan, dtype='float16')
 
-    coordinates = np.vstack((ahn_las.x[mask], ahn_las.y[mask])).T
-    values = ahn_las.z[mask]
+    coordinates = np.vstack((ahn_las.X[mask], ahn_las.Y[mask])).T
+    values = ahn_las.Z[mask]
     positions = np.vstack((grid_x.reshape(-1), grid_y.reshape(-1))).T
 
     idw = SpatialInterpolator(coordinates, values, method='idw')
@@ -192,7 +192,7 @@ def _get_building_surface(ahn_las, grid_x, grid_y, n_neighbors=8, max_dist=0.5,
 
     Parameters
     ----------
-    ahn_las : pylas point cloud
+    ahn_las : laspy point cloud
         The AHN point cloud.
 
     grid_x : list of floats
@@ -220,8 +220,8 @@ def _get_building_surface(ahn_las, grid_x, grid_y, n_neighbors=8, max_dist=0.5,
     if np.count_nonzero(mask) <= 1:
         return np.full(grid_x.shape, np.nan, dtype='float16')
 
-    coordinates = np.vstack((ahn_las.x[mask], ahn_las.y[mask])).T
-    values = ahn_las.z[mask]
+    coordinates = np.vstack((ahn_las.X[mask], ahn_las.Y[mask])).T
+    values = ahn_las.Z[mask]
     positions = np.vstack((grid_x.reshape(-1), grid_y.reshape(-1))).T
 
     idw = SpatialInterpolator(coordinates, values, method='max')
@@ -258,7 +258,7 @@ def process_ahn_las_tile(ahn_las_file, out_folder='', resolution=0.1):
 
     ((x_min, y_max), (x_max, y_min)) = get_bbox_from_tile_code(tile_code)
 
-    ahn_las = pylas.read(ahn_las_file)
+    ahn_las = laspy.read(ahn_las_file)
 
     # Create a grid with 0.1m resolution
     grid_y, grid_x = np.mgrid[y_max-resolution/2:y_min:-resolution,
