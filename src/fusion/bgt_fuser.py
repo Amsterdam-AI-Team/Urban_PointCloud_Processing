@@ -58,6 +58,9 @@ class BGTFuser(AbstractFuser, ABC):
             self._read_file(Path(bgt_file))
         elif bgt_folder is not None:
             self._read_folder(Path(bgt_folder))
+        else:
+            print('No data folder or file specified. Aborting...')
+            return None
 
     def _read_folder(self, path):
         """
@@ -149,6 +152,8 @@ class BGTBuildingFuser(BGTFuser):
             The point cloud <x, y, z>.
         mask : array of shape (n_points,) with dtype=bool
             Pre-mask used to label only a subset of the points.
+        las_labels : array of shape (n_points, 1)
+            All labels as int values
 
         Returns
         -------

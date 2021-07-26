@@ -2,7 +2,7 @@ import glob
 import pathlib
 import re
 import os
-import pylas
+import laspy
 
 
 def get_tilecode_from_filename(filename):
@@ -96,13 +96,14 @@ def get_bbox_from_las_folder(folder_path, padding=0):
 
 def read_las(las_file):
     """Read a las file and return the las object."""
-    return pylas.read(las_file)
+    return laspy.read(las_file)
 
 
 def label_and_save_las(las, labels, outfile):
     """Label a las file using the provided class labels and save to outfile."""
     assert len(labels) == las.header.point_count
     if 'label' not in las.point_format.extra_dimension_names:
-        las.add_extra_dim(name="label", type="uint16", description="Labels")
+        las.add_extra_dim(laspy.ExtraBytesParams(name="label", type="uint16",
+                          description="Labels"))
     las.label = labels
     las.write(outfile)

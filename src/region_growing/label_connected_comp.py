@@ -1,7 +1,7 @@
 import numpy as np
 
 # Two libraries necessary for the CloudCompare Python wrapper
-# Installation instructions in notebook [3. Clustering based region growing]
+# Installation instructions in notebook [3. Region growing.ipynb]
 import pycc
 import cccorelib
 
@@ -85,7 +85,7 @@ class LabelConnectedComp(AbstractRegionGrowing):
                 continue
             # number of point in the cluster that are labelled as seed point
             seed_count = np.count_nonzero(
-                self.self.point_labels[mask_indices[cc_mask]] == self.label)
+                self.point_labels[mask_indices[cc_mask]] == self.label)
             # at least X% of the cluster should be seed points
             if (float(seed_count) / cc_size) > self.threshold:
                 label_mask[mask_indices[cc_mask]] = True

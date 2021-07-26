@@ -95,6 +95,8 @@ class AHNFuser(AbstractFuser):
             The point cloud <x, y, z>.
         mask : array of shape (n_points,) with dtype=bool
             Pre-mask used to label only a subset of the points.
+        las_labels : array of shape (n_points, 1)
+            All labels as int values
 
         Returns
         -------

@@ -6,6 +6,7 @@ import zarr
 import copy
 import warnings
 import os
+from abc import ABC, abstractmethod
 from tifffile import TiffFile, imread
 from pathlib import Path
 from scipy import interpolate
@@ -15,7 +16,33 @@ from scipy.ndimage.morphology import binary_dilation
 from ..utils.las_utils import get_bbox_from_tile_code
 
 
-class GeoTIFFReader:
+class AHNReader(ABC):
+
+    def __init__(self, data_folder):
+        super().__init__()
+        self.path = Path(data_folder)
+
+        if not self.path.exists():
+            print('Input folder does not exist.')
+            return None
+
+    @abstractmethod
+    def filter_tile(self, tilecode):
+        pass
+
+
+class NPZReader(AHNReader):
+
+    def filter_tile(self, tilecode):
+        """
+        Returns an AHN tile dict for the area represented by the given
+        CycloMedia tile-code. TODO also implement geotiff?
+        """
+        return load_ahn_tile(os.path.join(self.path, 'ahn_' + tilecode
+                                          + '.npz'))
+
+
+class GeoTIFFReader(AHNReader):
     """
     GeoTIFFReader for AHN3 data. The data folder should contain on or more 0.5m
     resolution GeoTIFF files with the original filename.
@@ -29,12 +56,7 @@ class GeoTIFFReader:
     RESOLUTION = 0.5
 
     def __init__(self, data_folder):
-        self.path = Path(data_folder)
-
-        if not self.path.exists():
-            print('Input folder does not exist.')
-            return None
-
+        super().__init__()
         self.ahn_df = (pd.DataFrame(columns=['Filename', 'Path',
                                              'Xmin', 'Ymax', 'Xmax', 'Ymin'])
                        .set_index('Filename'))
