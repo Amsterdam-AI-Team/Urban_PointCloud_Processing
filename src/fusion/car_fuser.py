@@ -152,6 +152,8 @@ class CarFuser(AbstractFuser):
         bbox = get_bbox_from_tile_code(tilecode)  # TODO perform earlier, this is also performed in BGTBuildingFuser...
 
         road_polygons = self._filter_road_area(bbox)
+        if not road_polygons:
+            return label_mask
 
         # Get the interpolated ground points of the tile
         ahn_tile = self.ahn_reader.filter_tile(tilecode)
@@ -164,7 +166,6 @@ class CarFuser(AbstractFuser):
         point_components = lcc.get_components(points[mask])
 
         # Label car like clusters
-        label_mask = np.zeros((len(points),), dtype=bool)
         car_mask = self._fill_car_like_components(points[mask], fast_z,
                                                   point_components,
                                                   road_polygons)

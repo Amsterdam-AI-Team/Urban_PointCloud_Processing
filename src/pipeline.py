@@ -70,7 +70,7 @@ class Pipeline:
 
         return labels
 
-    def process_file(self, in_file, out_file=None, mask=None):
+    def process_file(self, in_file, out_file=None, mask=None, exclude_labels=None):
         """
         Process a single LAS file and save the result as .laz file.
 
@@ -97,11 +97,15 @@ class Pipeline:
 
         if mask is None:
             mask = np.ones((len(points),), dtype=bool)
-
+    
         if 'label' not in pointcloud.point_format.extra_dimension_names:
             labels = np.zeros((len(points),), dtype='uint16')
         else:
             labels = pointcloud.label
+
+        if exclude_labels is not None:
+            for exclude_label in exclude_labels:
+                mask = mask & (labels != exclude_label)
 
         labels = self.process_cloud(tilecode, points, labels, mask)
         label_and_save_las(pointcloud, labels, out_file)
