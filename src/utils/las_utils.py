@@ -10,7 +10,7 @@ def get_tilecode_from_filename(filename):
     return re.match(r'.*(\d{4}_\d{4}).*', filename)[1]
 
 
-def get_bbox_from_tile_code(tile_code, width=50, height=50):
+def get_bbox_from_tile_code(tile_code, padding=0, width=50, height=50):
     """
     Get the <X,Y> bounding box for a given tile code. The tile code is assumed
     to represent the lower left corner of the tile.
@@ -19,10 +19,10 @@ def get_bbox_from_tile_code(tile_code, width=50, height=50):
     ----------
     tile_code : str
         The tile code, e.g. 2386_9702.
-
+    padding : float
+        Optional padding (in m) by which the bounding box will be extended.
     width : int (default: 50)
         The width of the tile.
-
     height : int (default: 50)
         The height of the tile.
 
@@ -38,10 +38,11 @@ def get_bbox_from_tile_code(tile_code, width=50, height=50):
     x_min = int(tile_split[0]) * 50
     y_min = int(tile_split[1]) * 50
 
-    return ((x_min, y_min + height), (x_min + height, y_min))
+    return ((x_min - padding, y_min + height + padding),
+            (x_min + height + padding, y_min - padding))
 
 
-def get_bbox_from_las_file(laz_file):
+def get_bbox_from_las_file(laz_file, padding=0):
     """
     Get the <X,Y> bounding box for a given CycloMedia laz file, based on the
     filename.
@@ -50,6 +51,8 @@ def get_bbox_from_las_file(laz_file):
     ----------
     laz_file : Path or str
         the .laz filename, e.g. filtered_2386_9702.laz
+    padding : float
+        Optional padding (in m) by which the bounding box will be extended.
 
     Returns
     -------
@@ -60,7 +63,7 @@ def get_bbox_from_las_file(laz_file):
         laz_file = pathlib.Path(laz_file)
     tile_code = get_tilecode_from_filename(laz_file.name)
 
-    return get_bbox_from_tile_code(tile_code)
+    return get_bbox_from_tile_code(tile_code, padding=padding)
 
 
 def get_bbox_from_las_folder(folder_path, padding=0):
