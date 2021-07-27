@@ -12,3 +12,17 @@ class Labels:
     TRAFFIC_LIGHT = 6
     CAR = 7
     NOISE = 99
+
+    STR_DICT = {0: 'Unlabelled',
+                1: 'Ground',
+                2: 'Building',
+                3: 'Tree',
+                4: 'Street light',
+                5: 'Traffic sign',
+                6: 'Traffic light',
+                7: 'Car',
+                99: 'Noise'}
+
+    @staticmethod
+    def get_str(label):
+        return Labels.STR_DICT[label]

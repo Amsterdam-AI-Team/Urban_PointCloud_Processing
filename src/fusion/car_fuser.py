@@ -11,6 +11,7 @@ from ..utils.interpolation import FastGridInterpolator
 from ..utils.math_utils import minimum_bounding_rectangle
 from ..utils.ahn_utils import load_ahn_tile
 from ..utils.las_utils import get_bbox_from_tile_code
+from ..utils.labels import Labels
 
 
 class CarFuser(AbstractFuser):
@@ -173,6 +174,7 @@ class CarFuser(AbstractFuser):
                                                   road_polygons)
         label_mask[mask] = car_mask
 
-        print(f'Car fuser => processed (label={self.label}).')
+        print(f'Car fuser => processed '
+              f'(label={self.label}, {Labels.get_str(self.label)}).')
 
         return label_mask

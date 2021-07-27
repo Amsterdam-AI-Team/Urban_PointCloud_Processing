@@ -3,6 +3,7 @@ import open3d as o3d
 import copy
 
 from ..utils.math_utils import angle_between
+from ..utils.labels import Labels
 from .abstract import AbstractRegionGrowing
 
 
@@ -157,6 +158,6 @@ class RegionGrowing(AbstractRegionGrowing):
         label_mask, points_added = self._region_growing()
 
         print(f'Region Growing => {points_added} points added '
-              f'(label={self.label}).')
+              f'(label={self.label}, {Labels.get_str(self.label)}).')
 
         return label_mask

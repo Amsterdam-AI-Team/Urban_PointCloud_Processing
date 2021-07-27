@@ -6,6 +6,7 @@ import pycc
 import cccorelib
 
 from .abstract import AbstractRegionGrowing
+from ..utils.labels import Labels
 
 
 class LabelConnectedComp(AbstractRegionGrowing):
@@ -123,7 +124,8 @@ class LabelConnectedComp(AbstractRegionGrowing):
         label_mask, points_added = self._fill_components()
 
         print(f'Clustering based Region Growing => {points_added} '
-              f'points added (label={self.label}).')
+              f'points added (label={self.label}, '
+              f'{Labels.get_str(self.label)}).')
 
         return label_mask
 

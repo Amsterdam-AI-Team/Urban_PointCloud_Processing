@@ -6,6 +6,7 @@ import os
 from .abstract import AbstractFuser
 from ..utils import ahn_utils as ahn_utils
 from ..utils.interpolation import FastGridInterpolator
+from ..utils.labels import Labels
 
 
 class AHNFuser(AbstractFuser):
@@ -130,6 +131,6 @@ class AHNFuser(AbstractFuser):
             label_mask[mask] = points[mask, 2] < target_z + self.epsilon
 
         print(f'AHN [{self.method}] fuser => {self.target} processed '
-              f'(label={self.label}).')
+              f'(label={self.label}, {Labels.get_str(self.label)}).')
 
         return label_mask
