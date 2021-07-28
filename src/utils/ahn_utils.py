@@ -56,7 +56,7 @@ class GeoTIFFReader(AHNReader):
     RESOLUTION = 0.5
 
     def __init__(self, data_folder):
-        super().__init__()
+        super().__init__(data_folder)
         self.ahn_df = (pd.DataFrame(columns=['Filename', 'Path',
                                              'Xmin', 'Ymax', 'Xmax', 'Ymin'])
                        .set_index('Filename'))
