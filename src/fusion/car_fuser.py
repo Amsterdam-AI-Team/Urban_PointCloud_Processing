@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 import ast
 
-from .abstract import AbstractFuser
+from ..abstract_processor import AbstractProcessor
 from ..region_growing.label_connected_comp import LabelConnectedComp
 from ..utils.interpolation import FastGridInterpolator
 from ..utils.math_utils import minimum_bounding_rectangle
@@ -14,7 +14,7 @@ from ..utils.las_utils import get_bbox_from_tile_code
 from ..utils.labels import Labels
 
 
-class CarFuser(AbstractFuser):
+class CarFuser(AbstractProcessor):
     def __init__(self, label, ahn_reader, octree_level=9,
                  min_component_size=100, max_above_ground=3,
                  bgt_file=None, bgt_folder=None, min_width_thresh=1.5,
@@ -130,29 +130,30 @@ class CarFuser(AbstractFuser):
 
         return car_mask
 
-    def get_label_mask(self, tilecode, points, mask):
+    def get_label_mask(self, points, labels, mask, tilecode):
         """
-        Returns the car mask for the given pointcloud.
+        Returns the label mask for the given pointcloud.
 
         Parameters
         ----------
-        tilecode : str
-            The CycloMedia tile-code for the given pointcloud.
         points : array of shape (n_points, 3)
             The point cloud <x, y, z>.
+        labels : array of shape (n_points,)
+            Ignored by this class.
         mask : array of shape (n_points,) with dtype=bool
             Pre-mask used to label only a subset of the points.
-        las_labels : array of shape (n_points, 1)
-            All labels as int values
+        tilecode : str
+            The CycloMedia tile-code for the given pointcloud.
 
         Returns
         -------
-        An array of shape (n_points,) with indices indicating which points
+        An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
         label_mask = np.zeros((len(points),), dtype=bool)
 
-        bbox = get_bbox_from_tile_code(tilecode)  # TODO perform earlier, this is also performed in BGTBuildingFuser...
+        # TODO perform earlier, this is also performed in BGTBuildingFuser...
+        bbox = get_bbox_from_tile_code(tilecode)
 
         road_polygons = self._filter_road_area(bbox)
         if len(road_polygons) == 0:

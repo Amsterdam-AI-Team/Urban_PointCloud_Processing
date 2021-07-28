@@ -9,14 +9,14 @@ from sklearn.cluster import DBSCAN
 from scipy.stats import binned_statistic_2d
 from abc import ABC, abstractmethod
 
-from .abstract import AbstractFuser
+from ..abstract_processor import AbstractProcessor
 from ..utils.clip_utils import poly_offset, poly_clip, cylinder_clip, box_clip
 from ..utils.las_utils import get_bbox_from_tile_code
 from ..utils.interpolation import FastGridInterpolator
 from ..utils.labels import Labels
 
 
-class BGTFuser(AbstractFuser, ABC):
+class BGTFuser(AbstractProcessor, ABC):
     """
     Abstract class for automatic labelling of points using BGT data.
 
@@ -147,24 +147,24 @@ class BGTBuildingFuser(BGTFuser):
 
         return building_polygons
 
-    def get_label_mask(self, tilecode, points, mask):
+    def get_label_mask(self, points, labels, mask, tilecode):
         """
-        Returns the building mask for the given pointcloud.
+        Returns the label mask for the given pointcloud.
 
         Parameters
         ----------
-        tilecode : str
-            The CycloMedia tile-code for the given pointcloud.
         points : array of shape (n_points, 3)
             The point cloud <x, y, z>.
+        labels : array of shape (n_points,)
+            Ignored by this class.
         mask : array of shape (n_points,) with dtype=bool
             Pre-mask used to label only a subset of the points.
-        las_labels : array of shape (n_points, 1)
-            All labels as int values
+        tilecode : str
+            The CycloMedia tile-code for the given pointcloud.
 
         Returns
         -------
-        An array of shape (n_points,) with indices indicating which points
+        An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
         building_polygons = self._filter_tile(tilecode)
@@ -370,22 +370,24 @@ class BGTPointFuser(BGTFuser):
                 print(f'No candidates found for object {ind}.')
         return seeds
 
-    def get_label_mask(self, tilecode, points, mask):
+    def get_label_mask(self, points, labels, mask, tilecode):
         """
-        Returns the seed-point mask for the given pointcloud.
+        Returns the label mask for the given pointcloud.
 
         Parameters
         ----------
-        tilecode : str
-            The CycloMedia tile-code for the given pointcloud.
         points : array of shape (n_points, 3)
             The point cloud <x, y, z>.
+        labels : array of shape (n_points,)
+            Ignored by this class.
         mask : array of shape (n_points,) with dtype=bool
             Pre-mask used to label only a subset of the points.
+        tilecode : str
+            The CycloMedia tile-code for the given pointcloud.
 
         Returns
         -------
-        An array of shape (n_points,) with indices indicating which points
+        An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
         label_mask = np.zeros((len(points),), dtype=bool)

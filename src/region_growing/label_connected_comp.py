@@ -5,11 +5,11 @@ import numpy as np
 import pycc
 import cccorelib
 
-from .abstract import AbstractRegionGrowing
+from ..abstract_processor import AbstractProcessor
 from ..utils.labels import Labels
 
 
-class LabelConnectedComp(AbstractRegionGrowing):
+class LabelConnectedComp(AbstractProcessor):
     """
     Clustering based region growing implementation using label connected comp.
     """
@@ -101,7 +101,7 @@ class LabelConnectedComp(AbstractRegionGrowing):
 
         return label_mask, points_added
 
-    def get_label_mask(self, points, labels):
+    def get_label_mask(self, points, labels, mask, tilecode):
         """
         Returns the label mask for the given pointcloud.
 
@@ -109,8 +109,13 @@ class LabelConnectedComp(AbstractRegionGrowing):
         ----------
         points : array of shape (n_points, 3)
             The point cloud <x, y, z>.
-        labels : array of shape (n_points, 1)
-            All labels as int values
+        labels : array of shape (n_points,)
+            The labels corresponding to each point.
+        mask : array of shape (n_points,) with dtype=bool
+            Pre-mask used to label only a subset of the points. Can be
+            overwritten by setting `exclude_labels` in the constructor.
+        tilecode : str
+            Ignored by this class.
 
         Returns
         -------
@@ -119,8 +124,14 @@ class LabelConnectedComp(AbstractRegionGrowing):
         """
         if self.label == -1:
             print('Warning: label not set, defaulting to -1.')
-
-        self.get_components(points, labels)
+        self.point_labels = labels
+        if self.exclude_labels:
+            self.mask = np.ones((len(points),), dtype=bool)
+            self._set_mask()
+        else:
+            self.mask = mask
+        self._convert_input_cloud(points)
+        self._label_connected_comp()
         label_mask, points_added = self._fill_components()
 
         print(f'Clustering based Region Growing => {points_added} '
@@ -131,7 +142,7 @@ class LabelConnectedComp(AbstractRegionGrowing):
 
     def get_components(self, points, labels=None):
         self.mask = np.ones((len(points),), dtype=bool)
-        if labels is not None:
+        if labels is not None and self.exclude_labels:
             self.point_labels = labels
             self._set_mask()
         self._convert_input_cloud(points)

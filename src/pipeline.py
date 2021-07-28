@@ -8,9 +8,6 @@ from tqdm import tqdm
 from .utils.las_utils import (get_tilecode_from_filename, read_las,
                               label_and_save_las)
 
-from .fusion.abstract import AbstractFuser  # TODO because the temp for loop
-from .region_growing.abstract import AbstractRegionGrowing  # TODO because the temp for loop
-
 
 class Pipeline:
     """
@@ -22,7 +19,7 @@ class Pipeline:
 
     Parameters
     ----------
-    process_sequence : iterable of type AbstractFuser or AbstractRegionGrowing
+    process_sequence : iterable of type AbstractProcessor
         The processors to apply, in order.
     exclude_labels : list
         List of labels to exclude from processing.
@@ -55,18 +52,10 @@ class Pipeline:
         if mask is None:
             mask = np.ones((len(points),), dtype=bool)
 
-        # TODO this for loop is a temp solution
         for obj in self.process_sequence:
-            if isinstance(obj, AbstractFuser):
-                label_mask = obj.get_label_mask(tilecode, points, mask)
-                labels[label_mask] = obj.get_label()
-                mask[label_mask] = False
-            elif isinstance(obj, AbstractRegionGrowing):
-                label_mask = obj.get_label_mask(points, labels)
-                labels[label_mask] = obj.get_label()
-                mask[label_mask] = False
-            else:
-                print("No valid fuser or region growing object provided.")
+            label_mask = obj.get_label_mask(points, labels, mask, tilecode)
+            labels[label_mask] = obj.get_label()
+            mask[label_mask] = False
 
         return labels
 
