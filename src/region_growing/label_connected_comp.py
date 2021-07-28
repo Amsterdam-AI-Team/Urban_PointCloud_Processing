@@ -51,11 +51,15 @@ class LabelConnectedComp(AbstractProcessor):
 
     def _label_connected_comp(self):
         """ Perform the clustering algorithm: Label Connected Components. """
-        component_count = (cccorelib.AutoSegmentationTools
-                           .labelConnectedComponents(self.point_cloud,
-                                                     level=self.octree_level))
+        # component_count = (cccorelib.AutoSegmentationTools
+        #                    .labelConnectedComponents(self.point_cloud,
+        #                                              level=self.octree_level))
         # TODO filter components using self.min_component_size
-        print(f'There are {component_count} components found')
+        # print(f'There are {component_count} components found')
+
+        (cccorelib
+         .AutoSegmentationTools
+         .labelConnectedComponents(self.point_cloud, level=self.octree_level))
 
         # Get the scalar field with labels and points coords as numpy array
         labels_sf = self.point_cloud.getScalarField(self.labels_sf_idx)
@@ -101,7 +105,7 @@ class LabelConnectedComp(AbstractProcessor):
 
         return label_mask, points_added
 
-    def get_label_mask(self, points, labels, mask, tilecode):
+    def get_label_mask(self, points, labels, mask=None, tilecode=None):
         """
         Returns the label mask for the given pointcloud.
 
@@ -128,8 +132,11 @@ class LabelConnectedComp(AbstractProcessor):
         if self.exclude_labels:
             self.mask = np.ones((len(points),), dtype=bool)
             self._set_mask()
+        elif mask is None:
+            self.mask = np.ones((len(points),), dtype=bool)
         else:
             self.mask = mask
+
         self._convert_input_cloud(points)
         self._label_connected_comp()
         label_mask, points_added = self._fill_components()
