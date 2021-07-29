@@ -29,6 +29,15 @@ class Pipeline:
         self.process_sequence = process_sequence
         self.exclude_labels = exclude_labels
 
+    def _create_mask(self, mask, labels):
+        """Create mask based on `exclude_labels`."""
+        if mask is None:
+            mask = np.ones((len(labels),), dtype=bool)
+        if len(self.exclude_labels) > 0:
+            for exclude_label in self.exclude_labels:
+                mask = mask & (labels != exclude_label)
+        return mask
+
     def process_cloud(self, tilecode, points, labels, mask=None):
         """
         Process a single point cloud.
@@ -49,8 +58,7 @@ class Pipeline:
         An array of shape (n_points,) with dtype=uint16 indicating the label
         for each point.
         """
-        if mask is None:
-            mask = np.ones((len(points),), dtype=bool)
+        mask = self._create_mask(mask, labels)
 
         for obj in self.process_sequence:
             label_mask = obj.get_label_mask(points, labels, mask, tilecode)
@@ -84,17 +92,10 @@ class Pipeline:
         pointcloud = read_las(in_file)
         points = np.vstack((pointcloud.x, pointcloud.y, pointcloud.z)).T
 
-        if mask is None:
-            mask = np.ones((len(points),), dtype=bool)
-
         if 'label' not in pointcloud.point_format.extra_dimension_names:
             labels = np.zeros((len(points),), dtype='uint16')
         else:
             labels = pointcloud.label
-
-        if len(self.exclude_labels) > 0:
-            for exclude_label in self.exclude_labels:
-                mask = mask & (labels != exclude_label)
 
         labels = self.process_cloud(tilecode, points, labels, mask)
         label_and_save_las(pointcloud, labels, out_file)
