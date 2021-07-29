@@ -147,7 +147,9 @@ class LabelConnectedComp(AbstractProcessor):
         elif mask is None:
             self.mask = np.ones((len(points),), dtype=bool)
         else:
-            self.mask = mask
+            self.mask = mask.copy()
+            # We need to un-mask all points of the desired class label.
+            self.mask[labels == self.label] = True
 
         self._convert_input_cloud(points)
         self._label_connected_comp()
