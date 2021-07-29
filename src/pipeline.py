@@ -8,9 +8,6 @@ from tqdm import tqdm
 from .utils.las_utils import (get_tilecode_from_filename, read_las,
                               label_and_save_las)
 
-from .fusion.abstract import AbstractFuser  # TODO because the temp for loop
-from .region_growing.abstract import AbstractRegionGrowing  # TODO because the temp for loop
-
 
 class Pipeline:
     """
@@ -22,7 +19,7 @@ class Pipeline:
 
     Parameters
     ----------
-    process_sequence : iterable of type AbstractFuser or AbstractRegionGrowing
+    process_sequence : iterable of type AbstractProcessor
         The processors to apply, in order.
     exclude_labels : list
         List of labels to exclude from processing.
@@ -31,6 +28,15 @@ class Pipeline:
     def __init__(self, process_sequence=[], exclude_labels=[]):
         self.process_sequence = process_sequence
         self.exclude_labels = exclude_labels
+
+    def _create_mask(self, mask, labels):
+        """Create mask based on `exclude_labels`."""
+        if mask is None:
+            mask = np.ones((len(labels),), dtype=bool)
+        if len(self.exclude_labels) > 0:
+            for exclude_label in self.exclude_labels:
+                mask = mask & (labels != exclude_label)
+        return mask
 
     def process_cloud(self, tilecode, points, labels, mask=None):
         """
@@ -52,21 +58,12 @@ class Pipeline:
         An array of shape (n_points,) with dtype=uint16 indicating the label
         for each point.
         """
-        if mask is None:
-            mask = np.ones((len(points),), dtype=bool)
+        mask = self._create_mask(mask, labels)
 
-        # TODO this for loop is a temp solution
         for obj in self.process_sequence:
-            if isinstance(obj, AbstractFuser):
-                label_mask = obj.get_label_mask(tilecode, points, mask)
-                labels[label_mask] = obj.get_label()
-                mask[label_mask] = False
-            elif isinstance(obj, AbstractRegionGrowing):
-                label_mask = obj.get_label_mask(points, labels)
-                labels[label_mask] = obj.get_label()
-                mask[label_mask] = False
-            else:
-                print("No valid fuser or region growing object provided.")
+            label_mask = obj.get_label_mask(points, labels, mask, tilecode)
+            labels[label_mask] = obj.get_label()
+            mask[label_mask] = False
 
         return labels
 
@@ -95,17 +92,10 @@ class Pipeline:
         pointcloud = read_las(in_file)
         points = np.vstack((pointcloud.x, pointcloud.y, pointcloud.z)).T
 
-        if mask is None:
-            mask = np.ones((len(points),), dtype=bool)
-
         if 'label' not in pointcloud.point_format.extra_dimension_names:
             labels = np.zeros((len(points),), dtype='uint16')
         else:
             labels = pointcloud.label
-
-        if len(self.exclude_labels) > 0:
-            for exclude_label in self.exclude_labels:
-                mask = mask & (labels != exclude_label)
 
         labels = self.process_cloud(tilecode, points, labels, mask)
         label_and_save_las(pointcloud, labels, out_file)

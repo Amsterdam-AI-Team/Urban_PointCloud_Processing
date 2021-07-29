@@ -1,11 +1,12 @@
-"""Data Fuser Abstract Base Class"""
+"""Abstract base class for PipeLine processor objects."""
 
 from abc import ABC, abstractmethod
 
 
-class AbstractFuser(ABC):
+class AbstractProcessor(ABC):
     """
-    Data Fuser abstract base class for automatic labelling point clouds.
+    Abstract base class for automatic labelling point clouds. Objects of this
+    class can be used in the processing PipeLine.
 
     Parameters
     ----------
@@ -18,18 +19,20 @@ class AbstractFuser(ABC):
         super().__init__()
 
     @abstractmethod
-    def get_label_mask(self, tilecode, points, mask):
+    def get_label_mask(self, points, labels, mask, tilecode):
         """
         Returns the label mask for the given pointcloud.
 
         Parameters
         ----------
-        tilecode : str
-            The CycloMedia tile-code for the given pointcloud.
         points : array of shape (n_points, 3)
             The point cloud <x, y, z>.
+        labels : array of shape (n_points,)
+            The labels corresponding to each point.
         mask : array of shape (n_points,) with dtype=bool
             Pre-mask used to label only a subset of the points.
+        tilecode : str
+            The CycloMedia tile-code for the given pointcloud.
 
         Returns
         -------

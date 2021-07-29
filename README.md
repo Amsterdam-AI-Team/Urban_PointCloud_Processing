@@ -11,8 +11,8 @@ Example [notebooks](notebooks) are provided to demonstrate the tools.
 <figure>
   <img
   src="media/examples/demo.gif"
-  alt="Example: automatic labeling of ground and buildings.">
-  <figcaption class="figure-caption text-center"><b>Example:</b> automatic labeling of ground and buildings.</figcaption>
+  alt="Example: automatic labeling of a point cloud.">
+  <figcaption class="figure-caption text-center"><b>Example:</b> automatic labeling of ground, buildings, cars, street lights, traffic signs, and trees.</figcaption>
 </figure>
 
 ---
@@ -43,6 +43,7 @@ For a quick dive into this repository take a look at our [complete solution note
    * [`fusion`](./src/fusion) _Data fusion code_
    * [`preprocessing`](./src/preprocessing) _Pre-processing code_
    * [`region_growing`](./src/region_growing) _Region growing code_
+   * [`scrapers`](./src/scrapers) _Data scrapers_
    * [`utils`](./src/utils) _Utility functions_
 
 
@@ -60,6 +61,7 @@ For a quick dive into this repository take a look at our [complete solution note
     ```bash
     pip install -r requirements.txt
     ```
+    Additionally, install `cccorelib` and `pycc` by following the [instructions on their GitHub page](https://github.com/tmontaigu/CloudCompare-PythonPlugin/blob/master/docs/building.rst#building-as-indenpendent-wheels).
 
 3. Check out the [notebooks](notebooks) for a demonstration.
 
@@ -69,7 +71,7 @@ For a quick dive into this repository take a look at our [complete solution note
 
 We provide tutorial [notebooks](notebooks) that demonstrate how the tools can be used.
 
-For visualisation of the resulting labelled point clouds we suggest [CloudCompare](https://www.danielgm.net/cc/). Simply open the labelled .laz in CloudCompare, select the cloud, and set `Colors` to the custom `Scalar Field` named `label`.
+For visualisation of the resulting labelled point clouds we suggest [CloudCompare](https://www.danielgm.net/cc/). Simply open the labelled .laz in CloudCompare, select the cloud, and set `Colors` to the custom `Scalar Field` named `label`. For best results, use our [custom color scale](https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing/raw/main/media/cc_color_scale.xml), and set "steps" to 100.
 
 ---
 

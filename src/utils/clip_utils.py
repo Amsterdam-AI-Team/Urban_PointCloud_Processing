@@ -16,7 +16,7 @@ from ..utils import math_utils
 
 
 @jit(nopython=True)
-def rectangle_clip(points, box):
+def rectangle_clip(points, rect):
     """
     Clip all points within a rectangle.
 
@@ -24,16 +24,41 @@ def rectangle_clip(points, box):
     ----------
     points : array of shape (n_points, 2)
         The points.
-    box : tuple of floats
+    rect : tuple of floats
         (x_min, y_min, x_max, y_max)
 
     Returns
     -------
     A boolean mask with True entries for all points within the rectangle.
     """
-    clip_mask = ((points[:, 0] >= box[0]) & (points[:, 0] <= box[2])
-                 & (points[:, 1] >= box[1]) & (points[:, 1] <= box[3]))
+    clip_mask = ((points[:, 0] >= rect[0]) & (points[:, 0] <= rect[2])
+                 & (points[:, 1] >= rect[1]) & (points[:, 1] <= rect[3]))
     return clip_mask
+
+
+@jit(nopython=True)
+def box_clip(points, rect, bottom=-np.inf, top=np.inf):
+    """
+    Clip all points within a 3D box.
+
+    Parameters
+    ----------
+    points : array of shape (n_points, 2)
+        The points.
+    rect : tuple of floats
+        (x_min, y_min, x_max, y_max)
+    bottom : float (default: -inf)
+        Bottom of the box.
+    top : float (default: inf)
+        Top of the box.
+
+    Returns
+    -------
+    A boolean mask with True entries for all points within the 3D box.
+    """
+    box_mask = rectangle_clip(points, rect)
+    box_mask = box_mask & ((points[:, 2] <= top) & (points[:, 2] >= bottom))
+    return box_mask
 
 
 @jit(nopython=True)

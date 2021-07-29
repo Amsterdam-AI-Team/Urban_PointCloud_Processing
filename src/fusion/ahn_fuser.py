@@ -3,12 +3,13 @@
 import numpy as np
 import os
 
-from .abstract import AbstractFuser
+from ..abstract_processor import AbstractProcessor
 from ..utils import ahn_utils as ahn_utils
 from ..utils.interpolation import FastGridInterpolator
+from ..utils.labels import Labels
 
 
-class AHNFuser(AbstractFuser):
+class AHNFuser(AbstractProcessor):
     """
     Data Fuser class for automatic labelling of ground and building points
     using AHN data. The class can handle both pre-processed surfaces in .npz
@@ -83,20 +84,20 @@ class AHNFuser(AbstractFuser):
         elif self.method == 'geotiff':
             return self.reader.filter_tile(tilecode)
 
-    def get_label_mask(self, tilecode, points, mask):
+    def get_label_mask(self, points, labels, mask, tilecode):
         """
         Returns the label mask for the given pointcloud.
 
         Parameters
         ----------
-        tilecode : str
-            The CycloMedia tile-code for the given pointcloud.
         points : array of shape (n_points, 3)
             The point cloud <x, y, z>.
+        labels : array of shape (n_points,)
+            Ignored by this fuser.
         mask : array of shape (n_points,) with dtype=bool
             Pre-mask used to label only a subset of the points.
-        las_labels : array of shape (n_points, 1)
-            All labels as int values
+        tilecode : str
+            The CycloMedia tile-code for the given pointcloud.
 
         Returns
         -------
@@ -130,6 +131,6 @@ class AHNFuser(AbstractFuser):
             label_mask[mask] = points[mask, 2] < target_z + self.epsilon
 
         print(f'AHN [{self.method}] fuser => {self.target} processed '
-              f'(label={self.label}).')
+              f'(label={self.label}, {Labels.get_str(self.label)}).')
 
         return label_mask

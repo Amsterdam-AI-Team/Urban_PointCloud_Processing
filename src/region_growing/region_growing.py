@@ -3,10 +3,11 @@ import open3d as o3d
 import copy
 
 from ..utils.math_utils import angle_between
-from .abstract import AbstractRegionGrowing
+from ..utils.labels import Labels
+from ..abstract_processor import AbstractProcessor
 
 
-class RegionGrowing(AbstractRegionGrowing):
+class RegionGrowing(AbstractProcessor):
     """
     Region growing implementation based on:
     https://pcl.readthedocs.io/projects/tutorials/en/latest/region_growing_segmentation.html
@@ -80,9 +81,10 @@ class RegionGrowing(AbstractRegionGrowing):
         pcd_tree = o3d.geometry.KDTreeFlann(self.pcd)
 
         # Compute the normals for each point
-        self.pcd.estimate_normals(search_param=o3d.geometry
-                                  .KDTreeSearchParamHybrid(radius=self.grow_region_radius,
-                                  max_nn=self.max_nn))
+        self.pcd.estimate_normals(
+            search_param=o3d.geometry.KDTreeSearchParamHybrid(
+                                            radius=self.grow_region_radius,
+                                            max_nn=self.max_nn))
 
         # Initialize the indexes of all seed points as processed
         processed = np.full(len(self.pcd.points), False)
@@ -136,7 +138,7 @@ class RegionGrowing(AbstractRegionGrowing):
 
         return self.label_mask, points_added
 
-    def get_label_mask(self, points, las_labels):
+    def get_label_mask(self, points, labels, mask, tilecode):
         """
         Returns the label mask for the given pointcloud.
 
@@ -144,19 +146,24 @@ class RegionGrowing(AbstractRegionGrowing):
         ----------
         points : array of shape (n_points, 3)
             The point cloud <x, y, z>.
-        las_labels : array of shape (n_points, 1)
-            All labels as int values
+        labels : array of shape (n_points,)
+            The labels corresponding to each point.
+        mask : array of shape (n_points,) with dtype=bool
+            Ignored by this class, use `exclude_labels` in the constructor
+            instead.
+        tilecode : str
+            Ignored by this class.
 
         Returns
         -------
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
-        self._set_mask(las_labels)
+        self._set_mask(labels)
         self._convert_input_cloud(points)
         label_mask, points_added = self._region_growing()
 
         print(f'Region Growing => {points_added} points added '
-              f'(label={self.label}).')
+              f'(label={self.label}, {Labels.get_str(self.label)}).')
 
         return label_mask
