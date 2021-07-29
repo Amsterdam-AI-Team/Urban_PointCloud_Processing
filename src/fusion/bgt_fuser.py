@@ -217,7 +217,37 @@ class BGTPointFuser(BGTFuser):
     padding : float (default: 1)
         Optional padding (in m) around the tile when searching for objects.
     params : dict
-        Parameters specific to the bgt_type.
+        Parameters specific to the bgt_type (see notes).
+
+    Notes
+    -----
+    The `params` and their defaults are as follows:
+
+    'search_pad': 1.5
+        Specify the padding (in m) around the BGT object in which to search for
+        a match in the point cloud.
+    'max_dist': 1.2
+        Maximum distance (in m) between the expected location and the location
+        of a potential match.
+    'voxel_res': 0.2
+        Resolution of voxels used when searching for a match.
+    'seed_height': 1.75
+        Height above ground at which to determine object dimensions.
+    'min_height': 2.
+        Minimum hieght for an object to be considered a match.
+    'max_r': 0.5
+        Maximum radius for a pole-like object to be considered a match.
+    'min_points': 500
+        Minimum number of points for a cluster to be considered.
+    'z_min': 0.2
+        Height above ground, above which to search for objects.
+    'z_max': 2.7
+        Height above ground, below which to search for objects.
+    'r_mult': 1.5
+        Multiplier for radius when performing the initial (cylinder-based)
+        labelling.
+    'label_height': 4.
+        Maximum height for initial (cylinder-based) labelling.
     """
     COLUMNS = ['Type', 'X', 'Y']
 
@@ -245,7 +275,7 @@ class BGTPointFuser(BGTFuser):
 
     def _filter_tile(self, tilecode):
         """
-        Return a list of polygons representing each of the buildings found in
+        Return a list of points representing each of the objects found in
         the area represented by the given CycloMedia tile-code.
         """
         ((bx_min, by_max), (bx_max, by_min)) = \
@@ -259,6 +289,13 @@ class BGTPointFuser(BGTFuser):
     def _find_point_cluster(self, points, point, plane_height,
                             plane_buffer=0.1, search_radius=1, max_dist=0.1,
                             min_points=1, max_r=0.5):
+        """
+        Find a cluster in the point cloud that includes / is close to a
+        specified target point. The cluster is returned as a tuple (X, Y,
+        Radius).
+
+        For a description of parameters see "Notes" above.
+        """
         search_ids = np.where(cylinder_clip(points, point, search_radius,
                                             bottom=plane_height-plane_buffer,
                                             top=plane_height+plane_buffer))[0]
@@ -297,13 +334,22 @@ class BGTPointFuser(BGTFuser):
                                       min_height=2, min_points=500,
                                       max_r=0.5, z_min=0.2, z_max=2.7,
                                       **kwargs):
+        """
+        Locate a cluster of seed points that most likely matches each target
+        point. Seed clusters are returned as a list of tuples (X, Y, Radius).
+
+        For a description of parameters see "Notes" above.
+        """
         seeds = []
         for ind, obj in enumerate(point_objects):
             # Assume obj = [x, y].
             if fast_z is None:
                 ground_z = 0.
             else:
+                # Get the ground elevation.
                 ground_z = fast_z(np.array([obj]))
+
+            # Define the "box" within which to search for candidates.
             search_box = (obj[0]-search_pad, obj[1]-search_pad,
                           obj[0]+search_pad, obj[1]+search_pad)
             box_ids = np.where(box_clip(points, search_box,
@@ -312,60 +358,58 @@ class BGTPointFuser(BGTFuser):
             if len(box_ids) == 0:
                 print(f'Empty search box for object {ind}.')
                 continue
+
+            # Voxelize the search box and compute statistics for each column.
+            # TODO this voxelization only works when box width / height are
+            # multiples of voxel_res.
             x_edge = np.arange(search_box[0], search_box[2] + 0.01, voxel_res)
             y_edge = np.arange(search_box[1], search_box[3] + 0.01, voxel_res)
-            min_z_bin = binned_statistic_2d(points[box_ids, 0],
-                                            points[box_ids, 1],
-                                            points[box_ids, 2],
-                                            bins=[x_edge, y_edge],
-                                            statistic='min')
-            max_z_bin = binned_statistic_2d(points[box_ids, 0],
-                                            points[box_ids, 1],
-                                            points[box_ids, 2],
-                                            bins=[x_edge, y_edge],
-                                            statistic='max')
-            med_z_bin = binned_statistic_2d(points[box_ids, 0],
-                                            points[box_ids, 1],
-                                            points[box_ids, 2],
-                                            bins=[x_edge, y_edge],
-                                            statistic='median')
-            count_z_bin = binned_statistic_2d(points[box_ids, 0],
-                                              points[box_ids, 1],
-                                              points[box_ids, 2],
-                                              bins=[x_edge, y_edge],
-                                              statistic='count')
-
+            min_z_bin = binned_statistic_2d(
+                points[box_ids, 0], points[box_ids, 1], points[box_ids, 2],
+                bins=[x_edge, y_edge], statistic='min')
+            max_z_bin = binned_statistic_2d(
+                points[box_ids, 0], points[box_ids, 1], points[box_ids, 2],
+                bins=[x_edge, y_edge], statistic='max')
+            med_z_bin = binned_statistic_2d(
+                points[box_ids, 0], points[box_ids, 1], points[box_ids, 2],
+                bins=[x_edge, y_edge], statistic='median')
+            count_z_bin = binned_statistic_2d(
+                points[box_ids, 0], points[box_ids, 1], points[box_ids, 2],
+                bins=[x_edge, y_edge], statistic='count')
+            # Column height (max - min).
             height = max_z_bin.statistic - min_z_bin.statistic
             midpoint = (min_z_bin.statistic + max_z_bin.statistic) / 2
+            # Check if midpoint and median are close. This is a rough
+            # approximation of checking whether the z-distribution is uniform
+            # (i.e. a pole).
             med_mid = np.abs(med_z_bin.statistic - midpoint) < 0.2 * height
+
+            # Find target locations where all criteria are met.
             x_loc, y_loc = np.where((height > min_height)
                                     & (count_z_bin.statistic > min_points)
                                     & med_mid)
-            # x_loc, y_loc = np.where((height > min_height)
-            #                         & (count_z_bin.statistic > min_points))
             if len(x_loc) == 0:
                 print(f'No candidates found for object {ind}.')
                 continue
             candidates = np.stack((x_edge[x_loc] + voxel_res/2,
                                    y_edge[y_loc] + voxel_res/2)).T
-            cand_height = height[x_loc, y_loc]
+            # Distances of candidates to target point.
             dist = [np.linalg.norm(np.array(obj) - np.array([c]))
                     for c in candidates]
+            # Candidate with minimum distance.
             c_prime = candidates[np.argmin(dist), :]
-            cp_height = cand_height[np.argmin(dist)]
-            clusters = []
             if min(dist) <= max_dist:
-                clusters = self._find_point_cluster(points, c_prime,
-                                                    seed_height,
-                                                    max_r=max_r)
+                # Find a matching cluster.
+                clusters = self._find_point_cluster(
+                    points, c_prime, seed_height, max_r=max_r)
                 if len(clusters) > 0:
+                    # We simply take the first one (usually there is only one).
+                    # TODO we could return a 'correspondence' so it's clear
+                    # which objects were located.
                     seed = clusters[0]
-                    seed.append(cp_height)
                     seeds.append(seed)
                 else:
                     print(f'No cluster found for object {ind}')
-                    # seeds.append([c_prime[0], c_prime[1],
-                    #              voxel_res, cp_height])
             else:
                 print(f'No candidates found for object {ind}.')
         return seeds
@@ -398,10 +442,11 @@ class BGTPointFuser(BGTFuser):
         fast_z = FastGridInterpolator(ahn_tile['x'], ahn_tile['y'],
                                       ahn_tile['ground_surface'])
 
-        # Match and label trees.
+        # Find seed point clusters.
         seeds = self._find_seeds_for_point_objects(points[mask], bgt_points,
                                                    fast_z, **self.params)
         for seed in seeds:
+            # Label a cylinder based on the seed cluster.
             top_height = (fast_z(np.array([seed[0:2]]))
                           + self.params['label_height'])
             clip_mask = cylinder_clip(points[mask], np.array(seed[0:2]),

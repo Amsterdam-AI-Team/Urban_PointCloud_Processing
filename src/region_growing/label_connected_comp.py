@@ -1,7 +1,7 @@
 import numpy as np
 
 # Two libraries necessary for the CloudCompare Python wrapper
-# Installation instructions in notebook [3. Region growing.ipynb]
+# Installation instructions in notebook [5. Region growing.ipynb]
 import pycc
 import cccorelib
 
@@ -11,7 +11,23 @@ from ..utils.labels import Labels
 
 class LabelConnectedComp(AbstractProcessor):
     """
-    Clustering based region growing implementation using label connected comp.
+    Clustering based region growing implementation using the label connected
+    components method from CloudCompare.
+
+    Parameters
+    ----------
+    label : int (default: -1)
+        Label to use when labelling the grown region.
+    exclude_labels : list-like (default: [])
+        Which labels to exclude (optional).
+    octree_level : int (default: 9)
+        Used to construct the underlying octree, larger means more
+        fine-grained.
+    min_component_size : int (default: 100)
+        Minimum size of connected components to consider.
+    threshold : float (default: 0.5)
+        When labelling a cluster, at least this proportion of points should
+        already be labelled.
     """
     def __init__(self, label=-1, exclude_labels=[], octree_level=9,
                  min_component_size=100, threshold=0.1):
@@ -51,15 +67,11 @@ class LabelConnectedComp(AbstractProcessor):
 
     def _label_connected_comp(self):
         """ Perform the clustering algorithm: Label Connected Components. """
-        # component_count = (cccorelib.AutoSegmentationTools
-        #                    .labelConnectedComponents(self.point_cloud,
-        #                                              level=self.octree_level))
-        # TODO filter components using self.min_component_size
-        # print(f'There are {component_count} components found')
-
         (cccorelib
          .AutoSegmentationTools
          .labelConnectedComponents(self.point_cloud, level=self.octree_level))
+
+        # TODO filter components using self.min_component_size
 
         # Get the scalar field with labels and points coords as numpy array
         labels_sf = self.point_cloud.getScalarField(self.labels_sf_idx)
@@ -148,6 +160,17 @@ class LabelConnectedComp(AbstractProcessor):
         return label_mask
 
     def get_components(self, points, labels=None):
+        """
+        Simply get the components without caring about labels.
+
+        Parameters
+        ----------
+        points : array of shape (n_points, 3)
+            The point cloud <x, y, z>.
+        labels : array of shape (n_points,)
+            The labels corresponding to each point. Optional, only used in
+            combination with `exclude_labels`.
+        """
         self.mask = np.ones((len(points),), dtype=bool)
         if labels is not None and self.exclude_labels:
             self.point_labels = labels
