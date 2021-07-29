@@ -100,8 +100,8 @@ class Pipeline:
         labels = self.process_cloud(tilecode, points, labels, mask)
         label_and_save_las(pointcloud, labels, out_file)
 
-    def process_folder(self, in_folder, out_folder=None, suffix='',
-                       hide_progress=False):
+    def process_folder(self, in_folder, out_folder=None, in_prefix='',
+                       out_prefix='', suffix='', hide_progress=False):
         """
         Process a folder of LAS files and save each processed file.
 
@@ -112,7 +112,13 @@ class Pipeline:
         out_folder : str or Path (default: None)
            The name of the output folder. If None, the output will be written
            to the input folder.
-        suffix : str or None (default: '_processed')
+        in_prefix : str
+            Optional prefix to filter files in the input folder. Only files
+            starting with this prefix will be processed.
+        out_prefix : str
+            Optional prefix to prepend to output files. If an in_prefix is
+            given, it will be replaced by the out_prefix.
+        suffix : str or None
             Suffix to add to the filename of processed files. A value of None
             indicates that the same filename is kept; when out_folder=None this
             means each file will be overwritten.
@@ -131,10 +137,15 @@ class Pipeline:
 
         file_types = ('.LAS', '.las', '.LAZ', '.laz')
 
-        files = [f for f in in_folder.glob('*') if f.name.endswith(file_types)]
+        files = [f for f in in_folder.glob('*')
+                 if f.name.endswith(file_types)
+                 and f.name.startswith(in_prefix)]
 
         for file in tqdm(files, unit="file", disable=hide_progress):
-            # Load LAS file.
-            filename, extension = os.path.splitext(file)
-            outfile = filename + suffix + extension
+            filename, extension = os.path.splitext(file.name)
+            if in_prefix and out_prefix:
+                filename = filename.replace(in_prefix, out_prefix)
+            elif out_prefix:
+                filename = out_prefix + filename
+            outfile = out_folder + '/' + filename + suffix + extension
             self.process_file(file.as_posix(), outfile)
