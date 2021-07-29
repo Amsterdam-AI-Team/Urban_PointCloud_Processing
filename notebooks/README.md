@@ -6,8 +6,10 @@ These jupyter notebooks serve as a tutorial and demonstration of the tools in th
 
 [1. AHN preprocessing](1.%20AHN%20preprocessing.ipynb) -- detailed instructions for pre-processing AHN data.
 
-[2. Data fusion](2.%20Data%20fusion.ipynb) -- different data fusers and the data fusion pipeline.
+[2. Ground and Buildings](2.%20Ground%20and%20Buildings.ipynb) -- labelling ground and buildings using data fusion with AHN and BGT data.
 
-[3. Region growing](3.%20Region%20growing.ipynb) -- two region growing implementations for the refinement of labeled objects.
+[3. Cars](3.%20Cars.ipynb) -- label objects as cars based on dimensions of a cluster and BGT data.
 
-[4. Label cars](4.%20Label%20cars.ipynb) -- label objects as cars based on dimensions of a cluster and BGT data.
+[4. Pole-like objects](4.%20Pole-like%20objects.ipynb) -- labelling objects such as trees, street lights, and traffic signs using BGT data.
+
+[5. Region growing](5.%20Region%20growing.ipynb) -- two region growing implementations for the refinement of labeled objects.
