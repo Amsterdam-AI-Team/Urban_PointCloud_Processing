@@ -223,6 +223,30 @@ def poly_clip(points, poly):
     return clip_mask
 
 
+def poly_box_clip(points, poly, bottom=-np.inf, top=np.inf):
+    """
+    Clip all points within a 3D polygon with fixed height.
+
+    Parameters
+    ----------
+    points : array of shape (n_points, 2)
+        The points.
+    poly : list of tuples
+        Coordinates of polygon (closed ring).
+    bottom : float (default: -inf)
+        Bottom height of the 3D polygon.
+    top : float (default: inf)
+        Top height of the 3D polygon.
+
+    Returns
+    -------
+    A boolean mask with True entries for all points within the 3D polygon.
+    """
+    clip_mask = poly_clip(points, poly)
+    clip_mask = clip_mask & ((points[:, 2] <= top) & (points[:, 2] >= bottom))
+    return clip_mask
+
+
 def poly_offset(polygon, offset_meter):
     """
     Calculate coordinates of radius/offset around a polygon.
