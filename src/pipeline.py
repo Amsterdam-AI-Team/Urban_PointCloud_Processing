@@ -25,6 +25,8 @@ class Pipeline:
         List of labels to exclude from processing.
     """
 
+    FILE_TYPES = ('.LAS', '.las', '.LAZ', '.laz')
+
     def __init__(self, process_sequence=[], exclude_labels=[]):
         self.process_sequence = process_sequence
         self.exclude_labels = exclude_labels
@@ -135,13 +137,13 @@ class Pipeline:
         if suffix is None:
             suffix = ''
 
-        file_types = ('.LAS', '.las', '.LAZ', '.laz')
-
         files = [f for f in in_folder.glob('*')
-                 if f.name.endswith(file_types)
+                 if f.name.endswith(self.FILE_TYPES)
                  and f.name.startswith(in_prefix)]
+        files_tqdm = tqdm(files, unit="file", disable=hide_progress)
 
-        for file in tqdm(files, unit="file", disable=hide_progress):
+        for file in files_tqdm:
+            files_tqdm.set_postfix_str(file.name)
             filename, extension = os.path.splitext(file.name)
             if in_prefix and out_prefix:
                 filename = filename.replace(in_prefix, out_prefix)
