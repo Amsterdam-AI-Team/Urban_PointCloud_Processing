@@ -1,26 +1,43 @@
 import numpy as np
-import os
 from shapely.geometry import Polygon
-from pathlib import Path
-import pandas as pd
 import ast
 
-from ..abstract_processor import AbstractProcessor
+from ..fusion.bgt_fuser import BGTFuser
 from ..region_growing.label_connected_comp import LabelConnectedComp
 from ..utils.interpolation import FastGridInterpolator
 from ..utils.math_utils import minimum_bounding_rectangle
-from ..utils.ahn_utils import load_ahn_tile
 from ..utils.las_utils import get_bbox_from_tile_code
+from ..utils.clip_utils import poly_box_clip
 from ..utils.labels import Labels
 
 
-class CarFuser(AbstractProcessor):
-    def __init__(self, label, ahn_reader, octree_level=9,
-                 min_component_size=100, max_above_ground=3,
-                 bgt_file=None, bgt_folder=None, min_width_thresh=1.5,
-                 max_width_thresh=2.55, min_length_thresh=2.0,
-                 max_length_thresh=7.0):
-        super().__init__(label)
+class CarFuser(BGTFuser):
+    """
+    Parameters
+    ----------
+    label : int
+        Class label to use for this fuser.
+    ahn_reader : AHNReader object
+        Elevation data reader.
+    bgt_file : str or Path or None (default: None)
+        File containing data files needed for this fuser. Either a file or a
+        folder should be provided, but not both.
+    bgt_folder : str or Path or None (default: None)
+        Folder containing data files needed for this fuser. Data files are
+        assumed to be prefixed by "bgt_roads", unless otherwise specified.
+        Either a file or a folder should be provided, but not both.
+    file_prefix : str (default: 'bgt_roads')
+        Prefix used to load the correct files; only used with bgt_folder.
+    """
+
+    COLUMNS = ['bgt_name', 'polygon', 'x_min', 'y_max', 'x_max', 'y_min']
+
+    def __init__(self, label, ahn_reader,
+                 bgt_file=None, bgt_folder=None, file_prefix='bgt_roads',
+                 octree_level=9, min_component_size=100, max_above_ground=3,
+                 min_width_thresh=1.5, max_width_thresh=2.55,
+                 min_length_thresh=2.0, max_length_thresh=7.0):
+        super().__init__(label, bgt_file, bgt_folder, file_prefix)
 
         self.ahn_reader = ahn_reader
         self.octree_level = octree_level
@@ -31,59 +48,15 @@ class CarFuser(AbstractProcessor):
         self.min_length_thresh = min_length_thresh
         self.max_length_thresh = max_length_thresh
 
-        if bgt_file is not None:
-            self._read_file(Path(bgt_file))
-        elif bgt_folder is not None:
-            self._read_folder(Path(bgt_folder))
-        else:
-            print('No data folder or file specified. Aborting...')
-            return None
-
     def _filter_tile(self, tilecode):
         """
-        Returns an AHN tile dict for the area represented by the given
-        CycloMedia tile-code. TODO also implement geotiff?
+        Return a list of polygons representing each of the road segments found
+        in the area represented by the given CycloMedia tile-code.
         """
-        return load_ahn_tile(os.path.join(self.data_folder, 'ahn_' + tilecode
-                                          + '.npz'))
-
-    def _read_folder(self, path):
-        """
-        Read the contents of the folder. Internally, a DataFrame is created
-        detailing the polygons and bounding boxes of each building found in the
-        CSV files in that folder.
-        """
-        file_match = "*.csv"
-        frames = [pd.read_csv(file) for file in
-                  path.glob(file_match)]
-        self.bgt_df = pd.concat(frames)
-
-    def _read_file(self, path):
-        """
-        Read the contents of a file. Internally, a DataFrame is created
-        detailing the polygons and bounding boxes of each building found in the
-        CSV files in that folder.
-        """
-        self.bgt_df = pd.read_csv(path)
-
-    def _filter_road_area(self, bbox):
-        """
-        Return a list of polygons representing each of the road or parking
-        spots found in the specified area.
-        Parameters
-        ----------
-        bbox : tuple of tuples
-            bounding box with inverted y-axis: ((x_min, y_max), (x_max, y_min))
-        Returns
-        -------
-        dict
-            Mapping building_id to a list of coordinates specifying the
-            polygon.
-        """
-        ((bx_min, by_max), (bx_max, by_min)) = bbox
+        ((bx_min, by_max), (bx_max, by_min)) =\
+            get_bbox_from_tile_code(tilecode)
         df = self.bgt_df.query('(x_min < @bx_max) & (x_max > @bx_min)' +
                                ' & (y_min < @by_max) & (y_max > @by_min)')
-
         road_polygons = df['polygon'].apply(ast.literal_eval).tolist()
 
         return road_polygons
@@ -97,6 +70,7 @@ class CarFuser(AbstractProcessor):
         cc_labels, counts = np.unique(point_components,
                                       return_counts=True)
 
+        # TODO: remove when LCC is fixed
         cc_labels_filtered = cc_labels[counts >= self.min_component_size]
 
         for cc in cc_labels_filtered:
@@ -107,25 +81,25 @@ class CarFuser(AbstractProcessor):
             valid_values = target_z[np.isfinite(target_z)]
 
             if valid_values.size != 0:
-                max_z_thresh = np.mean(valid_values) + self.max_above_ground
+                ground_z = np.mean(valid_values)
+                max_z_thresh = ground_z + self.max_above_ground
 
                 max_z = np.amax(points[cc_mask][:, 2])
                 if max_z < max_z_thresh:
-                    _, hull_points, mbr_width, mbr_length =\
-                        minimum_bounding_rectangle(
-                            points[cc_mask][:, :2])
-
+                    mbrect, _, mbr_width, mbr_length =\
+                        minimum_bounding_rectangle(points[cc_mask][:, :2])
+                    poly = np.vstack((mbrect, mbrect[0]))
                     if (self.min_width_thresh < mbr_width <
                             self.max_width_thresh and self.min_length_thresh <
                             mbr_length < self.max_length_thresh):
-                        # TODO use bounding rectangle instead?
-                        p1 = Polygon(hull_points)
+                        p1 = Polygon(poly)
                         for road_polygon in road_polygons:
                             p2 = Polygon(road_polygon)
 
                             do_overlap = p1.intersects(p2)
                             if do_overlap:
-                                car_mask[cc_mask] = True
+                                car_mask = car_mask | poly_box_clip(
+                                    points, poly, bottom=ground_z, top=max_z)
                                 break
 
         return car_mask
@@ -152,17 +126,14 @@ class CarFuser(AbstractProcessor):
         """
         label_mask = np.zeros((len(points),), dtype=bool)
 
-        # TODO perform earlier, this is also performed in BGTBuildingFuser...
-        bbox = get_bbox_from_tile_code(tilecode)
-
-        road_polygons = self._filter_road_area(bbox)
+        road_polygons = self._filter_tile(tilecode)
         if len(road_polygons) == 0:
             return label_mask
 
         # Get the interpolated ground points of the tile
         ahn_tile = self.ahn_reader.filter_tile(tilecode)
-        surface = ahn_tile['ground_surface']
-        fast_z = FastGridInterpolator(ahn_tile['x'], ahn_tile['y'], surface)
+        fast_z = FastGridInterpolator(
+                    ahn_tile['x'], ahn_tile['y'], ahn_tile['ground_surface'])
 
         # Create lcc object and perform lcc
         lcc = LabelConnectedComp(self.label, octree_level=self.octree_level,
