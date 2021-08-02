@@ -10,6 +10,10 @@ from ..utils.labels import Labels
 
 class NoiseFilter(AbstractProcessor):
     """
+    Noise filter based on elevation level and cluster size. Any points below
+    ground level, and points that are within clusters with a size below the
+    given threshold, will be labelled as noise.
+
     Parameters
     ----------
     label : int
@@ -18,8 +22,12 @@ class NoiseFilter(AbstractProcessor):
         Elevation data reader.
     epsilon : float (default: 0.2)
         Precision of the fuser.
+    octree_level : int (default: 9)
+        Octree level for clustering connected components.
+    min_component_size : int (default: 100)
+        Minimum size of a cluster below which it is regarded as noise.
     """
-    def __init__(self, label, ahn_reader, epsilon, octree_level=9,
+    def __init__(self, label, ahn_reader, epsilon=0.2, octree_level=9,
                  min_component_size=100):
         super().__init__(label)
 
@@ -52,12 +60,12 @@ class NoiseFilter(AbstractProcessor):
         lcc = LabelConnectedComp(self.label, octree_level=self.octree_level,
                                  min_component_size=self.min_component_size)
         point_components = lcc.get_components(points[mask])
-        
+
         cc_labels, counts = np.unique(point_components,
                                       return_counts=True)
 
         cc_labels_filtered = cc_labels[counts < self.min_component_size]
-        
+
         # Get the interpolated ground points of the tile
         ahn_tile = self.ahn_reader.filter_tile(tilecode)
         surface = ahn_tile['ground_surface']
@@ -66,7 +74,8 @@ class NoiseFilter(AbstractProcessor):
 
         label_mask = np.zeros((len(points),), dtype=bool)
         # Label points below ground and points in small components.
-        label_mask[mask] = np.in1d(point_components, cc_labels_filtered) | ((points[mask, 2] - target_z) < -self.epsilon)
+        label_mask[mask] = (np.in1d(point_components, cc_labels_filtered)
+                            | ((points[mask, 2] - target_z) < -self.epsilon))
 
         print(f'Noise filter => processed '
               f'(label={self.label}, {Labels.get_str(self.label)}).')
