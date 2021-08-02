@@ -32,7 +32,7 @@ class CarFuser(BGTFuser):
 
     COLUMNS = ['bgt_name', 'polygon', 'x_min', 'y_max', 'x_max', 'y_min']
 
-    def __init__(self, label, ahn_reader, padding=0,
+    def __init__(self, label, ahn_reader,
                  bgt_file=None, bgt_folder=None, file_prefix='bgt_roads',
                  octree_level=9, min_component_size=100, max_above_ground=3,
                  min_width_thresh=1.5, max_width_thresh=2.55,
