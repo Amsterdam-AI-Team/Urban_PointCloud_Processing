@@ -3,10 +3,13 @@
 import numpy as np
 import os
 import pathlib
+import logging
 from tqdm import tqdm
 
 from .utils.las_utils import (get_tilecode_from_filename, read_las,
                               label_and_save_las)
+
+logger = logging.getLogger(__name__)
 
 
 class Pipeline:
@@ -83,8 +86,9 @@ class Pipeline:
         mask : array of shape (n_points,) with dtype=bool
             Pre-mask used to label only a subset of the points.
         """
+        logger.info(f'Processing file {in_file}.')
         if not os.path.isfile(in_file):
-            print('The input file specified does not exist')
+            logger.error('The input file specified does not exist')
             return None
 
         if out_file is None:
@@ -101,6 +105,7 @@ class Pipeline:
 
         labels = self.process_cloud(tilecode, points, labels, mask)
         label_and_save_las(pointcloud, labels, out_file)
+        logger.info(f'Output written to {out_file}.')
 
     def process_folder(self, in_folder, out_folder=None, in_prefix='',
                        out_prefix='', suffix='', hide_progress=False):
@@ -126,7 +131,7 @@ class Pipeline:
             means each file will be overwritten.
         """
         if not os.path.isdir(in_folder):
-            print('The input path specified does not exist')
+            logger.error('The input path specified does not exist')
             return None
         if type(in_folder) == str:
             in_folder = pathlib.Path(in_folder)

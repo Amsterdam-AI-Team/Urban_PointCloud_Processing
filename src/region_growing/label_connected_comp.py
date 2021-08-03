@@ -1,4 +1,5 @@
 import numpy as np
+import logging
 
 # Two libraries necessary for the CloudCompare Python wrapper
 # Installation instructions in notebook [5. Region growing.ipynb]
@@ -7,6 +8,8 @@ import cccorelib
 
 from ..abstract_processor import AbstractProcessor
 from ..utils.labels import Labels
+
+logger = logging.getLogger(__name__)
 
 
 class LabelConnectedComp(AbstractProcessor):
@@ -18,8 +21,6 @@ class LabelConnectedComp(AbstractProcessor):
     ----------
     label : int (default: -1)
         Label to use when labelling the grown region.
-    debug : bool (default: False)
-        Log extra debug info (optional).
     exclude_labels : list-like (default: [])
         Which labels to exclude (optional).
     octree_level : int (default: 9)
@@ -31,9 +32,9 @@ class LabelConnectedComp(AbstractProcessor):
         When labelling a cluster, at least this proportion of points should
         already be labelled.
     """
-    def __init__(self, label=-1, debug=False, exclude_labels=[],
+    def __init__(self, label=-1, exclude_labels=[],
                  octree_level=9, min_component_size=100, threshold=0.1):
-        super().__init__(label, debug)
+        super().__init__(label)
         """ Init variables. """
         self.octree_level = octree_level
         self.min_component_size = min_component_size
@@ -112,9 +113,9 @@ class LabelConnectedComp(AbstractProcessor):
         labels = self.point_labels
         labels[label_mask] = self.label
 
-        self._debug(f'Found {len(cc_labels_filtered)} clusters of ' +
-                    f'>{self.min_component_size} points; ' +
-                    f'{cc_count} added.')
+        logger.debug(f'Found {len(cc_labels_filtered)} clusters of ' +
+                     f'>{self.min_component_size} points; ' +
+                     f'{cc_count} added.')
 
         return label_mask
 
@@ -139,10 +140,10 @@ class LabelConnectedComp(AbstractProcessor):
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
-        self._log('Clustering based Region Growing ' +
-                  f'(label={self.label}, {Labels.get_str(self.label)}).')
+        logger.info('Clustering based Region Growing ' +
+                    f'(label={self.label}, {Labels.get_str(self.label)}).')
         if self.label == -1:
-            self._debug('Warning: label not set, defaulting to -1.')
+            logger.warning('Label not set, defaulting to -1.')
         self.point_labels = labels
         if self.exclude_labels:
             self.mask = np.ones((len(points),), dtype=bool)

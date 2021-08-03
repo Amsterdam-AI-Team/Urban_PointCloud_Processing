@@ -1,6 +1,7 @@
 import numpy as np
 from shapely.geometry import Polygon
 import ast
+import logging
 
 from ..fusion.bgt_fuser import BGTFuser
 from ..region_growing.label_connected_comp import LabelConnectedComp
@@ -9,6 +10,8 @@ from ..utils.math_utils import minimum_bounding_rectangle
 from ..utils.las_utils import get_bbox_from_tile_code
 from ..utils.clip_utils import poly_box_clip
 from ..utils.labels import Labels
+
+logger = logging.getLogger(__name__)
 
 
 class CarFuser(BGTFuser):
@@ -19,8 +22,6 @@ class CarFuser(BGTFuser):
         Class label to use for this fuser.
     ahn_reader : AHNReader object
         Elevation data reader.
-    debug : bool (default: False)
-        Log extra debug info (optional).
     bgt_file : str or Path or None (default: None)
         File containing data files needed for this fuser. Either a file or a
         folder should be provided, but not both.
@@ -34,12 +35,12 @@ class CarFuser(BGTFuser):
 
     COLUMNS = ['bgt_name', 'polygon', 'x_min', 'y_max', 'x_max', 'y_min']
 
-    def __init__(self, label, ahn_reader, debug=False,
+    def __init__(self, label, ahn_reader,
                  bgt_file=None, bgt_folder=None, file_prefix='bgt_roads',
                  octree_level=9, min_component_size=100, max_above_ground=3,
                  min_width_thresh=1.5, max_width_thresh=2.55,
                  min_length_thresh=2.0, max_length_thresh=7.0):
-        super().__init__(label, debug, bgt_file, bgt_folder, file_prefix)
+        super().__init__(label, bgt_file, bgt_folder, file_prefix)
 
         self.ahn_reader = ahn_reader
         self.octree_level = octree_level
@@ -105,7 +106,7 @@ class CarFuser(BGTFuser):
                                     points, poly, bottom=ground_z, top=max_z)
                                 car_count += 1
                                 break
-        self._log(f'{car_count} cars labelled.')
+        logger.info(f'{car_count} cars labelled.')
         return car_mask
 
     def get_label_mask(self, points, labels, mask, tilecode):
@@ -128,8 +129,8 @@ class CarFuser(BGTFuser):
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
-        self._log('Car fuser ' +
-                  f'(label={self.label}, {Labels.get_str(self.label)}).')
+        logger.info('Car fuser ' +
+                    f'(label={self.label}, {Labels.get_str(self.label)}).')
 
         label_mask = np.zeros((len(points),), dtype=bool)
 

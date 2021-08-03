@@ -1,10 +1,13 @@
 import numpy as np
 import open3d as o3d
 import copy
+import logging
 
 from ..utils.math_utils import angle_between
 from ..utils.labels import Labels
 from ..abstract_processor import AbstractProcessor
+
+logger = logging.getLogger(__name__)
 
 
 class RegionGrowing(AbstractProcessor):
@@ -12,10 +15,10 @@ class RegionGrowing(AbstractProcessor):
     Region growing implementation based on:
     https://pcl.readthedocs.io/projects/tutorials/en/latest/region_growing_segmentation.html
     """
-    def __init__(self, label, exclude_labels, debug=False, threshold_angle=20,
+    def __init__(self, label, exclude_labels, threshold_angle=20,
                  threshold_curve=1.0, max_nn=30, grow_region_knn=15,
                  grow_region_radius=0.2):
-        super().__init__(label, debug)
+        super().__init__(label)
         """ Init variables. """
         self.threshold_angle = threshold_angle
         self.threshold_curve = threshold_curve
@@ -35,7 +38,8 @@ class RegionGrowing(AbstractProcessor):
 
         list_of_indices = np.where(las_labels[mask] == self.label)[0]
         if len(list_of_indices) == 0:
-            self._debug('Input point cloud does not contain any seed points.')
+            logger.debug(
+                'Input point cloud does not contain any seed points.')
         self.list_of_seed_ids = list_of_indices.tolist()
 
         self.mask_indices = np.where(mask)[0]
@@ -155,8 +159,8 @@ class RegionGrowing(AbstractProcessor):
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
-        self._log('KDTree based Region Growing ' +
-                  f'(label={self.label}, {Labels.get_str(self.label)}).')
+        logger.info('KDTree based Region Growing ' +
+                    f'(label={self.label}, {Labels.get_str(self.label)}).')
         self._set_mask(labels)
         self._convert_input_cloud(points)
         label_mask = self._region_growing()

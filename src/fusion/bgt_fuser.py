@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import ast
 import os
+import logging
 from pathlib import Path
 from sklearn.cluster import DBSCAN
 from scipy.stats import binned_statistic_2d
@@ -15,6 +16,8 @@ from ..utils.las_utils import get_bbox_from_tile_code
 from ..utils.interpolation import FastGridInterpolator
 from ..utils.labels import Labels
 
+logger = logging.getLogger(__name__)
+
 
 class BGTFuser(AbstractProcessor, ABC):
     """
@@ -24,8 +27,6 @@ class BGTFuser(AbstractProcessor, ABC):
     ----------
     label : int
         Class label to use for this fuser.
-    debug : bool (default: False)
-        Log extra debug info.
     bgt_file : str or Path or None (default: None)
         File containing data files needed for this fuser. Either a file or a
         folder should be provided, but not both.
@@ -41,7 +42,7 @@ class BGTFuser(AbstractProcessor, ABC):
     def COLUMNS(cls):
         return NotImplementedError
 
-    def __init__(self, label, debug=False, bgt_file=None, bgt_folder=None,
+    def __init__(self, label, bgt_file=None, bgt_folder=None,
                  file_prefix=''):
         if (bgt_file is None) and (bgt_folder is None):
             print("Provide either a bgt_file or bgt_folder to load.")
@@ -56,7 +57,7 @@ class BGTFuser(AbstractProcessor, ABC):
             print('The data file specified does not exist')
             return None
 
-        super().__init__(label, debug)
+        super().__init__(label)
         self.file_prefix = file_prefix
         self.bgt_df = pd.DataFrame(columns=type(self).COLUMNS)
 
@@ -65,7 +66,7 @@ class BGTFuser(AbstractProcessor, ABC):
         elif bgt_folder is not None:
             self._read_folder(Path(bgt_folder))
         else:
-            print('No data folder or file specified. Aborting...')
+            logger.error('No data folder or file specified. Aborting...')
             return None
 
     def _read_folder(self, path):
@@ -78,7 +79,7 @@ class BGTFuser(AbstractProcessor, ABC):
         frames = [pd.read_csv(file, header=0, names=type(self).COLUMNS)
                   for file in path.glob(file_match)]
         if len(frames) == 0:
-            print(f'No data files found in {path.as_posix()}.')
+            logger.error(f'No data files found in {path.as_posix()}.')
             return
         self.bgt_df = pd.concat(frames)
 
@@ -109,8 +110,6 @@ class BGTBuildingFuser(BGTFuser):
     ----------
     label : int
         Class label to use for this fuser.
-    debug : bool (default: False)
-        Log extra debug info.
     bgt_file : str or Path or None (default: None)
         File containing data files needed for this fuser. Either a file or a
         folder should be provided, but not both.
@@ -128,9 +127,9 @@ class BGTBuildingFuser(BGTFuser):
 
     COLUMNS = ['BAG_ID', 'Polygon', 'x_min', 'y_max', 'x_max', 'y_min']
 
-    def __init__(self, label, debug=False, bgt_file=None, bgt_folder=None,
+    def __init__(self, label, bgt_file=None, bgt_folder=None,
                  file_prefix='bgt_buildings', building_offset=0, padding=0):
-        super().__init__(label, debug, bgt_file, bgt_folder, file_prefix)
+        super().__init__(label, bgt_file, bgt_folder, file_prefix)
         self.building_offset = building_offset
         self.padding = padding
 
@@ -171,8 +170,8 @@ class BGTBuildingFuser(BGTFuser):
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
-        self._log('BGT building fuser ' +
-                  f'(label={self.label}, {Labels.get_str(self.label)}).')
+        logger.info('BGT building fuser ' +
+                    f'(label={self.label}, {Labels.get_str(self.label)}).')
 
         building_polygons = self._filter_tile(tilecode)
 
@@ -187,7 +186,7 @@ class BGTBuildingFuser(BGTFuser):
             building_points = poly_clip(points[mask, :], building_with_offset)
             building_mask = building_mask | building_points
 
-        self._log(f'{len(building_polygons)} building polygons labelled.')
+        logger.info(f'{len(building_polygons)} building polygons labelled.')
 
         mask_indices = np.where(mask)[0]
         label_mask = np.zeros(len(points), dtype=bool)
@@ -209,8 +208,6 @@ class BGTPointFuser(BGTFuser):
     bgt_type : str
         Specify the 'type' of point object: 'boom', 'lichtmast', or
         'verkeersbord'
-    debug : bool (default: False)
-        Log extra debug info.
     bgt_file : str or Path or None (default: None)
         File containing data files needed for this fuser. Either a file or a
         folder should be provided, but not both.
@@ -259,17 +256,17 @@ class BGTPointFuser(BGTFuser):
     """
     COLUMNS = ['Type', 'X', 'Y']
 
-    def __init__(self, label, bgt_type, debug=False, bgt_file=None,
+    def __init__(self, label, bgt_type, bgt_file=None,
                  bgt_folder=None, file_prefix='bgt_points', ahn_reader=None,
                  padding=0, params={}):
-        super().__init__(label, debug, bgt_file, bgt_folder, file_prefix)
+        super().__init__(label, bgt_file, bgt_folder, file_prefix)
         self.bgt_type = bgt_type
         if ahn_reader is None:
-            print('WARNING: no ahn_reader specified. Assuming elevation=0.')
+            logger.warning('No ahn_reader specified. Assuming elevation=0.')
         self.ahn_reader = ahn_reader
         if padding > 0:
             # TODO: positive padding does not work with elevation data.
-            print('WARNING: positive padding not yet implemented.')
+            logger.warning('Positive padding not yet implemented.')
             padding = 0.
         self.padding = padding
         if 'r_mult' not in params:
@@ -448,8 +445,8 @@ class BGTPointFuser(BGTFuser):
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
-        self._log(f'BGT [{self.bgt_type}] point fuser ' +
-                  f'(label={self.label}, {Labels.get_str(self.label)}).')
+        logger.info(f'BGT [{self.bgt_type}] point fuser ' +
+                    f'(label={self.label}, {Labels.get_str(self.label)}).')
 
         label_mask = np.zeros((len(points),), dtype=bool)
 
@@ -471,11 +468,10 @@ class BGTPointFuser(BGTFuser):
                                       top=top_height)
             label_mask[mask] = label_mask[mask] | clip_mask
 
-        if self.debug:
-            match_str = ', '.join([f'{obj}->{cand}'
-                                   for (obj, cand) in matches.items()])
-            self._debug('Matches for [{self.bgt_type}]: ' + match_str)
+        match_str = ', '.join([f'{obj}->{cand}'
+                               for (obj, cand) in matches.items()])
+        logger.debug('Matches for [{self.bgt_type}]: ' + match_str)
 
-        self._log(f'{len(seeds)/len(bgt_points)} objects labelled:')
+        logger.info(f'{len(seeds)}/{len(bgt_points)} objects labelled.')
 
         return label_mask

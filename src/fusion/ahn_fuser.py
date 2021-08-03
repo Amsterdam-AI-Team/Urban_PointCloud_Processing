@@ -2,11 +2,14 @@
 
 import numpy as np
 import os
+import logging
 
 from ..abstract_processor import AbstractProcessor
 from ..utils import ahn_utils as ahn_utils
 from ..utils.interpolation import FastGridInterpolator
 from ..utils.labels import Labels
+
+logger = logging.getLogger(__name__)
 
 
 class AHNFuser(AbstractProcessor):
@@ -22,8 +25,6 @@ class AHNFuser(AbstractProcessor):
         Class label to use for this fuser.
     data_folder : str or Path
         Folder containing data files needed for this fuser.
-    debug : bool (default: False)
-        Log extra debug info.
     method : str (default: 'npz')
         Whether to use pre-processed .npz data ('npz') or GeoTIFF files
         ('geotiff').
@@ -46,22 +47,23 @@ class AHNFuser(AbstractProcessor):
     METHODS = ('npz', 'geotiff')
     TARGETS = ('ground', 'building')
 
-    def __init__(self, label, data_folder, debug=False,
+    def __init__(self, label, data_folder,
                  method='npz', target='ground', epsilon=0.2,
                  fill_gaps=True, max_gap_size=50,
                  smoothen=True, smooth_thickness=1):
-        super().__init__(label, debug)
+        super().__init__(label)
         if not os.path.isdir(data_folder):
-            print('The data folder specified does not exist')
+            logger.error('The data folder specified does not exist')
             return None
         if method not in self.METHODS:
-            print(f'Method should be one of {self.METHODS}.')
+            logger.error(f'Method should be one of {self.METHODS}.')
             return None
         if target not in self.TARGETS:
-            print(f'Target should be one of {self.TARGETS}.')
+            logger.error(f'Target should be one of {self.TARGETS}.')
             return None
         if method == 'geotiff' and target == 'building':
-            print(f'The combination of {method} and {target} is not valid.')
+            logger.error(
+                f'The combination of {method} and {target} is not valid.')
             return None
 
         self.data_folder = data_folder
@@ -106,8 +108,8 @@ class AHNFuser(AbstractProcessor):
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
-        self._log(f'AHN [{self.method}/{self.target}] fuser ' +
-                  f'(label={self.label}, {Labels.get_str(self.label)}).')
+        logger.info(f'AHN [{self.method}/{self.target}] fuser ' +
+                    f'(label={self.label}, {Labels.get_str(self.label)}).')
 
         ahn_tile = self._filter_tile(tilecode)
         if self.target == 'ground':

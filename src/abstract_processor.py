@@ -16,10 +16,8 @@ class AbstractProcessor(ABC):
         Log extra debug info (optional).
     """
 
-    def __init__(self, label, debug=False):
+    def __init__(self, label):
         self.label = label
-        self.debug = debug
-        self.log = ''
         super().__init__()
 
     @abstractmethod
@@ -45,28 +43,6 @@ class AbstractProcessor(ABC):
         """
         pass
 
-    def _log(self, message, is_debug=False, newline=True):
-        """Append a message to the log."""
-        if is_debug and not self.debug:
-            return
-        else:
-            message = '[DEBUG] ' + message
-        if newline:
-            self.log = self.log + message + '\n'
-        else:
-            self.log = self.log + message
-
-    def _debug(self, message):
-        self._log(message, is_debug=True)
-
-    def set_debug(self, debug):
-        """Set the debug flag."""
-        self.debug = debug
-
     def get_label(self):
         """Returns the label of this AbstractProcessor."""
         return self.label
-
-    def get_log(self):
-        """Returns the log of this AbstractProcessor."""
-        return self.log
