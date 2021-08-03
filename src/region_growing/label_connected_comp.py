@@ -18,6 +18,8 @@ class LabelConnectedComp(AbstractProcessor):
     ----------
     label : int (default: -1)
         Label to use when labelling the grown region.
+    debug : bool (default: False)
+        Log extra debug info (optional).
     exclude_labels : list-like (default: [])
         Which labels to exclude (optional).
     octree_level : int (default: 9)
@@ -29,9 +31,9 @@ class LabelConnectedComp(AbstractProcessor):
         When labelling a cluster, at least this proportion of points should
         already be labelled.
     """
-    def __init__(self, label=-1, exclude_labels=[], octree_level=9,
-                 min_component_size=100, threshold=0.1):
-        super().__init__(label)
+    def __init__(self, label=-1, debug=False, exclude_labels=[],
+                 octree_level=9, min_component_size=100, threshold=0.1):
+        super().__init__(label, debug)
         """ Init variables. """
         self.octree_level = octree_level
         self.min_component_size = min_component_size
@@ -81,9 +83,6 @@ class LabelConnectedComp(AbstractProcessor):
         """ Clustering based region growing process. When one initial seed
         point is found inside a component, make the whole component this
         label. """
-        pre_seed_count = np.count_nonzero(self.point_labels ==
-                                          self.label)
-
         mask_indices = np.where(self.mask)[0]
         label_mask = np.zeros(len(self.mask), dtype=bool)
 
@@ -91,6 +90,7 @@ class LabelConnectedComp(AbstractProcessor):
                                       return_counts=True)
 
         cc_labels_filtered = cc_labels[counts >= self.min_component_size]
+        cc_count = 0
 
         for cc in cc_labels_filtered:
             # select points that belong to the cluster
@@ -106,16 +106,17 @@ class LabelConnectedComp(AbstractProcessor):
             # at least X% of the cluster should be seed points
             if (float(seed_count) / cc_size) > self.threshold:
                 label_mask[mask_indices[cc_mask]] = True
+                cc_count += 1
 
         # Add label to the regions
         labels = self.point_labels
         labels[label_mask] = self.label
-        post_seed_count = np.count_nonzero(labels == self.label)
 
-        # Calculate the number of points grown
-        points_added = post_seed_count - pre_seed_count
+        self._debug(f'Found {len(cc_labels_filtered)} clusters of ' +
+                    f'>{self.min_component_size} points; ' +
+                    f'{cc_count} added.')
 
-        return label_mask, points_added
+        return label_mask
 
     def get_label_mask(self, points, labels, mask=None, tilecode=None):
         """
@@ -138,8 +139,10 @@ class LabelConnectedComp(AbstractProcessor):
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
+        self._log('Clustering based Region Growing ' +
+                  f'(label={self.label}, {Labels.get_str(self.label)}).')
         if self.label == -1:
-            print('Warning: label not set, defaulting to -1.')
+            self._debug('Warning: label not set, defaulting to -1.')
         self.point_labels = labels
         if self.exclude_labels:
             self.mask = np.ones((len(points),), dtype=bool)
@@ -153,11 +156,7 @@ class LabelConnectedComp(AbstractProcessor):
 
         self._convert_input_cloud(points)
         self._label_connected_comp()
-        label_mask, points_added = self._fill_components()
-
-        print(f'Clustering based Region Growing => {points_added} '
-              f'points added (label={self.label}, '
-              f'{Labels.get_str(self.label)}).')
+        label_mask = self._fill_components()
 
         return label_mask
 

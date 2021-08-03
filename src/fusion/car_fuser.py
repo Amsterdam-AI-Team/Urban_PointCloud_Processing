@@ -19,6 +19,8 @@ class CarFuser(BGTFuser):
         Class label to use for this fuser.
     ahn_reader : AHNReader object
         Elevation data reader.
+    debug : bool (default: False)
+        Log extra debug info (optional).
     bgt_file : str or Path or None (default: None)
         File containing data files needed for this fuser. Either a file or a
         folder should be provided, but not both.
@@ -32,12 +34,12 @@ class CarFuser(BGTFuser):
 
     COLUMNS = ['bgt_name', 'polygon', 'x_min', 'y_max', 'x_max', 'y_min']
 
-    def __init__(self, label, ahn_reader,
+    def __init__(self, label, ahn_reader, debug=False,
                  bgt_file=None, bgt_folder=None, file_prefix='bgt_roads',
                  octree_level=9, min_component_size=100, max_above_ground=3,
                  min_width_thresh=1.5, max_width_thresh=2.55,
                  min_length_thresh=2.0, max_length_thresh=7.0):
-        super().__init__(label, bgt_file, bgt_folder, file_prefix)
+        super().__init__(label, debug, bgt_file, bgt_folder, file_prefix)
 
         self.ahn_reader = ahn_reader
         self.octree_level = octree_level
@@ -66,6 +68,7 @@ class CarFuser(BGTFuser):
         """ Based on certain properties of a car we label clusters.  """
 
         car_mask = np.zeros(len(points), dtype=bool)
+        car_count = 0
 
         cc_labels, counts = np.unique(point_components,
                                       return_counts=True)
@@ -100,8 +103,9 @@ class CarFuser(BGTFuser):
                             if do_overlap:
                                 car_mask = car_mask | poly_box_clip(
                                     points, poly, bottom=ground_z, top=max_z)
+                                car_count += 1
                                 break
-
+        self._log(f'{car_count} cars labelled.')
         return car_mask
 
     def get_label_mask(self, points, labels, mask, tilecode):
@@ -124,6 +128,9 @@ class CarFuser(BGTFuser):
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
+        self._log('Car fuser ' +
+                  f'(label={self.label}, {Labels.get_str(self.label)}).')
+
         label_mask = np.zeros((len(points),), dtype=bool)
 
         road_polygons = self._filter_tile(tilecode)
@@ -145,8 +152,5 @@ class CarFuser(BGTFuser):
                                                   point_components,
                                                   road_polygons)
         label_mask[mask] = car_mask
-
-        print(f'Car fuser => processed '
-              f'(label={self.label}, {Labels.get_str(self.label)}).')
 
         return label_mask

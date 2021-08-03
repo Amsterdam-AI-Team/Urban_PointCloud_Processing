@@ -22,6 +22,8 @@ class AHNFuser(AbstractProcessor):
         Class label to use for this fuser.
     data_folder : str or Path
         Folder containing data files needed for this fuser.
+    debug : bool (default: False)
+        Log extra debug info.
     method : str (default: 'npz')
         Whether to use pre-processed .npz data ('npz') or GeoTIFF files
         ('geotiff').
@@ -44,11 +46,11 @@ class AHNFuser(AbstractProcessor):
     METHODS = ('npz', 'geotiff')
     TARGETS = ('ground', 'building')
 
-    def __init__(self, label, data_folder,
+    def __init__(self, label, data_folder, debug=False,
                  method='npz', target='ground', epsilon=0.2,
                  fill_gaps=True, max_gap_size=50,
                  smoothen=True, smooth_thickness=1):
-        super().__init__(label)
+        super().__init__(label, debug)
         if not os.path.isdir(data_folder):
             print('The data folder specified does not exist')
             return None
@@ -104,6 +106,9 @@ class AHNFuser(AbstractProcessor):
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
+        self._log(f'AHN [{self.method}/{self.target}] fuser ' +
+                  f'(label={self.label}, {Labels.get_str(self.label)}).')
+
         ahn_tile = self._filter_tile(tilecode)
         if self.target == 'ground':
             if self.method == 'geotiff':
@@ -129,8 +134,5 @@ class AHNFuser(AbstractProcessor):
                                 < self.epsilon)
         elif self.target == 'building':
             label_mask[mask] = points[mask, 2] < target_z + self.epsilon
-
-        print(f'AHN [{self.method}] fuser => {self.target} processed '
-              f'(label={self.label}, {Labels.get_str(self.label)}).')
 
         return label_mask

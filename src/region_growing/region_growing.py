@@ -12,10 +12,10 @@ class RegionGrowing(AbstractProcessor):
     Region growing implementation based on:
     https://pcl.readthedocs.io/projects/tutorials/en/latest/region_growing_segmentation.html
     """
-    def __init__(self, label, exclude_labels, threshold_angle=20,
+    def __init__(self, label, exclude_labels, debug=False, threshold_angle=20,
                  threshold_curve=1.0, max_nn=30, grow_region_knn=15,
                  grow_region_radius=0.2):
-        super().__init__(label)
+        super().__init__(label, debug)
         """ Init variables. """
         self.threshold_angle = threshold_angle
         self.threshold_curve = threshold_curve
@@ -35,7 +35,7 @@ class RegionGrowing(AbstractProcessor):
 
         list_of_indices = np.where(las_labels[mask] == self.label)[0]
         if len(list_of_indices) == 0:
-            print('NOTE: Input point cloud does not contain any seed points.')
+            self._debug('Input point cloud does not contain any seed points.')
         self.list_of_seed_ids = list_of_indices.tolist()
 
         self.mask_indices = np.where(mask)[0]
@@ -74,7 +74,6 @@ class RegionGrowing(AbstractProcessor):
         The same can also be performed in Python using scipy.spatial.cKDTree
         with query_ball_tree or query.
         """
-        pre_seed_count = len(self.list_of_seed_ids)
         region = copy.deepcopy(self.list_of_seed_ids)
 
         # Compute the KDTree
@@ -130,13 +129,10 @@ class RegionGrowing(AbstractProcessor):
 
             idx = idx+1
 
-        # Calculate the number of points grown
-        points_added = len(region) - pre_seed_count
-
         # Set the region grown points to True
         self.label_mask[self.mask_indices[region]] = True
 
-        return self.label_mask, points_added
+        return self.label_mask
 
     def get_label_mask(self, points, labels, mask, tilecode):
         """
@@ -159,11 +155,10 @@ class RegionGrowing(AbstractProcessor):
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
+        self._log('KDTree based Region Growing ' +
+                  f'(label={self.label}, {Labels.get_str(self.label)}).')
         self._set_mask(labels)
         self._convert_input_cloud(points)
-        label_mask, points_added = self._region_growing()
-
-        print(f'Region Growing => {points_added} points added '
-              f'(label={self.label}, {Labels.get_str(self.label)}).')
+        label_mask = self._region_growing()
 
         return label_mask

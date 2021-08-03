@@ -24,6 +24,8 @@ class BGTFuser(AbstractProcessor, ABC):
     ----------
     label : int
         Class label to use for this fuser.
+    debug : bool (default: False)
+        Log extra debug info.
     bgt_file : str or Path or None (default: None)
         File containing data files needed for this fuser. Either a file or a
         folder should be provided, but not both.
@@ -39,7 +41,7 @@ class BGTFuser(AbstractProcessor, ABC):
     def COLUMNS(cls):
         return NotImplementedError
 
-    def __init__(self, label, bgt_file=None, bgt_folder=None,
+    def __init__(self, label, debug=False, bgt_file=None, bgt_folder=None,
                  file_prefix=''):
         if (bgt_file is None) and (bgt_folder is None):
             print("Provide either a bgt_file or bgt_folder to load.")
@@ -54,7 +56,7 @@ class BGTFuser(AbstractProcessor, ABC):
             print('The data file specified does not exist')
             return None
 
-        super().__init__(label)
+        super().__init__(label, debug)
         self.file_prefix = file_prefix
         self.bgt_df = pd.DataFrame(columns=type(self).COLUMNS)
 
@@ -107,6 +109,8 @@ class BGTBuildingFuser(BGTFuser):
     ----------
     label : int
         Class label to use for this fuser.
+    debug : bool (default: False)
+        Log extra debug info.
     bgt_file : str or Path or None (default: None)
         File containing data files needed for this fuser. Either a file or a
         folder should be provided, but not both.
@@ -124,9 +128,9 @@ class BGTBuildingFuser(BGTFuser):
 
     COLUMNS = ['BAG_ID', 'Polygon', 'x_min', 'y_max', 'x_max', 'y_min']
 
-    def __init__(self, label, bgt_file=None, bgt_folder=None,
+    def __init__(self, label, debug=False, bgt_file=None, bgt_folder=None,
                  file_prefix='bgt_buildings', building_offset=0, padding=0):
-        super().__init__(label, bgt_file, bgt_folder, file_prefix)
+        super().__init__(label, debug, bgt_file, bgt_folder, file_prefix)
         self.building_offset = building_offset
         self.padding = padding
 
@@ -167,6 +171,9 @@ class BGTBuildingFuser(BGTFuser):
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
+        self._log('BGT building fuser ' +
+                  f'(label={self.label}, {Labels.get_str(self.label)}).')
+
         building_polygons = self._filter_tile(tilecode)
 
         if mask is None:
@@ -180,12 +187,11 @@ class BGTBuildingFuser(BGTFuser):
             building_points = poly_clip(points[mask, :], building_with_offset)
             building_mask = building_mask | building_points
 
+        self._log(f'{len(building_polygons)} building polygons labelled.')
+
         mask_indices = np.where(mask)[0]
         label_mask = np.zeros(len(points), dtype=bool)
         label_mask[mask_indices[building_mask]] = True
-
-        print(f'BGT building fuser => processed '
-              f'(label={self.label}, {Labels.get_str(self.label)}).')
 
         return label_mask
 
@@ -203,6 +209,8 @@ class BGTPointFuser(BGTFuser):
     bgt_type : str
         Specify the 'type' of point object: 'boom', 'lichtmast', or
         'verkeersbord'
+    debug : bool (default: False)
+        Log extra debug info.
     bgt_file : str or Path or None (default: None)
         File containing data files needed for this fuser. Either a file or a
         folder should be provided, but not both.
@@ -251,10 +259,10 @@ class BGTPointFuser(BGTFuser):
     """
     COLUMNS = ['Type', 'X', 'Y']
 
-    def __init__(self, label, bgt_type, bgt_file=None, bgt_folder=None,
-                 file_prefix='bgt_points', ahn_reader=None, padding=0,
-                 params={}):
-        super().__init__(label, bgt_file, bgt_folder, file_prefix)
+    def __init__(self, label, bgt_type, debug=False, bgt_file=None,
+                 bgt_folder=None, file_prefix='bgt_points', ahn_reader=None,
+                 padding=0, params={}):
+        super().__init__(label, debug, bgt_file, bgt_folder, file_prefix)
         self.bgt_type = bgt_type
         if ahn_reader is None:
             print('WARNING: no ahn_reader specified. Assuming elevation=0.')
@@ -341,6 +349,7 @@ class BGTPointFuser(BGTFuser):
         For a description of parameters see "Notes" above.
         """
         seeds = []
+        matches = dict()
         for ind, obj in enumerate(point_objects):
             # Assume obj = [x, y].
             if fast_z is None:
@@ -356,7 +365,8 @@ class BGTPointFuser(BGTFuser):
                                         bottom=ground_z+z_min,
                                         top=ground_z+z_max))[0]
             if len(box_ids) == 0:
-                print(f'Empty search box for object {ind}.')
+                # Empty search box, no match.
+                matches[obj] = None
                 continue
 
             # Voxelize the search box and compute statistics for each column.
@@ -389,7 +399,8 @@ class BGTPointFuser(BGTFuser):
                                     & (count_z_bin.statistic > min_points)
                                     & med_mid)
             if len(x_loc) == 0:
-                print(f'No candidates found for object {ind}.')
+                # No candidates found.
+                matches[obj] = None
                 continue
             candidates = np.stack((x_edge[x_loc] + voxel_res/2,
                                    y_edge[y_loc] + voxel_res/2)).T
@@ -408,11 +419,14 @@ class BGTPointFuser(BGTFuser):
                     # which objects were located.
                     seed = clusters[0]
                     seeds.append(seed)
+                    matches[obj] = (seed[0], seed[1])
                 else:
-                    print(f'No cluster found for object {ind}')
+                    # No cluster found.
+                    matches[obj] = None
             else:
-                print(f'No candidates found for object {ind}.')
-        return seeds
+                # No candidates found.
+                matches[obj] = None
+        return seeds, matches
 
     def get_label_mask(self, points, labels, mask, tilecode):
         """
@@ -434,6 +448,9 @@ class BGTPointFuser(BGTFuser):
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
+        self._log(f'BGT [{self.bgt_type}] point fuser ' +
+                  f'(label={self.label}, {Labels.get_str(self.label)}).')
+
         label_mask = np.zeros((len(points),), dtype=bool)
 
         bgt_points = self._filter_tile(tilecode)
@@ -443,8 +460,8 @@ class BGTPointFuser(BGTFuser):
                                       ahn_tile['ground_surface'])
 
         # Find seed point clusters.
-        seeds = self._find_seeds_for_point_objects(points[mask], bgt_points,
-                                                   fast_z, **self.params)
+        seeds, matches = self._find_seeds_for_point_objects(
+                            points[mask], bgt_points, fast_z, **self.params)
         for seed in seeds:
             # Label a cylinder based on the seed cluster.
             top_height = (fast_z(np.array([seed[0:2]]))
@@ -454,7 +471,11 @@ class BGTPointFuser(BGTFuser):
                                       top=top_height)
             label_mask[mask] = label_mask[mask] | clip_mask
 
-        print(f'BGT point fuser [{self.bgt_type}] => processed '
-              + f'(label={self.label}, {Labels.get_str(self.label)}).')
+        if self.debug:
+            match_str = ', '.join([f'{obj}->{cand}'
+                                   for (obj, cand) in matches.items()])
+            self._debug('Matches for [{self.bgt_type}]: ' + match_str)
+
+        self._log(f'{len(seeds)/len(bgt_points)} objects labelled:')
 
         return label_mask
