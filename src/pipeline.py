@@ -115,8 +115,7 @@ class Pipeline:
         stats = las_utils.get_stats(labels)
         logger.info('STATISTICS\n' + stats)
         logger.info(f'File processed in {duration:.2f}s, ' +
-                    f'output written to {out_file}.')
-        logger.info('==========')
+                    f'output written to {out_file}.\n' + '='*20)
 
     def process_folder(self, in_folder, out_folder=None, in_prefix='',
                        out_prefix='', suffix='', hide_progress=False):
@@ -173,4 +172,4 @@ class Pipeline:
             outfile = os.path.join(out_folder, filename + suffix + extension)
             self.process_file(file.as_posix(), outfile)
 
-        logger.info(f'Pipeline finished, {len(files)} processed.')
+        logger.info(f'Pipeline finished, {len(files)} processed.\n' + '='*20)

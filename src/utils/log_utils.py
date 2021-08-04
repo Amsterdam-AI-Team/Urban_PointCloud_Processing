@@ -1,4 +1,5 @@
 import logging
+import pathlib
 import sys
 
 
@@ -25,9 +26,15 @@ def add_console_logger(level=logging.INFO):
     logger.addHandler(ch)
 
 
-def add_file_logger(logfile, level=logging.DEBUG):
+def add_file_logger(logfile, level=logging.DEBUG, clear_log=False):
+    log_path = pathlib.Path(logfile)
+    if log_path.is_file():
+        if clear_log:
+            open(log_path, "w").close()
+    else:
+        pathlib.Path(log_path.parent).mkdir(parents=True, exist_ok=True)
     logger = logging.getLogger('src')
-    fh = logging.FileHandler(logfile)
+    fh = logging.FileHandler(log_path)
     fh.setLevel(level)
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
