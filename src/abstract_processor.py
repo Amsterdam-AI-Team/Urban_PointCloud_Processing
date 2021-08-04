@@ -12,8 +12,6 @@ class AbstractProcessor(ABC):
     ----------
     label : int
         Class label to use for this fuser.
-    debug : bool (default: False)
-        Log extra debug info (optional).
     """
 
     def __init__(self, label):

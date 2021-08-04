@@ -101,7 +101,7 @@ def get_bbox_from_las_folder(folder_path, padding=0):
 
 
 def get_stats(labels):
-    """Returns a string decsribing statistics based on labels."""
+    """Returns a string describing statistics based on labels."""
     N = len(labels)
     labels, counts = np.unique(labels, return_counts=True)
     stats = f'Total: {N:25} points\n'
