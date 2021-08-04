@@ -3,11 +3,11 @@
 import numpy as np
 import os
 import pathlib
+import time
 import logging
 from tqdm import tqdm
 
-from .utils.las_utils import (get_tilecode_from_filename, read_las,
-                              label_and_save_las)
+from .utils import las_utils
 
 logger = logging.getLogger(__name__)
 
@@ -66,9 +66,13 @@ class Pipeline:
         mask = self._create_mask(mask, labels)
 
         for obj in self.process_sequence:
+            start = time.time()
             label_mask = obj.get_label_mask(points, labels, mask, tilecode)
             labels[label_mask] = obj.get_label()
             mask[label_mask] = False
+            duration = time.time() - start
+            logger.info(f'Processor finished in {duration:.2f}s, ' +
+                        f'{np.count_nonzero(label_mask)} points labelled.')
 
         return labels
 
@@ -87,6 +91,7 @@ class Pipeline:
             Pre-mask used to label only a subset of the points.
         """
         logger.info(f'Processing file {in_file}.')
+        start = time.time()
         if not os.path.isfile(in_file):
             logger.error('The input file specified does not exist')
             return None
@@ -94,8 +99,8 @@ class Pipeline:
         if out_file is None:
             out_file = in_file
 
-        tilecode = get_tilecode_from_filename(in_file)
-        pointcloud = read_las(in_file)
+        tilecode = las_utils.get_tilecode_from_filename(in_file)
+        pointcloud = las_utils.read_las(in_file)
         points = np.vstack((pointcloud.x, pointcloud.y, pointcloud.z)).T
 
         if 'label' not in pointcloud.point_format.extra_dimension_names:
@@ -104,8 +109,14 @@ class Pipeline:
             labels = pointcloud.label
 
         labels = self.process_cloud(tilecode, points, labels, mask)
-        label_and_save_las(pointcloud, labels, out_file)
-        logger.info(f'Output written to {out_file}.')
+        las_utils.label_and_save_las(pointcloud, labels, out_file)
+
+        duration = time.time() - start
+        stats = las_utils.get_stats(labels)
+        logger.info('STATISTICS\n' + stats)
+        logger.info(f'File processed in {duration:.2f}s, ' +
+                    f'output written to {out_file}.')
+        logger.info('==========')
 
     def process_folder(self, in_folder, out_folder=None, in_prefix='',
                        out_prefix='', suffix='', hide_progress=False):
@@ -142,10 +153,15 @@ class Pipeline:
         if suffix is None:
             suffix = ''
 
+        logger.info('===== PIPELINE =====' +
+                    f'Processing folder {in_folder}, ' +
+                    f'writing results in {out_folder}.')
+
         files = [f for f in in_folder.glob('*')
                  if f.name.endswith(self.FILE_TYPES)
                  and f.name.startswith(in_prefix)]
         files_tqdm = tqdm(files, unit="file", disable=hide_progress)
+        logger.debug(f'{len(files)} files found.')
 
         for file in files_tqdm:
             files_tqdm.set_postfix_str(file.name)
@@ -154,5 +170,7 @@ class Pipeline:
                 filename = filename.replace(in_prefix, out_prefix)
             elif out_prefix:
                 filename = out_prefix + filename
-            outfile = out_folder + '/' + filename + suffix + extension
+            outfile = os.path.join(out_folder, filename + suffix + extension)
             self.process_file(file.as_posix(), outfile)
+
+        logger.info(f'Pipeline finished, {len(files)} processed.')

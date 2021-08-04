@@ -186,7 +186,7 @@ class BGTBuildingFuser(BGTFuser):
             building_points = poly_clip(points[mask, :], building_with_offset)
             building_mask = building_mask | building_points
 
-        logger.info(f'{len(building_polygons)} building polygons labelled.')
+        logger.debug(f'{len(building_polygons)} building polygons labelled.')
 
         mask_indices = np.where(mask)[0]
         label_mask = np.zeros(len(points), dtype=bool)
@@ -470,8 +470,7 @@ class BGTPointFuser(BGTFuser):
 
         match_str = ', '.join([f'{obj}->{cand}'
                                for (obj, cand) in matches.items()])
+        logger.debug(f'{len(seeds)}/{len(bgt_points)} objects labelled.')
         logger.debug('Matches for [{self.bgt_type}]: ' + match_str)
-
-        logger.info(f'{len(seeds)}/{len(bgt_points)} objects labelled.')
 
         return label_mask

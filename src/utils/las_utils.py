@@ -1,8 +1,11 @@
+import numpy as np
 import glob
 import pathlib
 import re
 import os
 import laspy
+
+from ..utils.labels import Labels
 
 
 def get_tilecode_from_filename(filename):
@@ -95,6 +98,19 @@ def get_bbox_from_las_folder(folder_path, padding=0):
         y_max = max(y_max, bbox[0][1])
 
     return ((x_min-padding, y_max+padding), (x_max+padding, y_min-padding))
+
+
+def get_stats(labels):
+    """Returns a string decsribing statistics based on labels."""
+    N = len(labels)
+    labels, counts = np.unique(labels, return_counts=True)
+    stats = f'Total: {N:25} points\n'
+    for label, cnt in zip(labels, counts):
+        name = Labels.get_str(label)
+        perc = (float(cnt) / N) * 100
+        stats += f'Class {label:2}, {name:14} ' +\
+                 f'{cnt:7} points ({perc:4.1f} %)\n'
+    return stats
 
 
 def read_las(las_file):

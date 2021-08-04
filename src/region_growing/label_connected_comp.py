@@ -32,7 +32,7 @@ class LabelConnectedComp(AbstractProcessor):
         When labelling a cluster, at least this proportion of points should
         already be labelled.
     """
-    def __init__(self, label=-1, exclude_labels=[],
+    def __init__(self, label=-1, exclude_labels=[], set_debug=False,
                  octree_level=9, min_component_size=100, threshold=0.1):
         super().__init__(label)
         """ Init variables. """
@@ -40,6 +40,7 @@ class LabelConnectedComp(AbstractProcessor):
         self.min_component_size = min_component_size
         self.threshold = threshold
         self.exclude_labels = exclude_labels
+        self.debug = set_debug
 
     def _set_mask(self):
         """ Configure the points that we want to perform region growing on. """
@@ -140,8 +141,13 @@ class LabelConnectedComp(AbstractProcessor):
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
-        logger.info('Clustering based Region Growing ' +
-                    f'(label={self.label}, {Labels.get_str(self.label)}).')
+        if not self.debug:
+            logger.info('Clustering based Region Growing ' +
+                        f'(label={self.label}, {Labels.get_str(self.label)}).')
+        else:
+            logger.debug('Clustering based Region Growing ' +
+                         f'(label={self.label}, ' +
+                         f'{Labels.get_str(self.label)}).')
         if self.label == -1:
             logger.warning('Label not set, defaulting to -1.')
         self.point_labels = labels

@@ -73,7 +73,7 @@ class TopBottomLCC(AbstractProcessor):
             height_mask_ids = np.where(
                         points[:, 2] <= points_z + params['plane_height'])[0]
         mask = np.zeros((len(points),), dtype=bool)
-        lcc = LabelConnectedComp(self.label,
+        lcc = LabelConnectedComp(self.label, set_debug=True,
                                  octree_level=params['octree_level'],
                                  min_component_size=params['min_comp_size'],
                                  threshold=params['threshold'])

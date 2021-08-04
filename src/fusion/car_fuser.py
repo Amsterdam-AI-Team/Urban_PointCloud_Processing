@@ -106,7 +106,7 @@ class CarFuser(BGTFuser):
                                     points, poly, bottom=ground_z, top=max_z)
                                 car_count += 1
                                 break
-        logger.info(f'{car_count} cars labelled.')
+        logger.debug(f'{car_count} cars labelled.')
         return car_mask
 
     def get_label_mask(self, points, labels, mask, tilecode):
