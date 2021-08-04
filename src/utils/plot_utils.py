@@ -11,7 +11,7 @@ from ..utils.labels import Labels
 from ..utils.interpolation import FastGridInterpolator
 
 
-def plot_cloud_slice(las_file, ahn_reader, plane_height=1.5):
+def plot_cloud_slice(las_file, ahn_reader, plane_height=1.5, hide_noise=False):
     las = las_utils.read_las(las_file)
     labels = las.label
     points = np.vstack((las.x, las.y, las.z)).T
@@ -31,6 +31,8 @@ def plot_cloud_slice(las_file, ahn_reader, plane_height=1.5):
     fig, ax = plt.subplots(1, constrained_layout=True)
 
     for label in label_set:
+        if label == Labels.NOISE and hide_noise:
+            continue
         label_mask = plane_mask & (labels == label)
         ax.scatter(points[label_mask, 0], points[label_mask, 1],
                    marker='.', label=Labels.get_str(label))
@@ -43,7 +45,10 @@ def plot_cloud_slice(las_file, ahn_reader, plane_height=1.5):
     ax.set_title(tilecode)
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
-    plt.axis('equal')
+    ax.set_xticks(range(x_min, x_max+1, 10))
+    ax.set_xticklabels(range(x_min, x_max+1, 10))
+    ax.set_yticks(range(y_min, y_max+1, 10))
+    ax.set_yticklabels(range(y_min, y_max+1, 10))
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     plt.show()
 
