@@ -1,0 +1,10 @@
+.azure
+.dockerignore
+.git
+.gitignore
+.idea
+.python-version
+__pycache__/
+datasets/pointcloud/complete_*
+media/
+notebooks/
