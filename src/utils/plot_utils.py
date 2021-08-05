@@ -1,10 +1,13 @@
 """Visualisation utilities."""
 
 import numpy as np
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from shapely.geometry import Polygon
+from shapely.ops import cascaded_union
 
+from ..utils import clip_utils
 from ..utils import las_utils
 from ..utils import bgt_utils
 from ..utils.labels import Labels
@@ -76,12 +79,12 @@ def plot_bgt(tilecode, building_file=None, road_file=None, point_file=None):
 
     ((x_min, y_max), (x_max, y_min)) =\
         las_utils.get_bbox_from_tile_code(tilecode)
-    fig, ax = plt.subplots(1, constrained_layout=True)
+    fig, ax = plt.subplots(1, figsize=(7, 5), constrained_layout=True)
 
     for poly in [Polygon(bld) for bld in buildings]:
         x, y = poly.exterior.xy
         ax.fill(x, y, c='lightblue', label='Building')
-        ax.plot(x, y, c='blue')
+        ax.plot(x, y, c='royalblue')
 
     for poly in [Polygon(rd) for rd in roads]:
         x, y = poly.exterior.xy
@@ -96,7 +99,7 @@ def plot_bgt(tilecode, building_file=None, road_file=None, point_file=None):
                             fill=False)
     ax.add_patch(box)
 
-    ax.set_title(tilecode)
+    ax.set_title(f'bgt_{tilecode}')
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
 
@@ -116,6 +119,8 @@ def plot_bgt(tilecode, building_file=None, road_file=None, point_file=None):
 
 
 def plot_ahn_surface(ahn_tile, surf='ground_surface', ax=None):
+    cmap = {'ground_surface': 'gist_earth',
+            'building_surface': 'Oranges'}
     full_plot = False
     if ax is None:
         full_plot = True
@@ -127,7 +132,7 @@ def plot_ahn_surface(ahn_tile, surf='ground_surface', ax=None):
     y_max = int(np.ceil(ahn_tile['y'][0]))
 
     im = ax.imshow(ahn_tile[surf], extent=[x_min, x_max, y_min, y_max],
-                   interpolation='none')
+                   interpolation='none', cmap=cmap[surf])
 
     ax.set_title(surf)
     ax.set_xticks(range(x_min, x_max+1, 10))
@@ -145,4 +150,54 @@ def plot_ahn_sidebyside(ahn_tile):
     plot_ahn_surface(ahn_tile, surf='ground_surface', ax=ax1)
     plot_ahn_surface(ahn_tile, surf='building_surface', ax=ax2)
     plt.tight_layout()
+    plt.show()
+
+
+def plot_buildings_ahn_bgt(tilecode, ahn_reader, building_file, offset=1):
+    ahn_tile = ahn_reader.filter_tile(tilecode)
+    buildings = bgt_utils.get_polygons(building_file, tilecode)
+    if offset > 0:
+        buildings_ofs = list(cascaded_union(
+            [Polygon(clip_utils.poly_offset(bld, offset))
+             for bld in buildings]))
+    else:
+        buildings_ofs = []
+    ((x_min, y_max), (x_max, y_min)) =\
+        las_utils.get_bbox_from_tile_code(tilecode)
+
+    fig, ax = plt.subplots(1, figsize=(7, 5), constrained_layout=True)
+
+    cmap = mcolors.LinearSegmentedColormap.from_list('sg', ['lightgrey']*2)
+
+    ax.imshow(ahn_tile['building_surface'],
+              extent=[x_min, x_max, y_min, y_max],
+              interpolation='none', cmap=cmap)
+    dummy = patches.Patch(color='lightgrey', label='AHN surface')
+
+    for poly in [Polygon(bld) for bld in buildings]:
+        x, y = poly.exterior.xy
+        ax.plot(x, y, c='royalblue', label='BGT polygon')
+    for poly in buildings_ofs:
+        x, y = poly.exterior.xy
+        ax.plot(x, y, c='royalblue', linestyle='--', label='Offset polygon')
+
+    box = patches.Rectangle((x_min, y_min), x_max-x_min, y_max-y_min,
+                            linewidth=1, linestyle='--', edgecolor='darkgrey',
+                            fill=False)
+    ax.add_patch(box)
+
+    ax.set_title(f'building_{tilecode}')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_xticks(range(x_min, x_max+1, 10))
+    ax.set_xticklabels(range(x_min, x_max+1, 10))
+    ax.set_yticks(range(y_min, y_max+1, 10))
+    ax.set_yticklabels(range(y_min, y_max+1, 10))
+
+    handles, labels = ax.get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    by_label[dummy.get_label()] = dummy
+    ax.legend(by_label.values(), by_label.keys(),
+              loc='center left', bbox_to_anchor=(1, 0.5))
+
     plt.show()
