@@ -42,5 +42,5 @@ class AbstractProcessor(ABC):
         pass
 
     def get_label(self):
-        """Returns the label of this DataFuser object."""
+        """Returns the label of this AbstractProcessor."""
         return self.label
