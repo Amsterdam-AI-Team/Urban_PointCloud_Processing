@@ -1,6 +1,7 @@
 import numpy as np
 from shapely.geometry import Polygon
 import ast
+import logging
 
 from ..fusion.bgt_fuser import BGTFuser
 from ..region_growing.label_connected_comp import LabelConnectedComp
@@ -9,6 +10,8 @@ from ..utils.math_utils import minimum_bounding_rectangle
 from ..utils.las_utils import get_bbox_from_tile_code
 from ..utils.clip_utils import poly_box_clip
 from ..utils.labels import Labels
+
+logger = logging.getLogger(__name__)
 
 
 class CarFuser(BGTFuser):
@@ -66,6 +69,7 @@ class CarFuser(BGTFuser):
         """ Based on certain properties of a car we label clusters.  """
 
         car_mask = np.zeros(len(points), dtype=bool)
+        car_count = 0
 
         cc_labels, counts = np.unique(point_components,
                                       return_counts=True)
@@ -100,8 +104,9 @@ class CarFuser(BGTFuser):
                             if do_overlap:
                                 car_mask = car_mask | poly_box_clip(
                                     points, poly, bottom=ground_z, top=max_z)
+                                car_count += 1
                                 break
-
+        logger.debug(f'{car_count} cars labelled.')
         return car_mask
 
     def get_label_mask(self, points, labels, mask, tilecode):
@@ -124,6 +129,9 @@ class CarFuser(BGTFuser):
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
+        logger.info('Car fuser ' +
+                    f'(label={self.label}, {Labels.get_str(self.label)}).')
+
         label_mask = np.zeros((len(points),), dtype=bool)
 
         road_polygons = self._filter_tile(tilecode)
@@ -145,8 +153,5 @@ class CarFuser(BGTFuser):
                                                   point_components,
                                                   road_polygons)
         label_mask[mask] = car_mask
-
-        print(f'Car fuser => processed '
-              f'(label={self.label}, {Labels.get_str(self.label)}).')
 
         return label_mask

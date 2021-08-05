@@ -1,8 +1,12 @@
 import numpy as np
+import logging
 
 from ..abstract_processor import AbstractProcessor
 from ..region_growing import LabelConnectedComp
 from ..utils.interpolation import FastGridInterpolator
+from ..utils.labels import Labels
+
+logger = logging.getLogger(__name__)
 
 
 class TopBottomLCC(AbstractProcessor):
@@ -37,7 +41,8 @@ class TopBottomLCC(AbstractProcessor):
         initially for the component to be added.
     """
 
-    def __init__(self, label, ahn_reader, top_params={}, bottom_params={}):
+    def __init__(self, label, ahn_reader,
+                 top_params={}, bottom_params={}):
         super().__init__(label)
         self.ahn_reader = ahn_reader
         self.top_params = self._set_defaults(top_params, 't')
@@ -46,7 +51,7 @@ class TopBottomLCC(AbstractProcessor):
     def _set_defaults(self, params, param_type):
         """Set defaults for parameters if not provided."""
         if 'plane_height' not in params:
-            print('You must supply `plane_height` parameter.')
+            logger.error('You must supply `plane_height` parameter.')
             raise Exception
         if 'octree_level' not in params:
             params['octree_level'] = 9
@@ -68,7 +73,7 @@ class TopBottomLCC(AbstractProcessor):
             height_mask_ids = np.where(
                         points[:, 2] <= points_z + params['plane_height'])[0]
         mask = np.zeros((len(points),), dtype=bool)
-        lcc = LabelConnectedComp(self.label,
+        lcc = LabelConnectedComp(self.label, set_debug=True,
                                  octree_level=params['octree_level'],
                                  min_component_size=params['min_comp_size'],
                                  threshold=params['threshold'])
@@ -97,6 +102,9 @@ class TopBottomLCC(AbstractProcessor):
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
+        logger.info('TopBottomLCC ' +
+                    f'(label={self.label}, {Labels.get_str(self.label)}))')
+
         # We need to un-mask all points of the desired class label.
         mask_copy = mask.copy()
         mask_copy[labels == self.label] = True
