@@ -39,8 +39,7 @@ if __name__ == '__main__':
         args.out_folder = args.in_folder
 
     if not os.path.isdir(args.in_folder):
-        print('The input path does not exist')
-        sys.exit()
+        raise FileNotFoundError('The input path does not exist')
 
     if args.out_folder != args.in_folder:
         Path(args.out_folder).mkdir(parents=True, exist_ok=True)
