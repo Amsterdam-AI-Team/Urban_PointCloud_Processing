@@ -73,6 +73,30 @@ For visualisation of the resulting labelled point clouds we suggest [CloudCompar
 
 ---
 
+## Containerization
+
+Run the following commands to build your Docker image, and push it to your container registry. See also the `base_image_tag` variable in the `run_on_azure.py` script.
+
+```
+# Login to your container registry
+$ docker login {registry-name}
+# Or if you are using the Azure CLI
+$ az acr login --name {registry-name}
+
+# Build and tag the image
+$ docker build -t {registry-name}/point-cloud-processing .
+
+# Push the image to the registry
+$ docker push {registry-name}/point-cloud-processing
+
+# Run the run_on_azure.py script to run the AHN batch processor remotely
+$ python run_on_azure.py
+```
+
+You may have to install .NET on your (Linux) host machine. Follow the instructions provided by the [Microsoft .NET documentation](https://docs.microsoft.com/en-us/dotnet/core/install/linux).
+
+---
+
 ## Acknowledgements
 
 This repository was created by [Amsterdam Intelligence](https://amsterdamintelligence.com/) for the City of Amsterdam.
