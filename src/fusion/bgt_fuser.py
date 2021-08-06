@@ -8,10 +8,12 @@ import logging
 from pathlib import Path
 from sklearn.cluster import DBSCAN
 from scipy.stats import binned_statistic_2d
+from shapely.geometry import Polygon
+from shapely.ops import cascaded_union
 from abc import ABC, abstractmethod
 
 from ..abstract_processor import AbstractProcessor
-from ..utils.clip_utils import poly_offset, poly_clip, cylinder_clip, box_clip
+from ..utils import clip_utils
 from ..utils.las_utils import get_bbox_from_tile_code
 from ..utils.interpolation import FastGridInterpolator
 from ..utils.labels import Labels
@@ -136,7 +138,7 @@ class BGTBuildingFuser(BGTFuser):
         # TODO will this speedup the process?
         self.bgt_df.sort_values(by=['x_max', 'y_min'], inplace=True)
 
-    def _filter_tile(self, tilecode):
+    def _filter_tile(self, tilecode, merge=True):
         """
         Return a list of polygons representing each of the buildings found in
         the area represented by the given CycloMedia tile-code.
@@ -145,10 +147,15 @@ class BGTBuildingFuser(BGTFuser):
             get_bbox_from_tile_code(tilecode, padding=self.padding)
         df = self.bgt_df.query('(x_min < @bx_max) & (x_max > @bx_min)' +
                                ' & (y_min < @by_max) & (y_max > @by_min)')
-        building_polygons = [ast.literal_eval(poly)
-                             for poly in df.Polygon.values]
-
-        return building_polygons
+        buildings = [ast.literal_eval(poly) for poly in df.Polygon.values]
+        if merge:
+            poly_offset = list(cascaded_union([Polygon(bld).buffer(1)
+                                               for bld in buildings]))
+        else:
+            poly_offset = [Polygon(bld).buffer(1) for bld in buildings]
+        poly_valid = [poly.exterior.coords for poly in poly_offset
+                      if len(poly.exterior.coords) > 1]
+        return poly_valid
 
     def get_label_mask(self, points, labels, mask, tilecode):
         """
@@ -182,8 +189,7 @@ class BGTBuildingFuser(BGTFuser):
         for polygon in building_polygons:
             # TODO if there are multiple buildings we could mask the points
             # iteratively to ignore points already labelled.
-            building_with_offset = poly_offset(polygon, self.building_offset)
-            building_points = poly_clip(points[mask, :], building_with_offset)
+            building_points = clip_utils.poly_clip(points[mask, :], polygon)
             building_mask = building_mask | building_points
 
         logger.debug(f'{len(building_polygons)} building polygons labelled.')
@@ -301,9 +307,10 @@ class BGTPointFuser(BGTFuser):
 
         For a description of parameters see "Notes" above.
         """
-        search_ids = np.where(cylinder_clip(points, point, search_radius,
-                                            bottom=plane_height-plane_buffer,
-                                            top=plane_height+plane_buffer))[0]
+        search_ids = np.where(clip_utils.cylinder_clip(
+                                points, point, search_radius,
+                                bottom=plane_height-plane_buffer,
+                                top=plane_height+plane_buffer))[0]
         if len(search_ids) < min_points:
             return np.empty((0, 3))
         # Cluster the potential seed points.
@@ -358,9 +365,9 @@ class BGTPointFuser(BGTFuser):
             # Define the "box" within which to search for candidates.
             search_box = (obj[0]-search_pad, obj[1]-search_pad,
                           obj[0]+search_pad, obj[1]+search_pad)
-            box_ids = np.where(box_clip(points, search_box,
-                                        bottom=ground_z+z_min,
-                                        top=ground_z+z_max))[0]
+            box_ids = np.where(clip_utils.box_clip(points, search_box,
+                                                   bottom=ground_z+z_min,
+                                                   top=ground_z+z_max))[0]
             if len(box_ids) == 0:
                 # Empty search box, no match.
                 matches[obj] = None
@@ -463,9 +470,10 @@ class BGTPointFuser(BGTFuser):
             # Label a cylinder based on the seed cluster.
             top_height = (fast_z(np.array([seed[0:2]]))
                           + self.params['label_height'])
-            clip_mask = cylinder_clip(points[mask], np.array(seed[0:2]),
-                                      self.params['r_mult']*seed[2],
-                                      top=top_height)
+            clip_mask = clip_utils.cylinder_clip(
+                                        points[mask], np.array(seed[0:2]),
+                                        self.params['r_mult']*seed[2],
+                                        top=top_height)
             label_mask[mask] = label_mask[mask] | clip_mask
 
         match_str = ', '.join([f'{obj}->{cand}'

@@ -75,11 +75,17 @@ class LabelConnectedComp(AbstractProcessor):
          .AutoSegmentationTools
          .labelConnectedComponents(self.point_cloud, level=self.octree_level))
 
-        # TODO filter components using self.min_component_size
-
         # Get the scalar field with labels and points coords as numpy array
         labels_sf = self.point_cloud.getScalarField(self.labels_sf_idx)
         self.point_components = labels_sf.asArray()
+
+        # Filter based on min_component_size
+        if self.min_component_size > 1:
+            cc_labels, counts = np.unique(self.point_components,
+                                          return_counts=True)
+            cc_labels_filtered = cc_labels[counts < self.min_component_size]
+            self.point_components[
+                np.in1d(self.point_components, cc_labels_filtered)] = -1
 
     def _fill_components(self):
         """ Clustering based region growing process. When one initial seed
@@ -88,13 +94,12 @@ class LabelConnectedComp(AbstractProcessor):
         mask_indices = np.where(self.mask)[0]
         label_mask = np.zeros(len(self.mask), dtype=bool)
 
-        cc_labels, counts = np.unique(self.point_components,
-                                      return_counts=True)
+        cc_labels = np.unique(self.point_components)
+        cc_labels = set(cc_labels).difference((-1,))
 
-        cc_labels_filtered = cc_labels[counts >= self.min_component_size]
         cc_count = 0
 
-        for cc in cc_labels_filtered:
+        for cc in cc_labels:
             # select points that belong to the cluster
             cc_mask = (self.point_components == cc)
             # cluster size
@@ -114,7 +119,7 @@ class LabelConnectedComp(AbstractProcessor):
         labels = self.point_labels
         labels[label_mask] = self.label
 
-        logger.debug(f'Found {len(cc_labels_filtered)} clusters of ' +
+        logger.debug(f'Found {len(cc_labels)} clusters of ' +
                      f'>{self.min_component_size} points; ' +
                      f'{cc_count} added.')
 
@@ -178,6 +183,11 @@ class LabelConnectedComp(AbstractProcessor):
         labels : array of shape (n_points,)
             The labels corresponding to each point. Optional, only used in
             combination with `exclude_labels`.
+
+        Returns
+        -------
+        An array of shape (n_points,) with cluster labels for each point.
+        Clusters with a size less than `min_component_size` are labelled as -1.
         """
         self.mask = np.ones((len(points),), dtype=bool)
         if labels is not None and self.exclude_labels:

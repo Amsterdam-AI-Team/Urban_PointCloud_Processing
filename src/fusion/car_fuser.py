@@ -71,13 +71,11 @@ class CarFuser(BGTFuser):
         car_mask = np.zeros(len(points), dtype=bool)
         car_count = 0
 
-        cc_labels, counts = np.unique(point_components,
-                                      return_counts=True)
+        cc_labels = np.unique(point_components)
 
-        # TODO: remove when LCC is fixed
-        cc_labels_filtered = cc_labels[counts >= self.min_component_size]
+        cc_labels = set(cc_labels).difference((-1,))
 
-        for cc in cc_labels_filtered:
+        for cc in cc_labels:
             # select points that belong to the cluster
             cc_mask = (point_components == cc)
 
