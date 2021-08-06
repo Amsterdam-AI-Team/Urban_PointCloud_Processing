@@ -10,9 +10,12 @@ https://github.com/sasamil/PointInPolygon_Py
 import numpy as np
 from numba import jit
 import numba
-import pyclipper
+import logging
+from shapely.geometry import Polygon
 
 from ..utils import math_utils
+
+logger = logging.getLogger(__name__)
 
 
 @jit(nopython=True)
@@ -205,6 +208,8 @@ def poly_clip(points, poly):
     A boolean mask with True entries for all points within the polygon.
     """
     # Convert to numpy to work with numba jit in nopython mode.
+    if poly[0] != poly[-1]:
+        logger.warning('Polygon should be a closed ring!')
     np_poly = np.array(poly)
 
     # Clip to bounding box
@@ -249,29 +254,19 @@ def poly_box_clip(points, poly, bottom=-np.inf, top=np.inf):
 
 def poly_offset(polygon, offset_meter):
     """
-    Calculate coordinates of radius/offset around a polygon.
+    Inflate or deflate a polygon.
 
     Parameters
     ----------
     polygon : list
         One polygon in list format
     offset_meter : int
-        Offset in meters (deflation, minus value, has bugs)
+        Offset in meters (negative value means deflation)
 
     Returns
     -------
     list
         Inflated polygon in a 1D list
     """
-    clipper_offset = pyclipper.PyclipperOffset()
-    coordinates_scaled = pyclipper.scale_to_clipper(polygon)
-
-    clipper_offset.AddPath(coordinates_scaled, pyclipper.JT_SQUARE,
-                           pyclipper.ET_CLOSEDPOLYGON)
-
-    new_coordinates = clipper_offset.Execute(pyclipper
-                                             .scale_to_clipper(offset_meter))
-
-    polygon_offset = pyclipper.scale_from_clipper(new_coordinates)[0]
-
-    return polygon_offset
+    shpl_poly = Polygon(polygon).buffer(offset_meter)
+    return shpl_poly.exterior.coords
