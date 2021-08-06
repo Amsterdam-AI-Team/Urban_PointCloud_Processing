@@ -208,9 +208,10 @@ def poly_clip(points, poly):
     A boolean mask with True entries for all points within the polygon.
     """
     # Convert to numpy to work with numba jit in nopython mode.
-    if poly[0] != poly[-1]:
-        logger.warning('Polygon should be a closed ring!')
     np_poly = np.array(poly)
+
+    if not np.array_equal(poly[0], poly[-1]):
+        logger.warning('Polygon should be a closed ring!')
 
     # Clip to bounding box
     x_min, y_max, x_max, y_min = math_utils.compute_bounding_box(poly)
