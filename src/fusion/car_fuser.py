@@ -37,19 +37,21 @@ class CarFuser(BGTFuser):
 
     def __init__(self, label, ahn_reader,
                  bgt_file=None, bgt_folder=None, file_prefix='bgt_roads',
-                 octree_level=9, min_component_size=100, max_above_ground=3,
-                 min_width_thresh=1.5, max_width_thresh=2.55,
-                 min_length_thresh=2.0, max_length_thresh=7.0):
+                 octree_level=9, min_component_size=5000,
+                 min_height=1.2, max_height=2.2,
+                 min_width=1.4, max_width=2.2,
+                 min_length=3.0, max_length=6.0):
         super().__init__(label, bgt_file, bgt_folder, file_prefix)
 
         self.ahn_reader = ahn_reader
         self.octree_level = octree_level
         self.min_component_size = min_component_size
-        self.max_above_ground = max_above_ground
-        self.min_width_thresh = min_width_thresh
-        self.max_width_thresh = max_width_thresh
-        self.min_length_thresh = min_length_thresh
-        self.max_length_thresh = max_length_thresh
+        self.min_height = min_height
+        self.max_height = max_height
+        self.min_width = min_width
+        self.max_width = max_width
+        self.min_length = min_length
+        self.max_length = max_length
 
     def _filter_tile(self, tilecode):
         """
@@ -84,20 +86,18 @@ class CarFuser(BGTFuser):
 
             if valid_values.size != 0:
                 ground_z = np.mean(valid_values)
-                max_z_thresh = ground_z + self.max_above_ground
-
-                max_z = np.amax(points[cc_mask][:, 2])
-                if max_z < max_z_thresh:
+                min_z = ground_z + self.min_height
+                max_z = ground_z + self.max_height
+                cluster_height = np.amax(points[cc_mask][:, 2])
+                if min_z <= cluster_height <= max_z:
                     mbrect, _, mbr_width, mbr_length =\
                         minimum_bounding_rectangle(points[cc_mask][:, :2])
                     poly = np.vstack((mbrect, mbrect[0]))
-                    if (self.min_width_thresh < mbr_width <
-                            self.max_width_thresh and self.min_length_thresh <
-                            mbr_length < self.max_length_thresh):
+                    if (self.min_width < mbr_width < self.max_width and
+                            self.min_length < mbr_length < self.max_length):
                         p1 = Polygon(poly)
                         for road_polygon in road_polygons:
                             p2 = Polygon(road_polygon)
-
                             do_overlap = p1.intersects(p2)
                             if do_overlap:
                                 car_mask = car_mask | poly_box_clip(
