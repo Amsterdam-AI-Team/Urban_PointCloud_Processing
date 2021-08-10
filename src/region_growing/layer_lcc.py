@@ -21,6 +21,8 @@ class LayerLCC(AbstractProcessor):
         Class label to use.
     ahn_reader : AHNReader object
         Used to get the correct elevation data.
+    reset_noise : bool (default: False)
+        If set to true, points previously labelled as noise will be considered.
     params : dict or list of dicts (see Notes)
         Parameters for each layer of the region grower.
 
@@ -42,9 +44,10 @@ class LayerLCC(AbstractProcessor):
         initially for the component to be added.
     """
 
-    def __init__(self, label, ahn_reader, params=[]):
+    def __init__(self, label, ahn_reader, reset_noise=False, params=[]):
         super().__init__(label)
         self.ahn_reader = ahn_reader
+        self.reset_noise = reset_noise
         self.params = self._set_defaults(params)
 
     def _set_defaults(self, params):
@@ -68,6 +71,8 @@ class LayerLCC(AbstractProcessor):
                     (points[:, 2] > points_z + params['bottom'])
                     & (points[:, 2] <= points_z + params['top']))[0]
         mask = np.zeros((len(points),), dtype=bool)
+        n_valid = np.count_nonzero(labels[height_mask_ids] == self.label)
+        logger.debug(f'{n_valid} valid labels in this layer.')
         lcc = LabelConnectedComp(self.label, set_debug=True,
                                  octree_level=params['octree_level'],
                                  min_component_size=params['min_comp_size'],
@@ -103,6 +108,9 @@ class LayerLCC(AbstractProcessor):
         # We need to un-mask all points of the desired class label.
         mask_copy = mask.copy()
         mask_copy[labels == self.label] = True
+        if self.reset_noise:
+            noise_mask = labels == Labels.NOISE
+            mask_copy[noise_mask] = True
 
         ahn_tile = self.ahn_reader.filter_tile(tilecode)
         fast_z = FastGridInterpolator(ahn_tile['x'], ahn_tile['y'],
@@ -111,12 +119,17 @@ class LayerLCC(AbstractProcessor):
 
         label_mask = np.zeros((len(points),), dtype=bool)
         layer_mask = np.zeros((np.count_nonzero(mask_copy),), dtype=bool)
+        labels_copy = labels[mask_copy].copy()
 
         for i, layer in enumerate(self.params):
             logger.debug(f'Layer {i}: {layer}')
             layer_mask = layer_mask | self._filter_layer(
                                             points[mask_copy, :], points_z,
-                                            labels[mask_copy], layer)
+                                            labels_copy, layer)
+            labels_copy[layer_mask] = self.label
 
         label_mask[mask_copy] = layer_mask
-        return label_mask & mask
+        if self.reset_noise:
+            return label_mask & (mask | noise_mask)
+        else:
+            return label_mask & mask
