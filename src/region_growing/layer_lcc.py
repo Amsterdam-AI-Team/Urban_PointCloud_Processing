@@ -9,11 +9,11 @@ from ..utils.labels import Labels
 logger = logging.getLogger(__name__)
 
 
-class TopBottomLCC(AbstractProcessor):
+class LayerLCC(AbstractProcessor):
     """
-    Two-part region growing based on LabelConnectedComp. Region growing is
-    applied separately to the top and bottom part of an object, so that
-    different parameters can be used for both.
+    Layered region growing based on LabelConnectedComp. Region growing is
+    applied separately to each layer, specified by its bottom and top bounds,
+    so that different parameters can be used for each layer.
 
     Parameters
     ----------
@@ -21,17 +21,18 @@ class TopBottomLCC(AbstractProcessor):
         Class label to use.
     ahn_reader : AHNReader object
         Used to get the correct elevation data.
-    top_params : dict (see Notes)
-        Parameters for the top-part of the region grower.
-    bottom_params : dict (see Notes)
-        Parameters for the bottom-part of the region grower.
+    params : dict or list of dicts (see Notes)
+        Parameters for each layer of the region grower.
 
     Notes
     -----
-    The `top_params` and `bottom_params` and their defaults are as follows:
+    Each layer is specified by a parameters dict. Each layer/dict contains the
+    following (default) parameters:
 
-    'plane_height': REQUIRED
-        Height above ground at which to start/stop (for top/bottom) growing.
+    'bottom': -inf
+        Height above ground at which the layer starts.
+    'top': inf
+        Height above ground at which the layer stops.
     'octree_level': 9
         Octree level for LCC method, higher means more fine-grained.
     'min_comp_size': 100
@@ -41,37 +42,31 @@ class TopBottomLCC(AbstractProcessor):
         initially for the component to be added.
     """
 
-    def __init__(self, label, ahn_reader,
-                 top_params={}, bottom_params={}):
+    def __init__(self, label, ahn_reader, params=[]):
         super().__init__(label)
         self.ahn_reader = ahn_reader
-        self.top_params = self._set_defaults(top_params, 't')
-        self.bottom_params = self._set_defaults(bottom_params, 'b')
+        self.params = self._set_defaults(params)
 
-    def _set_defaults(self, params, param_type):
+    def _set_defaults(self, params):
         """Set defaults for parameters if not provided."""
-        if 'plane_height' not in params:
-            logger.error('You must supply `plane_height` parameter.')
-            raise Exception
-        if 'octree_level' not in params:
-            params['octree_level'] = 9
-        if 'min_comp_size' not in params:
-            params['min_comp_size'] = 100
-        if 'threshold' not in params:
-            params['threshold'] = 0.5
-        params['type'] = param_type
+        for layer in params:
+            if 'bottom' not in layer:
+                layer['bottom'] = -np.inf
+            if 'top' not in layer:
+                layer['top'] = np.inf
+            if 'octree_level' not in layer:
+                layer['octree_level'] = 9
+            if 'min_comp_size' not in layer:
+                layer['min_comp_size'] = 100
+            if 'threshold' not in layer:
+                layer['threshold'] = 0.5
         return params
 
     def _filter_layer(self, points, points_z, labels, params):
-        """Process either the top or bottom part of the region grower."""
-        if params['type'] == 't':
-            # Top-part, so we want points above points_z.
-            height_mask_ids = np.where(
-                        points[:, 2] > points_z + params['plane_height'])[0]
-        else:
-            # Bottom-part, so we want points below points_z.
-            height_mask_ids = np.where(
-                        points[:, 2] <= points_z + params['plane_height'])[0]
+        """Process a layer of the region grower."""
+        height_mask_ids = np.where(
+                    (points[:, 2] > points_z + params['bottom'])
+                    & (points[:, 2] <= points_z + params['top']))[0]
         mask = np.zeros((len(points),), dtype=bool)
         lcc = LabelConnectedComp(self.label, set_debug=True,
                                  octree_level=params['octree_level'],
@@ -102,7 +97,7 @@ class TopBottomLCC(AbstractProcessor):
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
-        logger.info('TopBottomLCC ' +
+        logger.info('LayerLCC ' +
                     f'(label={self.label}, {Labels.get_str(self.label)}))')
 
         # We need to un-mask all points of the desired class label.
@@ -115,17 +110,13 @@ class TopBottomLCC(AbstractProcessor):
         points_z = fast_z(points[mask_copy, 0:2])
 
         label_mask = np.zeros((len(points),), dtype=bool)
-        tmp_mask = np.zeros((np.count_nonzero(mask_copy),), dtype=bool)
+        layer_mask = np.zeros((np.count_nonzero(mask_copy),), dtype=bool)
 
-        # Process the top part.
-        layer_mask = self._filter_layer(points[mask_copy, :], points_z,
-                                        labels[mask_copy], self.top_params)
-        tmp_mask[layer_mask] = True
+        for i, layer in enumerate(self.params):
+            logger.debug(f'Layer {i}: {layer}')
+            layer_mask = layer_mask | self._filter_layer(
+                                            points[mask_copy, :], points_z,
+                                            labels[mask_copy], layer)
 
-        # Process the bottom part.
-        layer_mask = self._filter_layer(points[mask_copy, :], points_z,
-                                        labels[mask_copy], self.bottom_params)
-        tmp_mask[layer_mask] = True
-
-        label_mask[mask_copy] = tmp_mask
+        label_mask[mask_copy] = layer_mask
         return label_mask & mask
