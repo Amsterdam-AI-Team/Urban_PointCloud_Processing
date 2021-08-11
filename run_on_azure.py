@@ -1,40 +1,46 @@
-from azureml.core import Workspace, Experiment, ScriptRunConfig, Environment, Dataset
-from azureml.data import OutputFileDatasetConfig
+import argparse
 
-base_image_tag = "pointcloudacr.azurecr.io/point-cloud-processing"
-input_dataset_name = "point-cloud-input"
-input_dataset_path = "/UI/08-04-2021_095741_UTC"
+from azureml.core import Environment, Experiment, ScriptRunConfig, Workspace
 
-# get workspace
-ws = Workspace.from_config(".azure/config.json")
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Run AHN LAS point cloud batch processing on Azure Machine Learning"
+    )
+    parser.add_argument("--input_dataset_path", type=str, required=True)
+    parser.add_argument("--output_dataset_path", type=str, required=True)
+    parser.add_argument("--image", type=str, required=True)
+    parser.add_argument("--compute_target", type=str, default="point-cloud-cpu")
+    parser.add_argument("--environment", type=str, default="point-cloud")
 
-# get compute target
-target = ws.compute_targets["point-cloud-cpu"]
+    args = parser.parse_args()
 
-# get registered environment
-env = Environment("point-cloud")
-env.python.user_managed_dependencies = True
-env.docker.base_image = base_image_tag
+    # Set up workspace
+    ws = Workspace.from_config(".azure/config.json")
+    target = ws.compute_targets[args.compute_target]
 
-# get/create experiment
-exp = Experiment(ws, "point-cloud")
+    # Set up container environment
+    env = Environment(args.environment)
+    env.docker.base_image = args.image
+    env.python.user_managed_dependencies = True
 
-# get blob store mount and datasets
-# def_blob_store = ws.get_default_datastore()
-# input_dataset = Dataset.File.from_files((def_blob_store, input_dataset_path))
-# output = OutputFileDatasetConfig(destination=(def_blob_store, "sample/output")).as_mount().register_on_complete(name="point-cloud-output")
-# mount_context = input_dataset.mount()
-# mount_context.start()
+    exp = Experiment(ws, args.environment)
 
-# set up script run configuration
-config = ScriptRunConfig(
-    source_directory=".",
-    script="scripts/ahn_batch_processor_azure.py",
-    compute_target=target,
-    environment=env,
-)
+    # Set up script run configuration
+    config = ScriptRunConfig(
+        source_directory=".",
+        script="scripts/ahn_batch_processor_azure.py",
+        arguments=[
+            "--input_dataset_path", args.input_dataset_path,
+            "--output_dataset_path", args.output_dataset_path,
+            "--subscription_id", ws.subscription_id,
+            "--resource_group", ws.resource_group,
+            "--workspace_name", ws.name,
+        ],
+        compute_target=target,
+        environment=env,
+    )
 
-# submit script to AML
-run = exp.submit(config)
-print(run.get_portal_url()) # link to ml.azure.com
-run.wait_for_completion(show_output=True)
+    # submit script to AML
+    run = exp.submit(config)
+    print(run.get_portal_url()) # link to ml.azure.com
+    run.wait_for_completion(show_output=True)
