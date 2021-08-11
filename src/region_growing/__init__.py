@@ -1,5 +1,5 @@
 from .region_growing import RegionGrowing
 from .label_connected_comp import LabelConnectedComp
-from .top_bottom_lcc import TopBottomLCC
+from .layer_lcc import LayerLCC
 
-__all__ = ['RegionGrowing', 'LabelConnectedComp', 'TopBottomLCC']
+__all__ = ['RegionGrowing', 'LabelConnectedComp', 'LayerLCC']

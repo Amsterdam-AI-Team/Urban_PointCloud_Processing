@@ -125,15 +125,23 @@ class BGTBuildingFuser(BGTFuser):
         The footprint polygon will be extended by this amount (in meters).
     padding : float (default: 0)
         Optional padding (in m) around the tile when searching for objects.
+    ahn_reader : AHNReader object
+        Optional, if provided AHN data will be used to set a maximum height for
+        each building polygon.
+    ahn_eps : float (default: 0.2)
+        Precision for the AHN elevation cut-off for buildings.
     """
 
     COLUMNS = ['BAG_ID', 'Polygon', 'x_min', 'y_max', 'x_max', 'y_min']
 
     def __init__(self, label, bgt_file=None, bgt_folder=None,
-                 file_prefix='bgt_buildings', building_offset=0, padding=0):
+                 file_prefix='bgt_buildings', building_offset=0, padding=0,
+                 ahn_reader=None, ahn_eps=0.2):
         super().__init__(label, bgt_file, bgt_folder, file_prefix)
         self.building_offset = building_offset
         self.padding = padding
+        self.ahn_reader = ahn_reader
+        self.ahn_eps = ahn_eps
 
         # TODO will this speedup the process?
         self.bgt_df.sort_values(by=['x_max', 'y_min'], inplace=True)
@@ -149,10 +157,12 @@ class BGTBuildingFuser(BGTFuser):
                                ' & (y_min < @by_max) & (y_max > @by_min)')
         buildings = [ast.literal_eval(poly) for poly in df.Polygon.values]
         if merge:
-            poly_offset = list(cascaded_union([Polygon(bld).buffer(1)
-                                               for bld in buildings]))
+            poly_offset = list(cascaded_union(
+                                [Polygon(bld).buffer(self.building_offset)
+                                 for bld in buildings]))
         else:
-            poly_offset = [Polygon(bld).buffer(1) for bld in buildings]
+            poly_offset = [Polygon(bld).buffer(self.building_offset)
+                           for bld in buildings]
         poly_valid = [poly.exterior.coords for poly in poly_offset
                       if len(poly.exterior.coords) > 1]
         return poly_valid
@@ -184,19 +194,30 @@ class BGTBuildingFuser(BGTFuser):
 
         if mask is None:
             mask = np.ones((len(points),), dtype=bool)
+        mask_ids = np.where(mask)[0]
 
-        building_mask = np.zeros((np.count_nonzero(mask),), dtype=bool)
+        if self.ahn_reader is not None:
+            ahn_tile = self.ahn_reader.filter_tile(tilecode)
+            fast_z = FastGridInterpolator(
+                ahn_tile['x'], ahn_tile['y'], ahn_tile['building_surface'])
+
+        building_mask = np.zeros((len(mask_ids),), dtype=bool)
         for polygon in building_polygons:
             # TODO if there are multiple buildings we could mask the points
             # iteratively to ignore points already labelled.
-            building_points = clip_utils.poly_clip(points[mask, :], polygon)
-            building_mask = building_mask | building_points
+            clip_mask = clip_utils.poly_clip(points[mask, :], polygon)
+            if self.ahn_reader is not None:
+                bld_z = fast_z(points[mask, :])
+                bld_z_valid = np.isfinite(bld_z)
+                ahn_mask = (points[mask_ids[bld_z_valid], 2]
+                            <= bld_z[bld_z_valid] + self.ahn_eps)
+                clip_mask[bld_z_valid] = clip_mask[bld_z_valid] & ahn_mask
+            building_mask = building_mask | clip_mask
 
         logger.debug(f'{len(building_polygons)} building polygons labelled.')
 
-        mask_indices = np.where(mask)[0]
         label_mask = np.zeros(len(points), dtype=bool)
-        label_mask[mask_indices[building_mask]] = True
+        label_mask[mask_ids[building_mask]] = True
 
         return label_mask
 
