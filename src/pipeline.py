@@ -26,13 +26,26 @@ class Pipeline:
         The processors to apply, in order.
     exclude_labels : list
         List of labels to exclude from processing.
+    ahn_reader : AHNReader object
+        Pointer to the AHNReader object used in the Processors. Required if
+        caching is used.
+    caching : bool (default: True)
+        Enable caching of AHN interpolation data.
     """
 
     FILE_TYPES = ('.LAS', '.las', '.LAZ', '.laz')
 
-    def __init__(self, process_sequence=[], exclude_labels=[]):
-        self.process_sequence = process_sequence
+    def __init__(self, processors=[], exclude_labels=[],
+                 ahn_reader=None, caching=True):
+        if ahn_reader is None and caching:
+            logger.error(
+                'An ahn_reader must be specified when caching is enabled.')
+            raise ValueError
+        self.processors = processors
         self.exclude_labels = exclude_labels
+        self.ahn_reader = ahn_reader
+        self.caching = caching
+        self.ahn_reader.set_caching(self.caching)
 
     def _create_mask(self, mask, labels):
         """Create mask based on `exclude_labels`."""
@@ -64,8 +77,10 @@ class Pipeline:
         for each point.
         """
         mask = self._create_mask(mask, labels)
+        self.ahn_reader.cache_interpolator(
+                                tilecode, points, surface='ground_surface')
 
-        for obj in self.process_sequence:
+        for obj in self.processors:
             start = time.time()
             label_mask = obj.get_label_mask(points, labels, mask, tilecode)
             labels[label_mask] = obj.get_label()

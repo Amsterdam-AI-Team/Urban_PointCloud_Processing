@@ -5,7 +5,6 @@ import logging
 
 from ..fusion.bgt_fuser import BGTFuser
 from ..region_growing.label_connected_comp import LabelConnectedComp
-from ..utils.interpolation import FastGridInterpolator
 from ..utils.math_utils import minimum_bounding_rectangle
 from ..utils.las_utils import get_bbox_from_tile_code
 from ..utils.clip_utils import poly_box_clip
@@ -66,7 +65,7 @@ class CarFuser(BGTFuser):
 
         return road_polygons
 
-    def _fill_car_like_components(self, points, fast_z, point_components,
+    def _fill_car_like_components(self, points, ground_z, point_components,
                                   road_polygons):
         """ Based on certain properties of a car we label clusters.  """
 
@@ -81,13 +80,13 @@ class CarFuser(BGTFuser):
             # select points that belong to the cluster
             cc_mask = (point_components == cc)
 
-            target_z = fast_z(points[cc_mask])
+            target_z = ground_z[cc_mask]
             valid_values = target_z[np.isfinite(target_z)]
 
             if valid_values.size != 0:
-                ground_z = np.mean(valid_values)
-                min_z = ground_z + self.min_height
-                max_z = ground_z + self.max_height
+                cc_z = np.mean(valid_values)
+                min_z = cc_z + self.min_height
+                max_z = cc_z + self.max_height
                 cluster_height = np.amax(points[cc_mask][:, 2])
                 if min_z <= cluster_height <= max_z:
                     mbrect, _, mbr_width, mbr_length =\
@@ -101,7 +100,7 @@ class CarFuser(BGTFuser):
                             do_overlap = p1.intersects(p2)
                             if do_overlap:
                                 car_mask = car_mask | poly_box_clip(
-                                    points, poly, bottom=ground_z, top=max_z)
+                                    points, poly, bottom=cc_z, top=max_z)
                                 car_count += 1
                                 break
         logger.debug(f'{car_count} cars labelled.')
@@ -137,9 +136,8 @@ class CarFuser(BGTFuser):
             return label_mask
 
         # Get the interpolated ground points of the tile
-        ahn_tile = self.ahn_reader.filter_tile(tilecode)
-        fast_z = FastGridInterpolator(
-                    ahn_tile['x'], ahn_tile['y'], ahn_tile['ground_surface'])
+        ground_z = self.ahn_reader.interpolate(
+                            tilecode, points[mask], mask, 'ground_surface')
 
         # Create lcc object and perform lcc
         lcc = LabelConnectedComp(self.label, octree_level=self.octree_level,
@@ -147,7 +145,7 @@ class CarFuser(BGTFuser):
         point_components = lcc.get_components(points[mask])
 
         # Label car like clusters
-        car_mask = self._fill_car_like_components(points[mask], fast_z,
+        car_mask = self._fill_car_like_components(points[mask], ground_z,
                                                   point_components,
                                                   road_polygons)
         label_mask[mask] = car_mask

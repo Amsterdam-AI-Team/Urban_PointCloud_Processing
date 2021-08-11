@@ -14,8 +14,8 @@ from abc import ABC, abstractmethod
 
 from ..abstract_processor import AbstractProcessor
 from ..utils import clip_utils
-from ..utils.las_utils import get_bbox_from_tile_code
 from ..utils.interpolation import FastGridInterpolator
+from ..utils.las_utils import get_bbox_from_tile_code
 from ..utils.labels import Labels
 
 logger = logging.getLogger(__name__)
@@ -196,23 +196,20 @@ class BGTBuildingFuser(BGTFuser):
             mask = np.ones((len(points),), dtype=bool)
         mask_ids = np.where(mask)[0]
 
-        if self.ahn_reader is not None:
-            ahn_tile = self.ahn_reader.filter_tile(tilecode)
-            fast_z = FastGridInterpolator(
-                ahn_tile['x'], ahn_tile['y'], ahn_tile['building_surface'])
-
         building_mask = np.zeros((len(mask_ids),), dtype=bool)
         for polygon in building_polygons:
             # TODO if there are multiple buildings we could mask the points
             # iteratively to ignore points already labelled.
             clip_mask = clip_utils.poly_clip(points[mask, :], polygon)
-            if self.ahn_reader is not None:
-                bld_z = fast_z(points[mask, :])
-                bld_z_valid = np.isfinite(bld_z)
-                ahn_mask = (points[mask_ids[bld_z_valid], 2]
-                            <= bld_z[bld_z_valid] + self.ahn_eps)
-                clip_mask[bld_z_valid] = clip_mask[bld_z_valid] & ahn_mask
             building_mask = building_mask | clip_mask
+
+        if self.ahn_reader is not None:
+            bld_z = self.ahn_reader.interpolate(
+                tilecode, points[mask, :], mask, 'building_surface')
+            bld_z_valid = np.isfinite(bld_z)
+            ahn_mask = (points[mask_ids[bld_z_valid], 2]
+                        <= bld_z[bld_z_valid] + self.ahn_eps)
+            building_mask[bld_z_valid] = building_mask[bld_z_valid] & ahn_mask
 
         logger.debug(f'{len(building_polygons)} building polygons labelled.')
 

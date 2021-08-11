@@ -5,7 +5,6 @@ import os
 import logging
 
 from ..abstract_processor import AbstractProcessor
-from ..utils.interpolation import FastGridInterpolator
 from ..utils.labels import Labels
 
 logger = logging.getLogger(__name__)
@@ -78,15 +77,12 @@ class AHNFuser(AbstractProcessor):
         logger.info(f'AHN [{self.method}/{self.target}] fuser ' +
                     f'(label={self.label}, {Labels.get_str(self.label)}).')
 
-        ahn_tile = self.ahn_reader.filter_tile(tilecode)
         if self.target == 'ground':
-            surface = ahn_tile['ground_surface']
+            target_z = self.ahn_reader.interpolate(
+                tilecode, points[mask, :], mask, 'ground_surface')
         elif self.target == 'building':
-            surface = ahn_tile['building_surface']
-
-        # Set-up and run interpolator.
-        fast_z = FastGridInterpolator(ahn_tile['x'], ahn_tile['y'], surface)
-        target_z = fast_z(points[mask, :])
+            target_z = self.ahn_reader.interpolate(
+                tilecode, points[mask, :], mask, 'building_surface')
 
         label_mask = np.zeros((len(points),), dtype=bool)
         if self.target == 'ground':
