@@ -18,6 +18,12 @@ from ..utils.las_utils import get_bbox_from_tile_code
 
 class AHNReader(ABC):
 
+    @property
+    @classmethod
+    @abstractmethod
+    def NAME(cls):
+        return NotImplementedError
+
     def __init__(self, data_folder):
         super().__init__()
         self.path = Path(data_folder)
@@ -32,14 +38,42 @@ class AHNReader(ABC):
 
 
 class NPZReader(AHNReader):
+    """
+    NPZReader for AHN3 data. The data folder should contain the pre-processed
+    .npz files.
+
+    Parameters
+    ----------
+    data_folder : str or Path
+        Folder containing the .npz files.
+    cashing : bool (default: True)
+        Whether to use cashing of the current tilecode.
+    """
+
+    NAME = 'npz'
+
+    def __init__(self, data_folder, cashing=True):
+        super().__init__(data_folder)
+        self.cashing = cashing
+        self.c_tilecode = ''
+        self.c_tile = None
 
     def filter_tile(self, tilecode):
         """
         Returns an AHN tile dict for the area represented by the given
         CycloMedia tile-code. TODO also implement geotiff?
         """
-        return load_ahn_tile(os.path.join(self.path, 'ahn_' + tilecode
-                                          + '.npz'))
+        if self.cashing:
+            if self.c_tilecode == tilecode:
+                return self.c_tile
+            else:
+                self.c_tile = load_ahn_tile(
+                        os.path.join(self.path, 'ahn_' + tilecode + '.npz'))
+                self.c_tilecode = tilecode
+                return self.c_tile
+        else:
+            return load_ahn_tile(
+                        os.path.join(self.path, 'ahn_' + tilecode + '.npz'))
 
 
 class GeoTIFFReader(AHNReader):
@@ -51,12 +85,33 @@ class GeoTIFFReader(AHNReader):
     ----------
     data_folder : str or Path
         Folder containing the GeoTIFF files.
+    cashing : bool (default: True)
+        Whether to use cashing of the current tilecode.
+    fill_gaps : bool (default: True)
+        Whether to fill gaps in the AHN data. Only used when method='geotiff'.
+    max_gap_size : int (default: 50)
+        Max gap size for gap filling. Only used when method='geotiff'.
+    smoothen : bool (default: True)
+        Whether to smoothen edges in the AHN data. Only used when
+        method='geotiff'.
+    smooth_thickness : int (default: 1)
+        Thickness for edge smoothening. Only used when method='geotiff'.
     """
 
     RESOLUTION = 0.5
+    NAME = 'geotiff'
 
-    def __init__(self, data_folder):
+    def __init__(self, data_folder, cashing=True,
+                 fill_gaps=True, max_gap_size=50,
+                 smoothen=True, smooth_thickness=1):
         super().__init__(data_folder)
+        self.cashing = cashing
+        self.c_tilecode = ''
+        self.c_tile = None
+        self.fill_gaps = fill_gaps
+        self.max_gap_size = max_gap_size
+        self.smoothen = smoothen
+        self.smooth_thickness = smooth_thickness
         self.ahn_df = (pd.DataFrame(columns=['Filename', 'Path',
                                              'Xmin', 'Ymax', 'Xmax', 'Ymin'])
                        .set_index('Filename'))
@@ -97,30 +152,8 @@ class GeoTIFFReader(AHNReader):
         """Return the DataFrame."""
         return self.ahn_df
 
-    def filter_tile(self, tilecode, fill_value=np.nan):
-        """
-        Return a dictionary <X, Y, Z> representing the Z-values of the <X, Y>
-        area corresponding to the given tilecode. The points are equally spaced
-        with a resolution of 0.5m, heights are copied directly from the AHN
-        GeoTIFF data. Missing data is filled with 'fill_value'.
-
-        NOTE: This function assumes that the full tilecode is enclosed in a
-        single AHN GEoTIFF tile. This assumption is valid for standard AHN data
-        and CycloMedia tilecodes.
-
-        Parameters
-        ----------
-        tilecode : str
-            The CycloMedia tile-code for the given pointcloud.
-        fill_value : float or np.nan (default: np.nan)
-            Value used to fill missing data.
-
-        Returns
-        -------
-        A dict containing AHN Z-values for the requested area, as well as the X
-        and Y coordinate axes.
-        """
-
+    def _load_tile(self, tilecode, fill_value):
+        """Extract one tile from the GeoTIFF data."""
         ((bx_min, by_max), (bx_max, by_min)) = \
             get_bbox_from_tile_code(tilecode)
 
@@ -150,7 +183,46 @@ class GeoTIFFReader(AHNReader):
             ahn_tile['ground_surface'] = z_data[y_start:y_end, x_start:x_end]
             fill_mask = ahn_tile['ground_surface'] > 1e5
             ahn_tile['ground_surface'][fill_mask] = fill_value
+            if self.fill_gaps:
+                fill_gaps(
+                    ahn_tile, max_gap_size=self.max_gap_size, inplace=True)
+            if self.smoothen:
+                smoothen_edges(
+                    ahn_tile, thickness=self.smooth_thickness, inplace=True)
             return ahn_tile
+
+    def filter_tile(self, tilecode, fill_value=np.nan):
+        """
+        Return a dictionary <X, Y, Z> representing the Z-values of the <X, Y>
+        area corresponding to the given tilecode. The points are equally spaced
+        with a resolution of 0.5m, heights are copied directly from the AHN
+        GeoTIFF data. Missing data is filled with 'fill_value'.
+
+        NOTE: This function assumes that the full tilecode is enclosed in a
+        single AHN GEoTIFF tile. This assumption is valid for standard AHN data
+        and CycloMedia tilecodes.
+
+        Parameters
+        ----------
+        tilecode : str
+            The CycloMedia tile-code for the given pointcloud.
+        fill_value : float or np.nan (default: np.nan)
+            Value used to fill missing data.
+
+        Returns
+        -------
+        A dict containing AHN Z-values for the requested area, as well as the X
+        and Y coordinate axes.
+        """
+        if self.cashing:
+            if self.c_tilecode == tilecode:
+                return self.c_tile
+            else:
+                self.c_tile = self._load_tile(tilecode, fill_value)
+                self.c_tilecode = tilecode
+                return self.c_tile
+        else:
+            return self._load_tile(tilecode, fill_value)
 
 
 def load_ahn_tile(ahn_file):
