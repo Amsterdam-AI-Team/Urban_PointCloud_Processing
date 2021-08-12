@@ -11,7 +11,6 @@ from ..utils import clip_utils
 from ..utils import las_utils
 from ..utils import bgt_utils
 from ..utils.labels import Labels
-from ..utils.interpolation import FastGridInterpolator
 
 
 bgt_labels = {'boom': 'Tree',
@@ -50,10 +49,10 @@ def plot_cloud_slice(las_file, ahn_reader, plane_height=1.5, hide_noise=False,
     tilecode = las_utils.get_tilecode_from_filename(las_file)
     ((x_min, y_max), (x_max, y_min)) =\
         las_utils.get_bbox_from_tile_code(tilecode)
-    ahn_tile = ahn_reader.filter_tile(tilecode)
-    fast_z = FastGridInterpolator(ahn_tile['x'], ahn_tile['y'],
-                                  ahn_tile['ground_surface'])
-    points_z = fast_z(points[:, 0:2])
+
+    points_z = ahn_reader.interpolate(tilecode, points,
+                                      np.ones((len(points),), dtype=bool),
+                                      'ground_surface')
 
     plane_mask = ((points[:, 2] >= points_z + plane_height - 0.05)
                   & (points[:, 2] <= points_z + plane_height + 0.05))

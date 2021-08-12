@@ -1,16 +1,18 @@
 # Datasets
 
-We supply several example data files.
+We supply two point cloud tiles for demonstration purposes, as well as the necessary data sources to run our code. The [notebooks](../notebooks/) provide information on how to extract data for arbitrary point cloud tiles.
 
-* `pointcloud/filtered_2386_9702.laz`  
-  This is a 50x50m urban point cloud, courtesy of [CycloMedia](https://www.cyclomedia.com/). See notes below for details.
-* `ahn/ahn_2386_9702.laz`  
-  This is an AHN point cloud of the same area, which can be generated using the [preprocessing tools](../notebooks/1.%20AHN%20preprocessing.ipynb).
-* `ahn/ahn_2386_9702.npz`  
-  This contains the pre-processed ground and building surfaces from the AHN point cloud.
-* `bgt/bgt_roads_2386_9702.csv`  
-  This file contains polygon information of the parking spots and road surfaces in the area.
-* `bgt/custom_points_2386_9702.csv`  
+* `pointcloud/filtered_23**_970*.laz`  
+  Two 50x50m urban point clouds, courtesy of [CycloMedia](https://www.cyclomedia.com/). See notes below for details.
+* `ahn/ahn_23**_970*.laz`  
+  The corresponding AHN point clouds, which can also be generated using the [preprocessing tools](../notebooks/1.%20AHN%20preprocessing.ipynb).
+* `ahn/ahn_23**_970*.npz`  
+  The pre-processed ground and building surfaces from the AHN point clouds.
+* `bgt/bgt_buildings_demo.csv`  
+  BGT building footprint polygons for the two demo tiles.
+* `bgt/bgt_roads_demo.csv`  
+  BGT road part polygons of the parking spots and road surfaces in the area.
+* `bgt/custom_points_demo.csv`  
   This contains <x,y> coordinates of pole-like objects and trees. These were collected manually from different sources, but can also be scraped from PDOK.
 
 These files are sufficient to run the [notebooks](../notebooks). Some additional required data files can be downloaded with provided scripts.
