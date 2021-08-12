@@ -156,7 +156,7 @@ class BGTBuildingFuser(BGTFuser):
         df = self.bgt_df.query('(x_min < @bx_max) & (x_max > @bx_min)' +
                                ' & (y_min < @by_max) & (y_max > @by_min)')
         buildings = [ast.literal_eval(poly) for poly in df.Polygon.values]
-        if merge:
+        if len(buildings) > 1 and merge:
             poly_offset = list(cascaded_union(
                                 [Polygon(bld).buffer(self.building_offset)
                                  for bld in buildings]))

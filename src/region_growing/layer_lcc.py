@@ -70,8 +70,16 @@ class LayerLCC(AbstractProcessor):
                     (points[:, 2] > points_z + params['bottom'])
                     & (points[:, 2] <= points_z + params['top']))[0]
         mask = np.zeros((len(points),), dtype=bool)
+        if len(height_mask_ids) == 0:
+            logger.debug(
+                f"Empty layer: {params['bottom']} -> {params['top']}.")
+            return mask
         n_valid = np.count_nonzero(labels[height_mask_ids] == self.label)
-        logger.debug(f'{n_valid} valid labels in this layer.')
+        if n_valid == 0:
+            logger.debug(f"No marked points in layer: {params['bottom']}"
+                         + f" -> {params['top']}.")
+            return mask
+
         lcc = LabelConnectedComp(self.label, set_debug=True,
                                  octree_level=params['octree_level'],
                                  min_component_size=params['min_comp_size'],
