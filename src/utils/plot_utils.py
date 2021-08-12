@@ -159,6 +159,23 @@ def plot_bgt(tilecode, building_file=None, road_file=None, point_file=None,
         plt.show()
 
 
+def plot_bgt_and_cloudslice(tilecode, las_file, ahn_reader,
+                            building_file=None, road_file=None,
+                            point_file=None, plane_height=1.5,
+                            hide_noise=False):
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5.5))
+    plot_bgt(tilecode, building_file, road_file, point_file,
+             title='BGT data', ax=ax1, legend_below=True)
+    plot_cloud_slice(las_file, ahn_reader, plane_height=plane_height,
+                     hide_noise=hide_noise, title='LAS labels', ax=ax2,
+                     legend_below=True)
+    ax2.set_yticklabels([])
+    ax2.yaxis.label.set_visible(False)
+    fig.suptitle(f'Tile {tilecode}', fontsize=14)
+    fig.subplots_adjust(top=0.95)
+    plt.show()
+
+
 def plot_ahn_surface(ahn_tile, surf='ground_surface', ax=None, cbar_pad=0.04):
     cmap = {'ground_surface': 'gist_earth',
             'building_surface': 'Oranges'}
@@ -210,7 +227,8 @@ def plot_ahn_merged(tilecode, ahn_reader):
     plt.show()
 
 
-def plot_buildings_ahn_bgt(tilecode, ahn_reader, building_file, offset=1):
+def plot_buildings_ahn_bgt(tilecode, ahn_reader, building_file, offset=1,
+                           show_elevation=True, offset_only=True, title=None):
     ahn_tile = ahn_reader.filter_tile(tilecode)
     buildings = bgt_utils.get_polygons(building_file, tilecode)
     if offset > 0:
@@ -224,16 +242,24 @@ def plot_buildings_ahn_bgt(tilecode, ahn_reader, building_file, offset=1):
 
     fig, ax = plt.subplots(1, figsize=(7, 5), constrained_layout=True)
 
-    cmap = mcolors.LinearSegmentedColormap.from_list('sg', ['lightgrey']*2)
+    if show_elevation:
+        plot_ahn_surface(
+            ahn_tile, surf='building_surface', ax=ax, cbar_pad=0.04)
+        if title is None:
+            title = 'Building footprints and elevation'
+    else:
+        cmap = mcolors.LinearSegmentedColormap.from_list('sg', ['lightgrey']*2)
+        ax.imshow(ahn_tile['building_surface'],
+                  extent=[x_min, x_max, y_min, y_max],
+                  interpolation='none', cmap=cmap)
+        dummy = patches.Patch(color='lightgrey', label='AHN surface')
+        if title is None:
+            title = 'Building footprints'
 
-    ax.imshow(ahn_tile['building_surface'],
-              extent=[x_min, x_max, y_min, y_max],
-              interpolation='none', cmap=cmap)
-    dummy = patches.Patch(color='lightgrey', label='AHN surface')
-
-    for poly in [Polygon(bld) for bld in buildings]:
-        x, y = poly.exterior.xy
-        ax.plot(x, y, c=bgt_colors['pand_poly'], label='BGT polygon')
+    if not offset_only:
+        for poly in [Polygon(bld) for bld in buildings]:
+            x, y = poly.exterior.xy
+            ax.plot(x, y, c=bgt_colors['pand_poly'], label='BGT polygon')
     for poly in buildings_ofs:
         x, y = poly.exterior.xy
         ax.plot(x, y, c=bgt_colors['pand_poly'], linestyle='--',
@@ -244,7 +270,7 @@ def plot_buildings_ahn_bgt(tilecode, ahn_reader, building_file, offset=1):
                             fill=False)
     ax.add_patch(box)
 
-    ax.set_title(f'Buildings tile {tilecode}')
+    ax.set_title(title)
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_xticks(range(x_min, x_max+1, 10))
@@ -252,11 +278,12 @@ def plot_buildings_ahn_bgt(tilecode, ahn_reader, building_file, offset=1):
     ax.set_yticks(range(y_min, y_max+1, 10))
     ax.set_yticklabels(range(y_min, y_max+1, 10))
 
-    handles, labels = ax.get_legend_handles_labels()
-    by_label = dict(zip(labels, handles))
-    by_label[dummy.get_label()] = dummy
-    ax.legend(by_label.values(), by_label.keys(),
-              loc='center left', bbox_to_anchor=(1, 0.5))
+    if not show_elevation:
+        handles, labels = ax.get_legend_handles_labels()
+        by_label = dict(zip(labels, handles))
+        by_label[dummy.get_label()] = dummy
+        ax.legend(by_label.values(), by_label.keys(),
+                  loc='center left', bbox_to_anchor=(1, 0.5))
 
     padding = 2.5
     ax.set_xlim((x_min - padding, x_max + padding))
