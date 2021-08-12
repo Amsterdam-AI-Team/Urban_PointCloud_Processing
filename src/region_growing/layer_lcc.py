@@ -3,7 +3,6 @@ import logging
 
 from ..abstract_processor import AbstractProcessor
 from ..region_growing import LabelConnectedComp
-from ..utils.interpolation import FastGridInterpolator
 from ..utils.labels import Labels
 
 logger = logging.getLogger(__name__)
@@ -112,10 +111,8 @@ class LayerLCC(AbstractProcessor):
             noise_mask = labels == Labels.NOISE
             mask_copy[noise_mask] = True
 
-        ahn_tile = self.ahn_reader.filter_tile(tilecode)
-        fast_z = FastGridInterpolator(ahn_tile['x'], ahn_tile['y'],
-                                      ahn_tile['ground_surface'])
-        points_z = fast_z(points[mask_copy, 0:2])
+        points_z = self.ahn_reader.interpolate(
+                    tilecode, points[mask_copy], mask_copy, 'ground_surface')
 
         label_mask = np.zeros((len(points),), dtype=bool)
         layer_mask = np.zeros((np.count_nonzero(mask_copy),), dtype=bool)

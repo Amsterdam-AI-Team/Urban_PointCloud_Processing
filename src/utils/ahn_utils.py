@@ -6,6 +6,7 @@ import zarr
 import copy
 import warnings
 import os
+import logging
 from abc import ABC, abstractmethod
 from tifffile import TiffFile, imread
 from pathlib import Path
@@ -14,32 +15,124 @@ from scipy.ndimage import measurements, generic_filter
 from scipy.ndimage.morphology import binary_dilation
 
 from ..utils.las_utils import get_bbox_from_tile_code
+from ..utils.interpolation import FastGridInterpolator
+
+logger = logging.getLogger(__name__)
 
 
 class AHNReader(ABC):
+    """Abstract class for reading AHN data."""
 
-    def __init__(self, data_folder):
+    @property
+    @classmethod
+    @abstractmethod
+    def NAME(cls):
+        return NotImplementedError
+
+    def __init__(self, data_folder, caching):
         super().__init__()
         self.path = Path(data_folder)
-
+        self.set_caching(caching)
+        self._clear_cache()
         if not self.path.exists():
             print('Input folder does not exist.')
-            return None
+            raise ValueError
 
     @abstractmethod
     def filter_tile(self, tilecode):
         pass
 
+    def set_caching(self, state):
+        self.caching = state
+        if not self.caching:
+            self._clear_cache()
+            logger.debug('Caching disabled.')
+        else:
+            logger.debug('Caching enabled.')
+
+    def _clear_cache(self):
+        self.cache = {'tilecode': ''}
+
+    def cache_interpolator(self, tilecode, points, surface='ground_surface'):
+        logger.info(f'Caching {surface} for tile {tilecode}.')
+        self.set_caching(True)
+        if self.cache['tilecode'] != tilecode:
+            # Clear cache.
+            self._clear_cache()
+        ahn_tile = self.filter_tile(tilecode)
+        if surface not in ahn_tile:
+            logger.error(f'Unknown surface: {surface}.')
+            raise ValueError
+        fast_z = FastGridInterpolator(
+            ahn_tile['x'], ahn_tile['y'], ahn_tile[surface])
+        self.cache['tilecode'] = tilecode
+        self.cache[surface] = fast_z(points)
+
+    def interpolate(self, tilecode, points=None, mask=None,
+                    surface='ground_surface'):
+        if points is None and mask is None:
+            logger.error('Must provide either points or mask.')
+            raise ValueError
+        if self.caching and mask is not None:
+            # Try retrieving cache.
+            if self.cache['tilecode'] == tilecode:
+                if surface in self.cache:
+                    return self.cache[surface][mask]
+                else:
+                    logger.debug(
+                        f'Surface {surface} not in cache for tile {tilecode}.')
+        elif self.caching:
+            logger.debug('Caching enabled but no mask provided.')
+
+        # No cache, fall back to FastGridInterpolator.
+        if self.cache['tilecode'] != tilecode and points is None:
+            logger.error(
+                f'Tile {tilecode} not cached and no points provided.')
+            raise ValueError
+
+        ahn_tile = self.filter_tile(tilecode)
+        if surface not in ahn_tile:
+            logger.error(f'Unknown surface: {surface}.')
+            raise ValueError
+        fast_z = FastGridInterpolator(
+            ahn_tile['x'], ahn_tile['y'], ahn_tile[surface])
+        return fast_z(points)
+
 
 class NPZReader(AHNReader):
+    """
+    NPZReader for AHN3 data. The data folder should contain the pre-processed
+    .npz files.
+
+    Parameters
+    ----------
+    data_folder : str or Path
+        Folder containing the .npz files.
+    caching : bool (default: True)
+        Enable caching of the current ahn tile and interpolation data.
+    """
+
+    NAME = 'npz'
+
+    def __init__(self, data_folder, caching=True):
+        super().__init__(data_folder, caching)
 
     def filter_tile(self, tilecode):
         """
         Returns an AHN tile dict for the area represented by the given
         CycloMedia tile-code. TODO also implement geotiff?
         """
-        return load_ahn_tile(os.path.join(self.path, 'ahn_' + tilecode
-                                          + '.npz'))
+        if self.caching:
+            if self.cache['tilecode'] != tilecode:
+                self._clear_cache()
+                self.cache['tilecode'] = tilecode
+            if 'ahn_tile' not in self.cache:
+                self.cache['ahn_tile'] = load_ahn_tile(
+                        os.path.join(self.path, 'ahn_' + tilecode + '.npz'))
+            return self.cache['ahn_tile']
+        else:
+            return load_ahn_tile(
+                        os.path.join(self.path, 'ahn_' + tilecode + '.npz'))
 
 
 class GeoTIFFReader(AHNReader):
@@ -51,12 +144,30 @@ class GeoTIFFReader(AHNReader):
     ----------
     data_folder : str or Path
         Folder containing the GeoTIFF files.
+    caching : bool (default: True)
+        Enable caching of the current ahn tile and interpolation data.
+    fill_gaps : bool (default: True)
+        Whether to fill gaps in the AHN data. Only used when method='geotiff'.
+    max_gap_size : int (default: 50)
+        Max gap size for gap filling. Only used when method='geotiff'.
+    smoothen : bool (default: True)
+        Whether to smoothen edges in the AHN data. Only used when
+        method='geotiff'.
+    smooth_thickness : int (default: 1)
+        Thickness for edge smoothening. Only used when method='geotiff'.
     """
 
     RESOLUTION = 0.5
+    NAME = 'geotiff'
 
-    def __init__(self, data_folder):
-        super().__init__(data_folder)
+    def __init__(self, data_folder, caching=True,
+                 fill_gaps=True, max_gap_size=50,
+                 smoothen=True, smooth_thickness=1):
+        super().__init__(data_folder, caching)
+        self.fill_gaps = fill_gaps
+        self.max_gap_size = max_gap_size
+        self.smoothen = smoothen
+        self.smooth_thickness = smooth_thickness
         self.ahn_df = (pd.DataFrame(columns=['Filename', 'Path',
                                              'Xmin', 'Ymax', 'Xmax', 'Ymin'])
                        .set_index('Filename'))
@@ -97,30 +208,8 @@ class GeoTIFFReader(AHNReader):
         """Return the DataFrame."""
         return self.ahn_df
 
-    def filter_tile(self, tilecode, fill_value=np.nan):
-        """
-        Return a dictionary <X, Y, Z> representing the Z-values of the <X, Y>
-        area corresponding to the given tilecode. The points are equally spaced
-        with a resolution of 0.5m, heights are copied directly from the AHN
-        GeoTIFF data. Missing data is filled with 'fill_value'.
-
-        NOTE: This function assumes that the full tilecode is enclosed in a
-        single AHN GEoTIFF tile. This assumption is valid for standard AHN data
-        and CycloMedia tilecodes.
-
-        Parameters
-        ----------
-        tilecode : str
-            The CycloMedia tile-code for the given pointcloud.
-        fill_value : float or np.nan (default: np.nan)
-            Value used to fill missing data.
-
-        Returns
-        -------
-        A dict containing AHN Z-values for the requested area, as well as the X
-        and Y coordinate axes.
-        """
-
+    def _load_tile(self, tilecode, fill_value):
+        """Extract one tile from the GeoTIFF data."""
         ((bx_min, by_max), (bx_max, by_min)) = \
             get_bbox_from_tile_code(tilecode)
 
@@ -150,7 +239,46 @@ class GeoTIFFReader(AHNReader):
             ahn_tile['ground_surface'] = z_data[y_start:y_end, x_start:x_end]
             fill_mask = ahn_tile['ground_surface'] > 1e5
             ahn_tile['ground_surface'][fill_mask] = fill_value
+            if self.fill_gaps:
+                fill_gaps(
+                    ahn_tile, max_gap_size=self.max_gap_size, inplace=True)
+            if self.smoothen:
+                smoothen_edges(
+                    ahn_tile, thickness=self.smooth_thickness, inplace=True)
             return ahn_tile
+
+    def filter_tile(self, tilecode, fill_value=np.nan):
+        """
+        Return a dictionary <X, Y, Z> representing the Z-values of the <X, Y>
+        area corresponding to the given tilecode. The points are equally spaced
+        with a resolution of 0.5m, heights are copied directly from the AHN
+        GeoTIFF data. Missing data is filled with 'fill_value'.
+
+        NOTE: This function assumes that the full tilecode is enclosed in a
+        single AHN GEoTIFF tile. This assumption is valid for standard AHN data
+        and CycloMedia tilecodes.
+
+        Parameters
+        ----------
+        tilecode : str
+            The CycloMedia tile-code for the given pointcloud.
+        fill_value : float or np.nan (default: np.nan)
+            Value used to fill missing data.
+
+        Returns
+        -------
+        A dict containing AHN Z-values for the requested area, as well as the X
+        and Y coordinate axes.
+        """
+        if self.caching:
+            if self.cache['tilecode'] != tilecode:
+                self._clear_cache()
+                self.cache['tilecode'] = tilecode
+            if 'ahn_tile' not in self.cache:
+                self.cache['ahn_tile'] = self._load_tile(tilecode, fill_value)
+            return self.cache['ahn_tile']
+        else:
+            return self._load_tile(tilecode, fill_value)
 
 
 def load_ahn_tile(ahn_file):

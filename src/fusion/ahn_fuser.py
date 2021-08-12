@@ -5,8 +5,6 @@ import os
 import logging
 
 from ..abstract_processor import AbstractProcessor
-from ..utils import ahn_utils as ahn_utils
-from ..utils.interpolation import FastGridInterpolator
 from ..utils.labels import Labels
 
 logger = logging.getLogger(__name__)
@@ -25,68 +23,36 @@ class AHNFuser(AbstractProcessor):
         Class label to use for this fuser.
     data_folder : str or Path
         Folder containing data files needed for this fuser.
-    method : str (default: 'npz')
-        Whether to use pre-processed .npz data ('npz') or GeoTIFF files
-        ('geotiff').
+    ahn_reader : AHNReader object
+        Used to read the AHN data.
     target : str (default: 'ground')
         If method='npz', this variable determines whether this fuser will label
         either 'ground' or 'building' points.
     epsilon : float (default: 0.2)
         Precision of the fuser.
-    fill_gaps : bool (default: True)
-        Whether to fill gaps in the AHN data. Only used when method='geotiff'.
-    max_gap_size : int (default: 50)
-        Max gap size for gap filling. Only used when method='geotiff'.
-    smoothen : bool (default: True)
-        Whether to smoothen edges in the AHN data. Only used when
-        method='geotiff'.
-    smooth_thickness : int (default: 1)
-        Thickness for edge smoothening. Only used when method='geotiff'.
     """
 
-    METHODS = ('npz', 'geotiff')
     TARGETS = ('ground', 'building')
 
-    def __init__(self, label, data_folder,
-                 method='npz', target='ground', epsilon=0.2,
-                 fill_gaps=True, max_gap_size=50,
-                 smoothen=True, smooth_thickness=1):
+    def __init__(self, label, data_folder, ahn_reader,
+                 target='ground', epsilon=0.2):
         super().__init__(label)
         if not os.path.isdir(data_folder):
             logger.error('The data folder specified does not exist')
             return None
-        if method not in self.METHODS:
-            logger.error(f'Method should be one of {self.METHODS}.')
-            return None
         if target not in self.TARGETS:
             logger.error(f'Target should be one of {self.TARGETS}.')
             return None
-        if method == 'geotiff' and target == 'building':
+        if ahn_reader.NAME == 'geotiff' and target == 'building':
             logger.error(
-                f'The combination of {method} and {target} is not valid.')
+                f'The {ahn_reader.NAME} reader cannot supply {target} data.')
             return None
 
         self.data_folder = data_folder
-        self.method = method
+        self.ahn_reader = ahn_reader
+        self.method = ahn_reader.NAME
         self.target = target
         self.epsilon = epsilon
-        if self.method == 'geotiff':
-            self.reader = ahn_utils.GeoTIFFReader(data_folder)
-            self.fill_gaps = fill_gaps
-            self.max_gap_size = max_gap_size
-            self.smoothen = smoothen
-            self.smooth_thickness = smooth_thickness
-
-    def _filter_tile(self, tilecode):
-        """
-        Returns an AHN tile dict for the area represented by the given
-        CycloMedia tile-code.
-        """
-        if self.method == 'npz':
-            return ahn_utils.load_ahn_tile(
-                os.path.join(self.data_folder, 'ahn_' + tilecode + '.npz'))
-        elif self.method == 'geotiff':
-            return self.reader.filter_tile(tilecode)
 
     def get_label_mask(self, points, labels, mask, tilecode):
         """
@@ -111,24 +77,12 @@ class AHNFuser(AbstractProcessor):
         logger.info(f'AHN [{self.method}/{self.target}] fuser ' +
                     f'(label={self.label}, {Labels.get_str(self.label)}).')
 
-        ahn_tile = self._filter_tile(tilecode)
         if self.target == 'ground':
-            if self.method == 'geotiff':
-                if self.fill_gaps:
-                    ahn_utils.fill_gaps(ahn_tile,
-                                        max_gap_size=self.max_gap_size,
-                                        inplace=True)
-                if self.smoothen:
-                    ahn_utils.smoothen_edges(ahn_tile,
-                                             thickness=self.smooth_thickness,
-                                             inplace=True)
-            surface = ahn_tile['ground_surface']
+            target_z = self.ahn_reader.interpolate(
+                tilecode, points[mask, :], mask, 'ground_surface')
         elif self.target == 'building':
-            surface = ahn_tile['building_surface']
-
-        # Set-up and run interpolator.
-        fast_z = FastGridInterpolator(ahn_tile['x'], ahn_tile['y'], surface)
-        target_z = fast_z(points[mask, :])
+            target_z = self.ahn_reader.interpolate(
+                tilecode, points[mask, :], mask, 'building_surface')
 
         label_mask = np.zeros((len(points),), dtype=bool)
         if self.target == 'ground':
