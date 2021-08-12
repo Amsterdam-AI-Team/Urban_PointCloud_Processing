@@ -45,7 +45,8 @@ class Pipeline:
         self.exclude_labels = exclude_labels
         self.ahn_reader = ahn_reader
         self.caching = caching
-        self.ahn_reader.set_caching(self.caching)
+        if self.caching:
+            self.ahn_reader.set_caching(self.caching)
 
     def _create_mask(self, mask, labels):
         """Create mask based on `exclude_labels`."""
@@ -77,7 +78,8 @@ class Pipeline:
         for each point.
         """
         mask = self._create_mask(mask, labels)
-        self.ahn_reader.cache_interpolator(
+        if self.caching:
+            self.ahn_reader.cache_interpolator(
                                 tilecode, points, surface='ground_surface')
 
         for obj in self.processors:
