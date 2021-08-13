@@ -8,11 +8,11 @@ This repository contains methods for the **automatic classification and labeling
 
 Example [notebooks](notebooks) are provided to demonstrate the tools.
 
-<figure>
+<figure align="center">
   <img
   src="media/examples/demo.gif"
   alt="Example: automatic labeling of a point cloud.">
-  <figcaption class="figure-caption text-center"><b>Example:</b> automatic labeling of ground, buildings, cars, street lights, traffic signs, and trees.</figcaption>
+  <figcaption><b>Example:</b> automatic labeling of ground, buildings, cars, trees, street lights, and traffic signs.</figcaption>
 </figure>
 
 ---

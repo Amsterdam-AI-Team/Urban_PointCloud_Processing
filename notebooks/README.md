@@ -13,3 +13,5 @@ These jupyter notebooks serve as a tutorial and demonstration of the tools in th
 [4. Pole-like objects](4.%20Pole-like%20objects.ipynb) -- labelling objects such as trees, street lights, and traffic signs using BGT data.
 
 [5. Region growing](5.%20Region%20growing.ipynb) -- two region growing implementations for the refinement of labeled objects.
+
+[Visualisations](Visualisations.ipynb) -- examples of different data visualisations.
