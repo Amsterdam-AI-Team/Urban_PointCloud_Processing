@@ -102,7 +102,7 @@ def parse_polygons(json_response, offset_meter=0.0, prepare_csv=False):
     return parsed_content, csv_headers
 
 
-def parse_points_bgtplus(json_response, prepare_csv=False):
+def parse_points_bgtplus(json_response):
     """
     Parse the JSON content and transform it into a table structure.
 
@@ -119,6 +119,4 @@ def parse_points_bgtplus(json_response, prepare_csv=False):
 
         parsed_content.append([name, point[0], point[1]])
 
-    csv_headers = ['Type', 'X', 'Y']
-
-    return parsed_content, csv_headers
+    return parsed_content
