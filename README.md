@@ -75,6 +75,22 @@ For visualisation of the resulting labelled point clouds we suggest [CloudCompar
 
 ---
 
+## Citing our work
+
+If you use (parts of) this repositiory in your work, please cite [our paper](https://arxiv.org/abs/2108.13757):
+
+```bibtex
+@article{bloembergen2021automatic,
+  title={Automatic labelling of urban point clouds using data fusion},
+  author={Bloembergen, Daan and Eijgenstein, Chris},
+  journal={arXiv preprint arXiv:2108.13757},
+  year={2021}
+}
+```
+
+
+---
+
 ## Acknowledgements
 
 This repository was created by [Amsterdam Intelligence](https://amsterdamintelligence.com/) for the City of Amsterdam.
