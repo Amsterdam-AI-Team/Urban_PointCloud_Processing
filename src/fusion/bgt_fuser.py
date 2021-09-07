@@ -4,16 +4,21 @@ import numpy as np
 import pandas as pd
 import ast
 import os
+import logging
 from pathlib import Path
 from sklearn.cluster import DBSCAN
 from scipy.stats import binned_statistic_2d
+from shapely.geometry import Polygon
+from shapely.ops import cascaded_union
 from abc import ABC, abstractmethod
 
 from ..abstract_processor import AbstractProcessor
-from ..utils.clip_utils import poly_offset, poly_clip, cylinder_clip, box_clip
-from ..utils.las_utils import get_bbox_from_tile_code
+from ..utils import clip_utils
 from ..utils.interpolation import FastGridInterpolator
+from ..utils.las_utils import get_bbox_from_tile_code
 from ..utils.labels import Labels
+
+logger = logging.getLogger(__name__)
 
 
 class BGTFuser(AbstractProcessor, ABC):
@@ -63,7 +68,7 @@ class BGTFuser(AbstractProcessor, ABC):
         elif bgt_folder is not None:
             self._read_folder(Path(bgt_folder))
         else:
-            print('No data folder or file specified. Aborting...')
+            logger.error('No data folder or file specified. Aborting...')
             return None
 
     def _read_folder(self, path):
@@ -76,7 +81,7 @@ class BGTFuser(AbstractProcessor, ABC):
         frames = [pd.read_csv(file, header=0, names=type(self).COLUMNS)
                   for file in path.glob(file_match)]
         if len(frames) == 0:
-            print(f'No data files found in {path.as_posix()}.')
+            logger.error(f'No data files found in {path.as_posix()}.')
             return
         self.bgt_df = pd.concat(frames)
 
@@ -120,20 +125,28 @@ class BGTBuildingFuser(BGTFuser):
         The footprint polygon will be extended by this amount (in meters).
     padding : float (default: 0)
         Optional padding (in m) around the tile when searching for objects.
+    ahn_reader : AHNReader object
+        Optional, if provided AHN data will be used to set a maximum height for
+        each building polygon.
+    ahn_eps : float (default: 0.2)
+        Precision for the AHN elevation cut-off for buildings.
     """
 
     COLUMNS = ['BAG_ID', 'Polygon', 'x_min', 'y_max', 'x_max', 'y_min']
 
     def __init__(self, label, bgt_file=None, bgt_folder=None,
-                 file_prefix='bgt_buildings', building_offset=0, padding=0):
+                 file_prefix='bgt_buildings', building_offset=0, padding=0,
+                 ahn_reader=None, ahn_eps=0.2):
         super().__init__(label, bgt_file, bgt_folder, file_prefix)
         self.building_offset = building_offset
         self.padding = padding
+        self.ahn_reader = ahn_reader
+        self.ahn_eps = ahn_eps
 
         # TODO will this speedup the process?
         self.bgt_df.sort_values(by=['x_max', 'y_min'], inplace=True)
 
-    def _filter_tile(self, tilecode):
+    def _filter_tile(self, tilecode, merge=True):
         """
         Return a list of polygons representing each of the buildings found in
         the area represented by the given CycloMedia tile-code.
@@ -142,10 +155,17 @@ class BGTBuildingFuser(BGTFuser):
             get_bbox_from_tile_code(tilecode, padding=self.padding)
         df = self.bgt_df.query('(x_min < @bx_max) & (x_max > @bx_min)' +
                                ' & (y_min < @by_max) & (y_max > @by_min)')
-        building_polygons = [ast.literal_eval(poly)
-                             for poly in df.Polygon.values]
-
-        return building_polygons
+        buildings = [ast.literal_eval(poly) for poly in df.Polygon.values]
+        if len(buildings) > 1 and merge:
+            poly_offset = list(cascaded_union(
+                                [Polygon(bld).buffer(self.building_offset)
+                                 for bld in buildings]))
+        else:
+            poly_offset = [Polygon(bld).buffer(self.building_offset)
+                           for bld in buildings]
+        poly_valid = [poly.exterior.coords for poly in poly_offset
+                      if len(poly.exterior.coords) > 1]
+        return poly_valid
 
     def get_label_mask(self, points, labels, mask, tilecode):
         """
@@ -167,25 +187,34 @@ class BGTBuildingFuser(BGTFuser):
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
+        logger.info('BGT building fuser ' +
+                    f'(label={self.label}, {Labels.get_str(self.label)}).')
+
         building_polygons = self._filter_tile(tilecode)
 
         if mask is None:
             mask = np.ones((len(points),), dtype=bool)
+        mask_ids = np.where(mask)[0]
 
-        building_mask = np.zeros((np.count_nonzero(mask),), dtype=bool)
+        building_mask = np.zeros((len(mask_ids),), dtype=bool)
         for polygon in building_polygons:
             # TODO if there are multiple buildings we could mask the points
             # iteratively to ignore points already labelled.
-            building_with_offset = poly_offset(polygon, self.building_offset)
-            building_points = poly_clip(points[mask, :], building_with_offset)
-            building_mask = building_mask | building_points
+            clip_mask = clip_utils.poly_clip(points[mask, :], polygon)
+            building_mask = building_mask | clip_mask
 
-        mask_indices = np.where(mask)[0]
+        if self.ahn_reader is not None:
+            bld_z = self.ahn_reader.interpolate(
+                tilecode, points[mask, :], mask, 'building_surface')
+            bld_z_valid = np.isfinite(bld_z)
+            ahn_mask = (points[mask_ids[bld_z_valid], 2]
+                        <= bld_z[bld_z_valid] + self.ahn_eps)
+            building_mask[bld_z_valid] = building_mask[bld_z_valid] & ahn_mask
+
+        logger.debug(f'{len(building_polygons)} building polygons labelled.')
+
         label_mask = np.zeros(len(points), dtype=bool)
-        label_mask[mask_indices[building_mask]] = True
-
-        print(f'BGT building fuser => processed '
-              f'(label={self.label}, {Labels.get_str(self.label)}).')
+        label_mask[mask_ids[building_mask]] = True
 
         return label_mask
 
@@ -251,17 +280,17 @@ class BGTPointFuser(BGTFuser):
     """
     COLUMNS = ['Type', 'X', 'Y']
 
-    def __init__(self, label, bgt_type, bgt_file=None, bgt_folder=None,
-                 file_prefix='bgt_points', ahn_reader=None, padding=0,
-                 params={}):
+    def __init__(self, label, bgt_type, bgt_file=None,
+                 bgt_folder=None, file_prefix='bgt_points', ahn_reader=None,
+                 padding=0, params={}):
         super().__init__(label, bgt_file, bgt_folder, file_prefix)
         self.bgt_type = bgt_type
         if ahn_reader is None:
-            print('WARNING: no ahn_reader specified. Assuming elevation=0.')
+            logger.warning('No ahn_reader specified. Assuming elevation=0.')
         self.ahn_reader = ahn_reader
         if padding > 0:
             # TODO: positive padding does not work with elevation data.
-            print('WARNING: positive padding not yet implemented.')
+            logger.warning('Positive padding not yet implemented.')
             padding = 0.
         self.padding = padding
         if 'r_mult' not in params:
@@ -296,9 +325,10 @@ class BGTPointFuser(BGTFuser):
 
         For a description of parameters see "Notes" above.
         """
-        search_ids = np.where(cylinder_clip(points, point, search_radius,
-                                            bottom=plane_height-plane_buffer,
-                                            top=plane_height+plane_buffer))[0]
+        search_ids = np.where(clip_utils.cylinder_clip(
+                                points, point, search_radius,
+                                bottom=plane_height-plane_buffer,
+                                top=plane_height+plane_buffer))[0]
         if len(search_ids) < min_points:
             return np.empty((0, 3))
         # Cluster the potential seed points.
@@ -341,6 +371,7 @@ class BGTPointFuser(BGTFuser):
         For a description of parameters see "Notes" above.
         """
         seeds = []
+        matches = dict()
         for ind, obj in enumerate(point_objects):
             # Assume obj = [x, y].
             if fast_z is None:
@@ -352,11 +383,12 @@ class BGTPointFuser(BGTFuser):
             # Define the "box" within which to search for candidates.
             search_box = (obj[0]-search_pad, obj[1]-search_pad,
                           obj[0]+search_pad, obj[1]+search_pad)
-            box_ids = np.where(box_clip(points, search_box,
-                                        bottom=ground_z+z_min,
-                                        top=ground_z+z_max))[0]
+            box_ids = np.where(clip_utils.box_clip(points, search_box,
+                                                   bottom=ground_z+z_min,
+                                                   top=ground_z+z_max))[0]
             if len(box_ids) == 0:
-                print(f'Empty search box for object {ind}.')
+                # Empty search box, no match.
+                matches[obj] = None
                 continue
 
             # Voxelize the search box and compute statistics for each column.
@@ -389,7 +421,8 @@ class BGTPointFuser(BGTFuser):
                                     & (count_z_bin.statistic > min_points)
                                     & med_mid)
             if len(x_loc) == 0:
-                print(f'No candidates found for object {ind}.')
+                # No candidates found.
+                matches[obj] = None
                 continue
             candidates = np.stack((x_edge[x_loc] + voxel_res/2,
                                    y_edge[y_loc] + voxel_res/2)).T
@@ -408,11 +441,14 @@ class BGTPointFuser(BGTFuser):
                     # which objects were located.
                     seed = clusters[0]
                     seeds.append(seed)
+                    matches[obj] = (seed[0], seed[1])
                 else:
-                    print(f'No cluster found for object {ind}')
+                    # No cluster found.
+                    matches[obj] = None
             else:
-                print(f'No candidates found for object {ind}.')
-        return seeds
+                # No candidates found.
+                matches[obj] = None
+        return seeds, matches
 
     def get_label_mask(self, points, labels, mask, tilecode):
         """
@@ -434,6 +470,9 @@ class BGTPointFuser(BGTFuser):
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
+        logger.info(f'BGT [{self.bgt_type}] point fuser ' +
+                    f'(label={self.label}, {Labels.get_str(self.label)}).')
+
         label_mask = np.zeros((len(points),), dtype=bool)
 
         bgt_points = self._filter_tile(tilecode)
@@ -443,18 +482,21 @@ class BGTPointFuser(BGTFuser):
                                       ahn_tile['ground_surface'])
 
         # Find seed point clusters.
-        seeds = self._find_seeds_for_point_objects(points[mask], bgt_points,
-                                                   fast_z, **self.params)
+        seeds, matches = self._find_seeds_for_point_objects(
+                            points[mask], bgt_points, fast_z, **self.params)
         for seed in seeds:
             # Label a cylinder based on the seed cluster.
             top_height = (fast_z(np.array([seed[0:2]]))
                           + self.params['label_height'])
-            clip_mask = cylinder_clip(points[mask], np.array(seed[0:2]),
-                                      self.params['r_mult']*seed[2],
-                                      top=top_height)
+            clip_mask = clip_utils.cylinder_clip(
+                                        points[mask], np.array(seed[0:2]),
+                                        self.params['r_mult']*seed[2],
+                                        top=top_height)
             label_mask[mask] = label_mask[mask] | clip_mask
 
-        print(f'BGT point fuser [{self.bgt_type}] => processed '
-              + f'(label={self.label}, {Labels.get_str(self.label)}).')
+        match_str = ', '.join([f'{obj}->{cand}'
+                               for (obj, cand) in matches.items()])
+        logger.debug(f'{len(seeds)}/{len(bgt_points)} objects labelled.')
+        logger.debug('Matches for [{self.bgt_type}]: ' + match_str)
 
         return label_mask

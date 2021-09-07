@@ -8,11 +8,11 @@ This repository contains methods for the **automatic classification and labeling
 
 Example [notebooks](notebooks) are provided to demonstrate the tools.
 
-<figure>
+<figure align="center">
   <img
   src="media/examples/demo.gif"
   alt="Example: automatic labeling of a point cloud.">
-  <figcaption class="figure-caption text-center"><b>Example:</b> automatic labeling of ground, buildings, cars, street lights, traffic signs, and trees.</figcaption>
+  <figcaption><b>Example:</b> automatic labeling of ground, buildings, cars, trees, street lights, and traffic signs.</figcaption>
 </figure>
 
 ---
@@ -72,6 +72,22 @@ For a quick dive into this repository take a look at our [complete solution note
 We provide tutorial [notebooks](notebooks) that demonstrate how the tools can be used.
 
 For visualisation of the resulting labelled point clouds we suggest [CloudCompare](https://www.danielgm.net/cc/). Simply open the labelled .laz in CloudCompare, select the cloud, and set `Colors` to the custom `Scalar Field` named `label`. For best results, use our [custom color scale](https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing/raw/main/media/cc_color_scale.xml), and set "steps" to 100.
+
+---
+
+## Citing our work
+
+If you use (parts of) this repositiory in your work, please cite [our paper](https://arxiv.org/abs/2108.13757):
+
+```bibtex
+@article{bloembergen2021automatic,
+  title={Automatic labelling of urban point clouds using data fusion},
+  author={Bloembergen, Daan and Eijgenstein, Chris},
+  journal={arXiv preprint arXiv:2108.13757},
+  year={2021}
+}
+```
+
 
 ---
 

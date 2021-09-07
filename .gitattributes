@@ -1,0 +1,2 @@
+# Treat notebooks as documentation to remove them from language stats
+notebooks/* linguist-documentation

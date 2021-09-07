@@ -1,11 +1,13 @@
 """Noise filter"""
 
 import numpy as np
+import logging
 
 from ..abstract_processor import AbstractProcessor
-from ..utils.interpolation import FastGridInterpolator
 from ..region_growing.label_connected_comp import LabelConnectedComp
 from ..utils.labels import Labels
+
+logger = logging.getLogger(__name__)
 
 
 class NoiseFilter(AbstractProcessor):
@@ -27,8 +29,8 @@ class NoiseFilter(AbstractProcessor):
     min_component_size : int (default: 100)
         Minimum size of a cluster below which it is regarded as noise.
     """
-    def __init__(self, label, ahn_reader, epsilon=0.2, octree_level=9,
-                 min_component_size=100):
+    def __init__(self, label, ahn_reader, epsilon=0.2,
+                 octree_level=9, min_component_size=100):
         super().__init__(label)
 
         self.ahn_reader = ahn_reader
@@ -56,28 +58,26 @@ class NoiseFilter(AbstractProcessor):
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
+        logger.info('Noise filter ' +
+                    f'(label={self.label}, {Labels.get_str(self.label)}).')
         # Create lcc object and perform lcc
         lcc = LabelConnectedComp(self.label, octree_level=self.octree_level,
                                  min_component_size=self.min_component_size)
         point_components = lcc.get_components(points[mask])
-
-        cc_labels, counts = np.unique(point_components,
-                                      return_counts=True)
-
-        cc_labels_filtered = cc_labels[counts < self.min_component_size]
+        cc_mask = point_components == -1
+        logger.debug(f'Found {np.count_nonzero(cc_mask)} noise points in '
+                     + f'clusters <{self.min_component_size} points.')
 
         # Get the interpolated ground points of the tile
-        ahn_tile = self.ahn_reader.filter_tile(tilecode)
-        surface = ahn_tile['ground_surface']
-        fast_z = FastGridInterpolator(ahn_tile['x'], ahn_tile['y'], surface)
-        target_z = fast_z(points[mask, :])
+        target_z = self.ahn_reader.interpolate(
+                            tilecode, points[mask], mask, 'ground_surface')
+        ground_mask = (points[mask, 2] - target_z) < -self.epsilon
+        diff = ground_mask & ~cc_mask
+        logger.debug(f'Found {np.count_nonzero(diff)} noise points '
+                     + 'below ground level.')
 
         label_mask = np.zeros((len(points),), dtype=bool)
         # Label points below ground and points in small components.
-        label_mask[mask] = (np.in1d(point_components, cc_labels_filtered)
-                            | ((points[mask, 2] - target_z) < -self.epsilon))
-
-        print(f'Noise filter => processed '
-              f'(label={self.label}, {Labels.get_str(self.label)}).')
+        label_mask[mask] = cc_mask | ground_mask
 
         return label_mask
