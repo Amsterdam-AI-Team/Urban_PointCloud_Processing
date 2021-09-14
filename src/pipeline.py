@@ -177,7 +177,8 @@ class Pipeline:
         files = [f for f in in_folder.glob('*')
                  if f.name.endswith(self.FILE_TYPES)
                  and f.name.startswith(in_prefix)]
-        files_tqdm = tqdm(files, unit="file", disable=hide_progress)
+        files_tqdm = tqdm(files, unit="file",
+                          disable=hide_progress, smoothing=0)
         logger.debug(f'{len(files)} files found.')
 
         for file in files_tqdm:

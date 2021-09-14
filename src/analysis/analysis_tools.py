@@ -99,7 +99,7 @@ def get_pole_locations_pred(orig_pc_folder, pred_pc_folder,
     locations = []
 
     files = list(pathlib.Path(pred_pc_folder).glob(pred_prefix + "_*.laz"))
-    files_tqdm = tqdm(files, unit="file", disable=hide_progress)
+    files_tqdm = tqdm(files, unit="file", disable=hide_progress, smoothing=0)
     logger.debug(f'{len(files)} files found.')
 
     for file in files_tqdm:
