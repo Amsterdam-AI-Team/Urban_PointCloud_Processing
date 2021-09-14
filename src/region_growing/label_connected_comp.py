@@ -77,7 +77,7 @@ class LabelConnectedComp(AbstractProcessor):
 
         # Get the scalar field with labels and points coords as numpy array
         labels_sf = self.point_cloud.getScalarField(self.labels_sf_idx)
-        self.point_components = labels_sf.asArray()
+        self.point_components = np.around(labels_sf.asArray())
 
         # Filter based on min_component_size
         if self.min_component_size > 1:
