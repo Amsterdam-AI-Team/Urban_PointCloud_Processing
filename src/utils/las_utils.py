@@ -126,3 +126,43 @@ def label_and_save_las(las, labels, outfile):
                           description="Labels"))
     las.label = labels
     las.write(outfile)
+
+
+def create_pole_las(outfile, point_objects, labels=0, z_step=0.1):
+    """
+    Create a LAS file based on a set of given point objects. The LAS file will
+    contain columns of points visualising the given objects.
+
+    Parameters
+    ----------
+    outfile : str
+        Path to output file.
+    point_objects : list
+        Each entry represents one point object: (x, y, z_min, z_max)
+    labels : int or list of integers (optional)
+        Either provide one label for all point objects, or a list of labels
+        (one for each object).
+    z_step : float (default: 0.1)
+        Resolution (step size) of the output columns in the z axis.
+    """
+    points = np.empty((0, 3))
+    point_labels = []
+    for i, obj in enumerate(point_objects):
+        obj_points = [[obj[0], obj[1], z]
+                      for z in np.arange(obj[2], obj[2] + obj[3], z_step)]
+        points = np.vstack((points, obj_points))
+        if isinstance(labels, int):
+            obj_label = labels
+        else:
+            obj_label = labels[i]
+        point_labels.extend([obj_label]*len(obj_points))
+
+    las = laspy.create(file_version="1.2", point_format=3)
+    las.header.offsets = np.min(points, axis=0)
+    las.x = points[:, 0]
+    las.y = points[:, 1]
+    las.z = points[:, 2]
+    las.add_extra_dim(laspy.ExtraBytesParams(name="label", type="uint8",
+                                             description="Labels"))
+    las.label = point_labels
+    las.write(outfile)
