@@ -4,6 +4,10 @@ import pathlib
 import re
 import os
 import laspy
+import logging
+from tqdm import tqdm
+
+logger = logging.getLogger(__name__)
 
 
 def get_tilecode_from_filename(filename):
@@ -107,10 +111,74 @@ def label_and_save_las(las, labels, outfile):
     """Label a las file using the provided class labels and save to outfile."""
     assert len(labels) == las.header.point_count
     if 'label' not in las.point_format.extra_dimension_names:
-        las.add_extra_dim(laspy.ExtraBytesParams(name="label", type="uint16",
+        las.add_extra_dim(laspy.ExtraBytesParams(name="label", type="uint8",
                           description="Labels"))
     las.label = labels
     las.write(outfile)
+
+
+def merge_cloud_pred(cloud_file, pred_file, out_file, label_dict=None):
+    """Merge predicted labels into a point cloud LAS file."""
+    cloud = laspy.read(cloud_file)
+    pred = laspy.read(pred_file)
+
+    if len(pred.label) != len(cloud.x):
+        logger.error('Dimension mismatch between cloud and prediction '
+                     + f'for tile {get_tilecode_from_filename(cloud)}.')
+        return
+    if 'label' not in cloud.point_format.extra_dimension_names:
+        cloud.add_extra_dim(laspy.ExtraBytesParams(
+                            name="label", type="uint8", description="Labels"))
+
+    cloud.label = pred.label.astype('uint8')
+    if label_dict is not None:
+        for key, value in label_dict.items():
+            cloud.label[cloud.label == key] = value
+    cloud.write(out_file)
+
+
+def merge_cloud_pred_folder(cloud_folder, pred_folder, out_folder='',
+                            cloud_prefix='filtered', pred_prefix='pred',
+                            out_prefix='merged', label_dict=None,
+                            hide_progress=False):
+    """
+    Merge the labels of all predicted tiles in a folder into the corresponding
+    point clouds and save the result.
+
+    Parameters
+    ----------
+    cloud_folder : str
+        Folder containing the unlabelled .laz files.
+    pred_folder : str
+        Folder containing corresponding .laz files with predicted labels.
+    out_folder : str (default: '')
+        Folder in which to save the merged clouds.
+    cloud_prefix : str (default: 'filtered')
+        Prefix of unlabelled .laz files.
+    pred_prefix : str (default: 'pred')
+        Prefix of predicted .laz files.
+    out_prefix : str (default: 'merged')
+        Prefix of output files.
+    label_dict : dict (optional)
+        Mapping from predicted labels to saved labels.
+    hide_progress : bool (default: False)
+        Whether to hide the progress bar.
+    """
+    files = list(pathlib.Path(pred_folder).glob(pred_prefix + "_*.laz"))
+    files_tqdm = tqdm(files, unit="file", disable=hide_progress, smoothing=0)
+    logger.debug(f'{len(files)} files found.')
+
+    for file in files_tqdm:
+        tilecode = get_tilecode_from_filename(file.name)
+        files_tqdm.set_postfix_str(tilecode)
+        logger.info(f'Processing tile {tilecode}...')
+        cloud_file = os.path.join(
+                        cloud_folder, cloud_prefix + '_' + tilecode + '.laz')
+        pred_file = os.path.join(
+                        pred_folder, pred_prefix + '_' + tilecode + '.laz')
+        out_file = os.path.join(
+                        out_folder, out_prefix + '_' + tilecode + '.laz')
+        merge_cloud_pred(cloud_file, pred_file, out_file, label_dict)
 
 
 def create_pole_las(outfile, point_objects, labels=0, z_step=0.1):
