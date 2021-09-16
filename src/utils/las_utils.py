@@ -15,6 +15,13 @@ def get_tilecode_from_filename(filename):
     return re.match(r'.*(\d{4}_\d{4}).*', filename)[1]
 
 
+def get_tilecodes_from_folder(las_folder, las_prefix=''):
+    """Get a set of unique tilecodes for the LAS files in a given folder."""
+    files = pathlib.Path(las_folder).glob(f'{las_prefix}*.laz')
+    tilecodes = set([get_tilecode_from_filename(file.name) for file in files])
+    return tilecodes
+
+
 def get_bbox_from_tile_code(tile_code, padding=0, width=50, height=50):
     """
     Get the <X,Y> bounding box for a given tile code. The tile code is assumed
