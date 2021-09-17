@@ -44,7 +44,8 @@ def get_pole_dims(points, fast_z, decimals=2):
 
 
 def get_pole_locations(points, labels, target_label, fast_z,
-                       min_component_size=100, octree_level=5):
+                       min_component_size=100, octree_level=5,
+                       return_counts=False):
     """
     Returns a list of locations and dimensions of pole-like objects
     corresponding to the target_label in a given point cloud.
@@ -63,6 +64,8 @@ def get_pole_locations(points, labels, target_label, fast_z,
         Minimum size of a component to be considered.
     octree_level : int (default: 6)
         Octree level for the LabelConnectedComp algorithm.
+    return_counts : bool (default: False)
+        Whether to return the number of points per object.
 
     Returns
     -------
@@ -87,42 +90,55 @@ def get_pole_locations(points, labels, target_label, fast_z,
         for cc in cc_labels:
             cc_mask = (point_components == cc)
             logger.debug(f'Cluster {cc}: {np.count_nonzero(cc_mask)} points.')
-            pole_locations.append(get_pole_dims(points[mask][cc_mask], fast_z))
+            dims = get_pole_dims(points[mask][cc_mask], fast_z)
+            if return_counts:
+                dims = (*dims, np.count_nonzero(cc_mask))
+            pole_locations.append(dims)
     return pole_locations
 
 
-def get_pole_locations_pred(orig_pc_folder, pred_pc_folder,
+def get_pole_locations_pred(cloud_pc_folder, pred_pc_folder,
                             target_label, ahn_reader,
-                            orig_prefix='filtered', pred_prefix='pred',
-                            min_component_size=100, hide_progress=False):
+                            cloud_prefix='filtered', pred_prefix='pred',
+                            min_component_size=100, return_counts=False,
+                            hide_progress=False):
 
     locations = []
 
-    files = list(pathlib.Path(pred_pc_folder).glob(pred_prefix + "_*.laz"))
-    files_tqdm = tqdm(files, unit="file", disable=hide_progress, smoothing=0)
-    logger.debug(f'{len(files)} files found.')
+    cloud_files = list(pathlib.Path(cloud_pc_folder)
+                       .glob(cloud_prefix + "_*.laz"))
+    pred_files = list(pathlib.Path(pred_pc_folder)
+                      .glob(pred_prefix + "_*.laz"))
+    tilecodes = set([las_utils.get_tilecode_from_filename(f.name)
+                     for f in cloud_files])
+    tilecodes = list(tilecodes.intersection(set(
+        [las_utils.get_tilecode_from_filename(f.name) for f in pred_files])))
+    files_tqdm = tqdm(tilecodes, unit="file", disable=hide_progress,
+                      smoothing=0)
+    logger.debug(f'{len(tilecodes)} files found.')
 
-    for file in files_tqdm:
-        tilecode = las_utils.get_tilecode_from_filename(file.name)
+    for tilecode in files_tqdm:
         files_tqdm.set_postfix_str(tilecode)
         logger.info(f'Processing tile {tilecode}...')
 
-        pointcloud_pred = las_utils.read_las(file.as_posix())
+        pointcloud_pred = las_utils.read_las(os.path.join(
+            pred_pc_folder, pred_prefix + '_' + tilecode + '.laz'))
         labels = pointcloud_pred.label
 
         if np.count_nonzero(labels == target_label) > 0:
-            if ((orig_pc_folder == pred_pc_folder)
-                    and (orig_prefix == pred_prefix)):
+            if ((cloud_pc_folder == pred_pc_folder)
+                    and (cloud_prefix == pred_prefix)):
                 pointcloud = pointcloud_pred
             else:
                 pointcloud = las_utils.read_las(os.path.join(
-                    orig_pc_folder, orig_prefix + '_' + tilecode + '.laz'))
+                    cloud_pc_folder, cloud_prefix + '_' + tilecode + '.laz'))
             points = np.vstack((pointcloud.x, pointcloud.y, pointcloud.z)).T
             ahn_tile = ahn_reader.filter_tile(tilecode)
             fast_z = FastGridInterpolator(ahn_tile['x'], ahn_tile['y'],
                                           ahn_tile['ground_surface'])
             tile_locations = get_pole_locations(points, labels, target_label,
-                                                fast_z, min_component_size)
+                                                fast_z, min_component_size,
+                                                return_counts=return_counts)
             locations.extend([(*x, tilecode) for x in tile_locations])
 
     return locations
