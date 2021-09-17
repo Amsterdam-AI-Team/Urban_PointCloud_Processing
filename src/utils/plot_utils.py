@@ -298,7 +298,7 @@ def plot_buildings_ahn_bgt(tilecode, ahn_reader, building_file, offset=1,
 
 
 def plot_tiles_map(tiles, train_tiles=[], width=1024, height=1024,
-                   zoom_control=True, zoom_start=14):
+                   zoom_control=True, zoom_start=14, opacity=0.25):
     """
     Visualise the locations of all point cloud tiles in a given folder and
     overlay them on an OpenStreetMap of the area. The returned map is
@@ -331,7 +331,7 @@ def plot_tiles_map(tiles, train_tiles=[], width=1024, height=1024,
                 conv.from_rd(row.X1 + 50, row.Y1 + 50)]
         if row.Train:
             fc = 'darkorange'
-            fop = 0.25
+            fop = opacity
         else:
             fc = 'royalblue'
             fop = 0.1
