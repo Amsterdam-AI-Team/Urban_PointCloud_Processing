@@ -171,12 +171,16 @@ def merge_cloud_pred_folder(cloud_folder, pred_folder, out_folder='',
     hide_progress : bool (default: False)
         Whether to hide the progress bar.
     """
-    files = list(pathlib.Path(pred_folder).glob(pred_prefix + "_*.laz"))
-    files_tqdm = tqdm(files, unit="file", disable=hide_progress, smoothing=0)
-    logger.debug(f'{len(files)} files found.')
+    cloud_files = list(pathlib.Path(cloud_folder)
+                       .glob(cloud_prefix + "_*.laz"))
+    cloud_codes = {get_tilecode_from_filename(f.name) for f in cloud_files}
+    pred_files = list(pathlib.Path(pred_folder).glob(pred_prefix + "_*.laz"))
+    pred_codes = {get_tilecode_from_filename(f.name) for f in pred_files}
+    codes = cloud_codes.intersection(pred_codes)
+    files_tqdm = tqdm(codes, unit="file", disable=hide_progress, smoothing=0)
+    logger.debug(f'{len(codes)} files found.')
 
-    for file in files_tqdm:
-        tilecode = get_tilecode_from_filename(file.name)
+    for tilecode in files_tqdm:
         files_tqdm.set_postfix_str(tilecode)
         logger.info(f'Processing tile {tilecode}...')
         cloud_file = os.path.join(
