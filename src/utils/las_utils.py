@@ -202,7 +202,7 @@ def create_pole_las(outfile, point_objects, labels=0, z_step=0.1):
     outfile : str
         Path to output file.
     point_objects : list
-        Each entry represents one point object: (x, y, z_min, z_max)
+        Each entry represents one point object: (x, y, z, height)
     labels : int or list of integers (optional)
         Either provide one label for all point objects, or a list of labels
         (one for each object).
