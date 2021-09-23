@@ -133,6 +133,7 @@ def merge_cloud_pred(cloud_file, pred_file, out_file, label_dict=None):
         logger.error('Dimension mismatch between cloud and prediction '
                      + f'for tile {get_tilecode_from_filename(cloud)}.')
         return
+
     if 'label' not in cloud.point_format.extra_dimension_names:
         cloud.add_extra_dim(laspy.ExtraBytesParams(
                             name="label", type="uint8", description="Labels"))
@@ -141,13 +142,21 @@ def merge_cloud_pred(cloud_file, pred_file, out_file, label_dict=None):
     if label_dict is not None:
         for key, value in label_dict.items():
             cloud.label[cloud.label == key] = value
+
+    if 'probability' in pred.point_format.extra_dimension_names:
+        if 'probability' not in cloud.point_format.extra_dimension_names:
+            cloud.add_extra_dim(laspy.ExtraBytesParams(
+                                name="probability", type="float32",
+                                description="Probabilities"))
+        cloud.probability = pred.probability
+
     cloud.write(out_file)
 
 
 def merge_cloud_pred_folder(cloud_folder, pred_folder, out_folder='',
                             cloud_prefix='filtered', pred_prefix='pred',
                             out_prefix='merged', label_dict=None,
-                            hide_progress=False):
+                            resume=False, hide_progress=False):
     """
     Merge the labels of all predicted tiles in a folder into the corresponding
     point clouds and save the result.
@@ -168,17 +177,22 @@ def merge_cloud_pred_folder(cloud_folder, pred_folder, out_folder='',
         Prefix of output files.
     label_dict : dict (optional)
         Mapping from predicted labels to saved labels.
+    resume : bool (default: False)
+        Skip merge when output file already exists.
     hide_progress : bool (default: False)
         Whether to hide the progress bar.
     """
-    cloud_files = list(pathlib.Path(cloud_folder)
-                       .glob(cloud_prefix + "_*.laz"))
-    cloud_codes = {get_tilecode_from_filename(f.name) for f in cloud_files}
-    pred_files = list(pathlib.Path(pred_folder).glob(pred_prefix + "_*.laz"))
-    pred_codes = {get_tilecode_from_filename(f.name) for f in pred_files}
-    codes = cloud_codes.intersection(pred_codes)
-    files_tqdm = tqdm(codes, unit="file", disable=hide_progress, smoothing=0)
-    logger.debug(f'{len(codes)} files found.')
+    cloud_codes = get_tilecodes_from_folder(cloud_folder, cloud_prefix)
+    pred_codes = get_tilecodes_from_folder(pred_folder, pred_prefix)
+    in_codes = cloud_codes.intersection(pred_codes)
+    if resume:
+        done_codes = get_tilecodes_from_folder(out_folder, out_prefix)
+        todo_codes = {c for c in in_codes if c not in done_codes}
+    else:
+        todo_codes = in_codes
+    files_tqdm = tqdm(todo_codes, unit="file", disable=hide_progress,
+                      smoothing=0)
+    logger.debug(f'{len(todo_codes)} files found.')
 
     for tilecode in files_tqdm:
         files_tqdm.set_postfix_str(tilecode)
