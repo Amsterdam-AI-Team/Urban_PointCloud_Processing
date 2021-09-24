@@ -2,18 +2,11 @@ import numpy as np
 from scipy.spatial import ConvexHull
 
 
-def _unit_vector(vector):
-    """ Returns the unit vector of the vector. """
-    return vector / np.linalg.norm(vector)
-
-
-def angle_between(v1, v2):
-    """ Returns the angle in degrees between vectors 'v1' and 'v2'. """
-    v1_u = _unit_vector(v1)
-    v2_u = _unit_vector(v2)
-    dot_product = np.dot(v1_u, v2_u)
-    rad = np.arccos(np.clip(dot_product, -1.0, 1.0))
-    return np.degrees(rad)
+def vector_angle(u, v=np.array([0., 0., 1.])):
+    """ Returns the angle in degrees between vectors 'v1' and 'v2'."""
+    # see https://stackoverflow.com/a/2827466/425458
+    c = np.dot(u/np.linalg.norm(u), v/np.linalg.norm(v))
+    return np.rad2deg(np.arccos(np.clip(c, -1, 1)))
 
 
 def compute_bounding_box(points):

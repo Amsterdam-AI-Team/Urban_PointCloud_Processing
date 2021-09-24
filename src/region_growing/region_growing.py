@@ -3,7 +3,7 @@ import open3d as o3d
 import copy
 import logging
 
-from ..utils.math_utils import angle_between
+from ..utils.math_utils import vector_angle
 from ..utils.labels import Labels
 from ..abstract_processor import AbstractProcessor
 
@@ -115,8 +115,8 @@ class RegionGrowing(AbstractProcessor):
                     continue
 
                 # Compute angles between two n-dimensional vectors
-                current_angle = angle_between(seed_normal,
-                                              self.pcd.normals[neighbor_id])
+                current_angle = vector_angle(seed_normal,
+                                             self.pcd.normals[neighbor_id])
                 # The smoothness constraint in degrees
                 if current_angle < self.threshold_angle:
                     region.append(neighbor_id)
