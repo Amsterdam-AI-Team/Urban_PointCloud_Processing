@@ -4,12 +4,14 @@ import os
 import pathlib
 from numba import jit
 from tqdm import tqdm
+from sklearn.decomposition import PCA
 
 from ..region_growing import LabelConnectedComp
 from ..utils.interpolation import FastGridInterpolator
 from ..utils.labels import Labels
 from ..utils import las_utils
 from ..utils import clip_utils
+from ..utils import math_utils
 
 logger = logging.getLogger(__name__)
 
@@ -28,13 +30,36 @@ def get_label_stats(labels):
 
 
 @jit(nopython=True)
-def get_pole_dims(points):
-    """Returns the dimensions of a pole-like object."""
-    x = np.median(points[:, 0])
-    y = np.median(points[:, 1])
-    z = np.min(points[:, 2])
-    h = np.max(points[:, 2])
-    return x, y, z, h
+def get_xystd(points, z, margin):
+    clip_mask = (points[:, 2] >= z - margin) & (points[:, 2] < z + margin)
+    x_mean = np.mean(points[clip_mask, 0])
+    y_mean = np.mean(points[clip_mask, 1])
+    xy_std = np.max(np.array([np.std(points[clip_mask, 0]),
+                              np.std(points[clip_mask, 1])]))
+    return x_mean, y_mean, z, xy_std
+
+
+def extract_pole(points, ground_est=None):
+    step = 0.1
+    z_min = np.min(points[:, 2])
+    z_max = np.max(points[:, 2])
+    if ground_est is None:
+        ground_est = z_min
+    xyzstd = np.array([[*get_xystd(points, z, step)]
+                       for z in np.arange(z_min + step, z_max, 2*step)])
+    valid_mask = xyzstd[:, 3] <= 2 * np.min(xyzstd[:, 3])
+    pca = PCA(n_components=1).fit(xyzstd[valid_mask, 0:3])
+    origin = pca.mean_
+    direction_vector = pca.components_[0]
+    if direction_vector[2] < 0:
+        direction_vector *= -1
+    extent = (origin[2] - ground_est, z_max - origin[2])
+    multiplier = np.sum(np.linalg.norm(direction_vector, 2))
+    x, y, z = origin - direction_vector * extent[0] * multiplier
+    x2, y2, z2 = origin + direction_vector * extent[1] * multiplier
+    height = np.sum(extent) * multiplier
+    angle = math_utils.vector_angle(direction_vector)
+    return x, y, z, x2, y2, z2, height, angle
 
 
 def get_pole_locations(points, labels, target_label, ground_label,
@@ -95,31 +120,32 @@ def get_pole_locations(points, labels, target_label, ground_label,
         for cc in cc_labels:
             cc_mask = (point_components == cc)
             logger.debug(f'Cluster {cc}: {np.count_nonzero(cc_mask)} points.')
-            x, y, z, h = get_pole_dims(points[mask_ids[noise_filter]][cc_mask])
+            cluster_center = np.mean(
+                        points[mask_ids[noise_filter]][cc_mask, 0:2], axis=0)
             ground_clip = clip_utils.circle_clip(
-                                        points[ground_mask], (x, y), 1.)
+                                    points[ground_mask], cluster_center, 1.)
             if np.count_nonzero(ground_clip) > 0:
                 ground_est = np.mean(points[ground_mask, 2][ground_clip])
             elif fast_z is None:
                 ground_clip = clip_utils.circle_clip(
-                                            points[ground_mask], (x, y), 2.)
+                                    points[ground_mask], cluster_center, 2.)
                 if np.count_nonzero(ground_clip) > 0:
                     ground_est = np.mean(points[ground_mask, 2][ground_clip])
                 else:
-                    ground_est = z
+                    ground_est = None
             else:
                 logger.debug('Falling back to AHN data.')
-                ground_est = fast_z(np.array([[x, y]]))[0]
+                ground_est = fast_z(np.array([cluster_center]))[0]
                 if np.isnan(ground_est):
                     z_vals = fast_z(points[mask_ids[noise_filter]][cc_mask])
                     if np.isnan(z_vals).all():
-                        logger.warn(f'Missing AHN data for point ({x}, {y}).')
+                        logger.warn(
+                            f'Missing AHN data for point ({cluster_center}).')
                     else:
                         ground_est = np.nanmean(z_vals)
-                    if np.isnan(ground_est):
-                        ground_est = z
-            dims = tuple(round(x, 2)
-                         for x in [x, y, ground_est, h - ground_est])
+            pole = extract_pole(
+                        points[mask_ids[noise_filter]][cc_mask], ground_est)
+            dims = tuple(round(x, 2) for x in pole)
             if return_counts:
                 dims = (*dims, np.count_nonzero(cc_mask))
             pole_locations.append(dims)
