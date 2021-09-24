@@ -32,12 +32,13 @@ def get_pole_dims(points):
     """Returns the dimensions of a pole-like object."""
     x = np.median(points[:, 0])
     y = np.median(points[:, 1])
-    z = np.max(points[:, 2])
-    return x, y, z
+    z = np.min(points[:, 2])
+    h = np.max(points[:, 2])
+    return x, y, z, h
 
 
-def get_pole_locations(points, labels, target_label, ground_label, fast_z,
-                       min_component_size=100, octree_level=5,
+def get_pole_locations(points, labels, target_label, ground_label,
+                       fast_z=None, min_component_size=100, octree_level=5,
                        return_counts=False):
     """
     Returns a list of locations and dimensions of pole-like objects
@@ -53,7 +54,7 @@ def get_pole_locations(points, labels, target_label, ground_label, fast_z,
         The label of the target class.
     ground_label : int
         The label of the ground class, for height determination.
-    fast_z : FastGridInterpolator
+    fast_z : FastGridInterpolator, optional
         Interpolator for the ground surface, fall-back method.
     min_component_size : int (default: 100)
         Minimum size of a component to be considered.
@@ -94,11 +95,18 @@ def get_pole_locations(points, labels, target_label, ground_label, fast_z,
         for cc in cc_labels:
             cc_mask = (point_components == cc)
             logger.debug(f'Cluster {cc}: {np.count_nonzero(cc_mask)} points.')
-            x, y, h = get_pole_dims(points[mask_ids[noise_filter]][cc_mask])
+            x, y, z, h = get_pole_dims(points[mask_ids[noise_filter]][cc_mask])
             ground_clip = clip_utils.circle_clip(
                                         points[ground_mask], (x, y), 1.)
             if np.count_nonzero(ground_clip) > 0:
                 ground_est = np.mean(points[ground_mask, 2][ground_clip])
+            elif fast_z is None:
+                ground_clip = clip_utils.circle_clip(
+                                            points[ground_mask], (x, y), 2.)
+                if np.count_nonzero(ground_clip) > 0:
+                    ground_est = np.mean(points[ground_mask, 2][ground_clip])
+                else:
+                    ground_est = z
             else:
                 logger.debug('Falling back to AHN data.')
                 ground_est = fast_z(np.array([[x, y]]))[0]
@@ -109,8 +117,7 @@ def get_pole_locations(points, labels, target_label, ground_label, fast_z,
                     else:
                         ground_est = np.nanmean(z_vals)
                     if np.isnan(ground_est):
-                        ground_est = np.min(
-                                    points[mask_ids[noise_filter]][cc_mask, 2])
+                        ground_est = z
             dims = tuple(round(x, 2)
                          for x in [x, y, ground_est, h - ground_est])
             if return_counts:
@@ -120,7 +127,7 @@ def get_pole_locations(points, labels, target_label, ground_label, fast_z,
 
 
 def get_pole_locations_pred(cloud_folder, pred_folder, target_label,
-                            ground_label, ahn_reader,
+                            ground_label, ahn_reader=None,
                             cloud_prefix='filtered', pred_prefix='pred',
                             min_component_size=100, return_counts=False,
                             hide_progress=False):
@@ -155,9 +162,12 @@ def get_pole_locations_pred(cloud_folder, pred_folder, target_label,
                 pointcloud = las_utils.read_las(os.path.join(
                     cloud_folder, cloud_prefix + '_' + tilecode + '.laz'))
             points = np.vstack((pointcloud.x, pointcloud.y, pointcloud.z)).T
-            ahn_tile = ahn_reader.filter_tile(tilecode)
-            fast_z = FastGridInterpolator(ahn_tile['x'], ahn_tile['y'],
-                                          ahn_tile['ground_surface'])
+            if ahn_reader is not None:
+                ahn_tile = ahn_reader.filter_tile(tilecode)
+                fast_z = FastGridInterpolator(ahn_tile['x'], ahn_tile['y'],
+                                              ahn_tile['ground_surface'])
+            else:
+                fast_z = None
             tile_locations = get_pole_locations(
                         points, labels, target_label, ground_label, fast_z,
                         min_component_size, return_counts=return_counts)
