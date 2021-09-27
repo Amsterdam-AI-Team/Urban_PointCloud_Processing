@@ -216,7 +216,8 @@ def create_pole_las(outfile, point_objects, labels=0, z_step=0.1):
     outfile : str
         Path to output file.
     point_objects : list
-        Each entry represents one point object: (x, y, z, height)
+        Each entry represents one point object: (x, y, z, height) or
+        (bottom, top) as ((x, y, z), (x, y, z))
     labels : int or list of integers (optional)
         Either provide one label for all point objects, or a list of labels
         (one for each object).
@@ -226,8 +227,20 @@ def create_pole_las(outfile, point_objects, labels=0, z_step=0.1):
     points = np.empty((0, 3))
     point_labels = []
     for i, obj in enumerate(point_objects):
-        obj_points = [[obj[0], obj[1], z]
-                      for z in np.arange(obj[2], obj[2] + obj[3], z_step)]
+        if type(obj[1]) == int:
+            loc = obj[0]
+            height = obj[1]
+            steps = int(height / z_step)
+            obj_points = [[loc[0], loc[1], z]
+                          for z in np.linspace(loc[2], loc[2]+height, steps)]
+        else:
+            bottom = obj[0]
+            top = obj[1]
+            steps = int((top[2] - bottom[2]) / z_step)
+            xs = np.linspace(bottom[0], top[0], steps)
+            ys = np.linspace(bottom[1], top[1], steps)
+            zs = np.linspace(bottom[2], top[2], steps)
+            obj_points = np.stack((xs, ys, zs), axis=1)
         points = np.vstack((points, obj_points))
         if isinstance(labels, int):
             obj_label = labels
