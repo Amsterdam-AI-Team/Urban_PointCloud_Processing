@@ -15,6 +15,12 @@ from ..utils import math_utils
 
 logger = logging.getLogger(__name__)
 
+DEBUG_INFO = {0: 'No errors',
+              1: 'AHN fallback',
+              2: 'Ground undetermined',
+              3: 'Slope undetermined',
+              4: 'Pole not detected'}
+
 
 def get_label_stats(labels):
     """Returns a string describing statistics based on labels."""
@@ -32,39 +38,54 @@ def get_label_stats(labels):
 @jit(nopython=True)
 def get_xystd(points, z, margin):
     clip_mask = (points[:, 2] >= z - margin) & (points[:, 2] < z + margin)
-    x_mean = np.mean(points[clip_mask, 0])
-    y_mean = np.mean(points[clip_mask, 1])
-    xy_std = np.max(np.array([np.std(points[clip_mask, 0]),
-                              np.std(points[clip_mask, 1])]))
-    return x_mean, y_mean, z, xy_std
+    if np.count_nonzero(clip_mask) > 0:
+        x_mean = np.mean(points[clip_mask, 0])
+        y_mean = np.mean(points[clip_mask, 1])
+        xy_std = np.max(np.array([np.std(points[clip_mask, 0]),
+                                  np.std(points[clip_mask, 1])]))
+        return x_mean, y_mean, z, xy_std
+    else:
+        return np.nan, np.nan, z, np.nan
 
 
 def extract_pole(points, ground_est=None):
     step = 0.1
+    debug = 0
     z_min = np.min(points[:, 2])
     z_max = np.max(points[:, 2])
     if ground_est is None:
         ground_est = z_min
     xyzstd = np.array([[*get_xystd(points, z, step)]
                        for z in np.arange(z_min + step, z_max, 2*step)])
-    valid_mask = xyzstd[:, 3] <= 2 * np.min(xyzstd[:, 3])
-    pca = PCA(n_components=1).fit(xyzstd[valid_mask, 0:3])
-    origin = pca.mean_
-    direction_vector = pca.components_[0]
-    if direction_vector[2] < 0:
-        direction_vector *= -1
+    valid_mask = xyzstd[:, 3] <= np.nanmedian(xyzstd[:, 3])
+    if np.count_nonzero(valid_mask) == 0:
+        logger.debug('Not enough data to extract pole.')
+        debug = 4
+        origin = np.mean(points, axis=0)
+        direction_vector = np.array([0, 0, 1])
+    elif np.count_nonzero(valid_mask) == 1:
+        logger.debug('Not enough data to determine slope.')
+        debug = 3
+        origin = xyzstd[valid_mask, 0:3][0]
+        direction_vector = np.array([0, 0, 1])
+    else:
+        pca = PCA(n_components=1).fit(xyzstd[valid_mask, 0:3])
+        origin = pca.mean_
+        direction_vector = pca.components_[0]
+        if direction_vector[2] < 0:
+            direction_vector *= -1
     extent = (origin[2] - ground_est, z_max - origin[2])
     multiplier = np.sum(np.linalg.norm(direction_vector, 2))
     x, y, z = origin - direction_vector * extent[0] * multiplier
     x2, y2, z2 = origin + direction_vector * extent[1] * multiplier
     height = np.sum(extent) * multiplier
     angle = math_utils.vector_angle(direction_vector)
-    return x, y, z, x2, y2, z2, height, angle
+    return (x, y, z, x2, y2, z2, height, angle), debug
 
 
-def get_pole_locations(points, labels, target_label, ground_label,
-                       fast_z=None, min_component_size=100, octree_level=5,
-                       return_counts=False):
+def get_pole_locations(points, labels, probabilities,
+                       target_label, ground_label, fast_z=None,
+                       min_component_size=100, octree_level=5):
     """
     Returns a list of locations and dimensions of pole-like objects
     corresponding to the target_label in a given point cloud.
@@ -75,6 +96,8 @@ def get_pole_locations(points, labels, target_label, ground_label,
         The point cloud.
     labels : array of shape (n_points,)
         The corresponding labels.
+    probabilities : array of shape (n_points,)
+        The corresponding probabilities.
     target_label : int
         The label of the target class.
     ground_label : int
@@ -85,8 +108,6 @@ def get_pole_locations(points, labels, target_label, ground_label,
         Minimum size of a component to be considered.
     octree_level : int (default: 6)
         Octree level for the LabelConnectedComp algorithm.
-    return_counts : bool (default: False)
-        Whether to return the number of points per object.
 
     Returns
     -------
@@ -118,6 +139,7 @@ def get_pole_locations(points, labels, target_label, ground_label,
         ground_mask = labels == ground_label
 
         for cc in cc_labels:
+            ground_debug = 0
             cc_mask = (point_components == cc)
             logger.debug(f'Cluster {cc}: {np.count_nonzero(cc_mask)} points.')
             cluster_center = np.mean(
@@ -135,19 +157,22 @@ def get_pole_locations(points, labels, target_label, ground_label,
                     ground_est = None
             else:
                 logger.debug('Falling back to AHN data.')
+                ground_debug = 1
                 ground_est = fast_z(np.array([cluster_center]))[0]
                 if np.isnan(ground_est):
                     z_vals = fast_z(points[mask_ids[noise_filter]][cc_mask])
                     if np.isnan(z_vals).all():
                         logger.warn(
                             f'Missing AHN data for point ({cluster_center}).')
+                        ground_debug = 2
                     else:
                         ground_est = np.nanmean(z_vals)
-            pole = extract_pole(
+            pole, pole_debug = extract_pole(
                         points[mask_ids[noise_filter]][cc_mask], ground_est)
             dims = tuple(round(x, 2) for x in pole)
-            if return_counts:
-                dims = (*dims, np.count_nonzero(cc_mask))
+            proba = np.mean(probabilities[mask_ids[noise_filter]][cc_mask])
+            debug = f'{ground_debug}_{pole_debug}'
+            dims = (*dims, proba, np.count_nonzero(cc_mask), debug)
             pole_locations.append(dims)
     return pole_locations
 
@@ -155,8 +180,7 @@ def get_pole_locations(points, labels, target_label, ground_label,
 def get_pole_locations_pred(cloud_folder, pred_folder, target_label,
                             ground_label, ahn_reader=None,
                             cloud_prefix='filtered', pred_prefix='pred',
-                            min_component_size=100, return_counts=False,
-                            hide_progress=False):
+                            min_component_size=100, hide_progress=False):
 
     locations = []
 
@@ -179,6 +203,7 @@ def get_pole_locations_pred(cloud_folder, pred_folder, target_label,
         pointcloud_pred = las_utils.read_las(os.path.join(
             pred_folder, pred_prefix + '_' + tilecode + '.laz'))
         labels = pointcloud_pred.label
+        probabilities = pointcloud_pred.probability
 
         if np.count_nonzero(labels == target_label) > 0:
             if ((cloud_folder == pred_folder)
@@ -195,8 +220,9 @@ def get_pole_locations_pred(cloud_folder, pred_folder, target_label,
             else:
                 fast_z = None
             tile_locations = get_pole_locations(
-                        points, labels, target_label, ground_label, fast_z,
-                        min_component_size, return_counts=return_counts)
+                                        points, labels, probabilities,
+                                        target_label, ground_label, fast_z,
+                                        min_component_size=min_component_size)
             locations.extend([(*x, tilecode) for x in tile_locations])
 
     return locations
