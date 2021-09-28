@@ -55,7 +55,10 @@ class LabelConnectedComp(AbstractProcessor):
         # python land)
         xs = (points[self.mask, 0]).astype(pycc.PointCoordinateType)
         ys = (points[self.mask, 1]).astype(pycc.PointCoordinateType)
-        zs = (points[self.mask, 2]).astype(pycc.PointCoordinateType)
+        if points.shape[1] == 2:
+            zs = np.zeros(xs.shape).astype(pycc.PointCoordinateType)
+        else:
+            zs = (points[self.mask, 2]).astype(pycc.PointCoordinateType)
         point_cloud = pycc.ccPointCloud(xs, ys, zs)
 
         # (Optional) Create (if it does not exists already)
