@@ -57,7 +57,7 @@ def extract_pole(points, ground_est=None):
         ground_est = z_min
     xyzstd = np.array([[*get_xystd(points, z, step)]
                        for z in np.arange(z_min + step, z_max, 2*step)])
-    valid_mask = xyzstd[:, 3] <= np.nanmedian(xyzstd[:, 3])
+    valid_mask = xyzstd[:, 3] <= np.nanpercentile(xyzstd[:, 3], 50)
     if np.count_nonzero(valid_mask) == 0:
         logger.debug('Not enough data to extract pole.')
         debug = 4
@@ -83,8 +83,8 @@ def extract_pole(points, ground_est=None):
     return (x, y, z, x2, y2, z2, height, angle), debug
 
 
-def get_pole_locations(points, labels, probabilities,
-                       target_label, ground_label, fast_z=None,
+def get_pole_locations(points, labels, probabilities, target_label,
+                       ground_label, ahn_reader=None, tilecode=None,
                        min_component_size=100, octree_level=5):
     """
     Returns a list of locations and dimensions of pole-like objects
@@ -102,8 +102,10 @@ def get_pole_locations(points, labels, probabilities,
         The label of the target class.
     ground_label : int
         The label of the ground class, for height determination.
-    fast_z : FastGridInterpolator, optional
+    ahn_reader : FastGridInterpolator, optional
         Interpolator for the ground surface, fall-back method.
+    tilecode : str, optional
+        Only needed when ahn_reader is provided.
     min_component_size : int (default: 100)
         Minimum size of a component to be considered.
     octree_level : int (default: 6)
@@ -127,7 +129,8 @@ def get_pole_locations(points, labels, probabilities,
         point_components = (LabelConnectedComp(
                                 octree_level=octree_level,
                                 min_component_size=min_component_size)
-                            .get_components(points[mask_ids[noise_filter]]))
+                            .get_components(points[mask_ids[noise_filter],
+                                                   0:2]))
 
         cc_labels, counts = np.unique(point_components, return_counts=True)
         cc_labels = cc_labels[(cc_labels != -1)
@@ -148,7 +151,7 @@ def get_pole_locations(points, labels, probabilities,
                                     points[ground_mask], cluster_center, 1.)
             if np.count_nonzero(ground_clip) > 0:
                 ground_est = np.mean(points[ground_mask, 2][ground_clip])
-            elif fast_z is None:
+            elif ahn_reader is None:
                 ground_clip = clip_utils.circle_clip(
                                     points[ground_mask], cluster_center, 2.)
                 if np.count_nonzero(ground_clip) > 0:
@@ -158,6 +161,9 @@ def get_pole_locations(points, labels, probabilities,
             else:
                 logger.debug('Falling back to AHN data.')
                 ground_debug = 1
+                ahn_tile = ahn_reader.filter_tile(tilecode)
+                fast_z = FastGridInterpolator(ahn_tile['x'], ahn_tile['y'],
+                                              ahn_tile['ground_surface'])
                 ground_est = fast_z(np.array([cluster_center]))[0]
                 if np.isnan(ground_est):
                     z_vals = fast_z(points[mask_ids[noise_filter]][cc_mask])
@@ -213,16 +219,10 @@ def get_pole_locations_pred(cloud_folder, pred_folder, target_label,
                 pointcloud = las_utils.read_las(os.path.join(
                     cloud_folder, cloud_prefix + '_' + tilecode + '.laz'))
             points = np.vstack((pointcloud.x, pointcloud.y, pointcloud.z)).T
-            if ahn_reader is not None:
-                ahn_tile = ahn_reader.filter_tile(tilecode)
-                fast_z = FastGridInterpolator(ahn_tile['x'], ahn_tile['y'],
-                                              ahn_tile['ground_surface'])
-            else:
-                fast_z = None
             tile_locations = get_pole_locations(
-                                        points, labels, probabilities,
-                                        target_label, ground_label, fast_z,
-                                        min_component_size=min_component_size)
+                                points, labels, probabilities, target_label,
+                                ground_label, ahn_reader, tilecode,
+                                min_component_size=min_component_size)
             locations.extend([(*x, tilecode) for x in tile_locations])
 
     return locations
