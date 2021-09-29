@@ -1,12 +1,15 @@
 import numpy as np
+from numba import jit
 from scipy.spatial import ConvexHull
 
 
+@jit(nopython=True)
 def vector_angle(u, v=np.array([0., 0., 1.])):
     """ Returns the angle in degrees between vectors 'v1' and 'v2'."""
     # see https://stackoverflow.com/a/2827466/425458
     c = np.dot(u/np.linalg.norm(u), v/np.linalg.norm(v))
-    return np.rad2deg(np.arccos(np.clip(c, -1, 1)))
+    clip = np.minimum(1, np.maximum(c, -1))
+    return np.rad2deg(np.arccos(clip))
 
 
 def compute_bounding_box(points):
