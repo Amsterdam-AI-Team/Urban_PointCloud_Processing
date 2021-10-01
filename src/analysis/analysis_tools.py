@@ -37,6 +37,7 @@ def get_label_stats(labels):
 
 @jit(nopython=True)
 def get_xystd(points, z, margin):
+    """Returns the mean and std.dev. of `points` within `margin` of `z`."""
     clip_mask = (points[:, 2] >= z - margin) & (points[:, 2] < z + margin)
     if np.count_nonzero(clip_mask) > 0:
         x_mean = np.mean(points[clip_mask, 0])
@@ -48,8 +49,15 @@ def get_xystd(points, z, margin):
         return np.nan, np.nan, z, np.nan
 
 
-def extract_pole(points, ground_est=None):
-    step = 0.1
+def extract_pole(points, ground_est=None, step=0.1, percentile=25):
+    """
+    Extract pole features from a set of points. The supplied points are assumed
+    to contain one pole-shaped object. If a `ground_est` is provided this is
+    assumed to be the true ground elevation at that location.
+
+    Returns a tuple (x, y, z, x2, y2, z2, height, angle), where (x, y, z) is
+    the location of the bottom of the pole, and (x2, y2, z2) is the top.
+    """
     debug = 0
     z_min = np.min(points[:, 2])
     z_max = np.max(points[:, 2])
@@ -57,7 +65,7 @@ def extract_pole(points, ground_est=None):
         ground_est = z_min
     xyzstd = np.array([[*get_xystd(points, z, step)]
                        for z in np.arange(z_min + step, z_max, 2*step)])
-    valid_mask = xyzstd[:, 3] <= np.nanpercentile(xyzstd[:, 3], 50)
+    valid_mask = xyzstd[:, 3] <= np.nanpercentile(xyzstd[:, 3], percentile)
     if np.count_nonzero(valid_mask) == 0:
         logger.debug('Not enough data to extract pole.')
         debug = 4
@@ -102,8 +110,9 @@ def get_pole_locations(points, labels, probabilities, target_label,
         The label of the target class.
     ground_label : int
         The label of the ground class, for height determination.
-    ahn_reader : FastGridInterpolator, optional
-        Interpolator for the ground surface, fall-back method.
+    ahn_reader : AHNReader, optional
+        To extract the ground elevation, if this cannot be determined from the
+        labelled point cloud itself. Fall-back method.
     tilecode : str, optional
         Only needed when ahn_reader is provided.
     min_component_size : int (default: 100)
@@ -187,6 +196,38 @@ def get_pole_locations_pred(cloud_folder, pred_folder, target_label,
                             ground_label, ahn_reader=None,
                             cloud_prefix='filtered', pred_prefix='pred',
                             min_component_size=100, hide_progress=False):
+    """
+    Returns a list of locations and dimensions of pole-like objects
+    corresponding to the target_label for all point clouds in a folder.
+
+    Parameters
+    ----------
+    cloud_folder : str
+        The folder containing the point clouds.
+    pred_folder : str
+        The folder containing the predicted labels (can be the same as
+        `cloud_folder`).
+    target_label : int
+        The label of the target class.
+    ground_label : int
+        The label of the ground class, for height determination.
+    ahn_reader : AHNReader, optional
+        To extract the ground elevation, if this cannot be determined from the
+        labelled point cloud itself. Fall-back method.
+    cloud_prefix : str (default: 'filtered')
+        Prefix of point cloud files.
+    predd_prefix : str (default: 'pred')
+        Prefix of LAS files with predicted labels. Can be the same as
+        `cloud_prefix` if the point cloud files are labelled.
+    min_component_size : int (default: 100)
+        Minimum size of a component to be considered.
+    octree_level : int (default: 6)
+        Octree level for the LabelConnectedComp algorithm.
+
+    Returns
+    -------
+    A list of tuples, one for each pole-like object: (x, y, z, height).
+    """
 
     locations = []
 
