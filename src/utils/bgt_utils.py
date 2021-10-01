@@ -2,8 +2,40 @@
 
 import ast
 import pandas as pd
+from shapely.geometry import Polygon
+from shapely.ops import cascaded_union
 
 from ..utils.las_utils import get_bbox_from_tile_code
+
+
+class BGTPolyReader():
+
+    COLUMNS = ['BAG_ID', 'Polygon', 'x_min', 'y_max', 'x_max', 'y_min']
+
+    def __init__(self, bgt_file, building_offset=0):
+        self.bgt_df = pd.read_csv(bgt_file, header=0, names=self.COLUMNS)
+        self.building_offset = building_offset
+
+    def filter_tile(self, tilecode, merge=True):
+        """
+        Return a list of polygons representing found in the area represented by
+        the given CycloMedia tile-code.
+        """
+        ((bx_min, by_max), (bx_max, by_min)) =\
+            get_bbox_from_tile_code(tilecode)
+        df = self.bgt_df.query('(x_min < @bx_max) & (x_max > @bx_min)' +
+                               ' & (y_min < @by_max) & (y_max > @by_min)')
+        buildings = [ast.literal_eval(poly) for poly in df.Polygon.values]
+        if len(buildings) > 1 and merge:
+            poly_offset = list(cascaded_union(
+                                [Polygon(bld).buffer(self.building_offset)
+                                 for bld in buildings]))
+        else:
+            poly_offset = [Polygon(bld).buffer(self.building_offset)
+                           for bld in buildings]
+        poly_valid = [poly.exterior.coords for poly in poly_offset
+                      if len(poly.exterior.coords) > 1]
+        return poly_valid
 
 
 def get_polygons(bgt_file, tilecode):
