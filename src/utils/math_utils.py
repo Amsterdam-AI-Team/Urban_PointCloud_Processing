@@ -12,6 +12,7 @@ def vector_angle(u, v=np.array([0., 0., 1.])):
     return np.rad2deg(np.arccos(clip))
 
 
+@jit(nopython=True)
 def compute_bounding_box(points):
     """
     Get the min/max values of a point list.
@@ -26,9 +27,12 @@ def compute_bounding_box(points):
     list
         Bounding box with outer points of a polygon
     """
-    x_coord, y_coord = zip(*points)
+    min_x = np.min(points[:, 0])
+    max_x = np.max(points[:, 0])
+    min_y = np.min(points[:, 1])
+    max_y = np.max(points[:, 1])
 
-    return min(x_coord), max(y_coord), max(x_coord), min(y_coord)
+    return min_x, max_y, max_x, min_y
 
 
 def minimum_bounding_rectangle(points):
