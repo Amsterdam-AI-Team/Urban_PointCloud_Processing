@@ -27,9 +27,12 @@ class BGTPolyReader():
                                ' & (y_min < @by_max) & (y_max > @by_min)')
         buildings = [ast.literal_eval(poly) for poly in df.Polygon.values]
         if len(buildings) > 1 and merge:
-            poly_offset = list(cascaded_union(
-                                [Polygon(bld).buffer(self.building_offset)
-                                 for bld in buildings]))
+            union = cascaded_union([Polygon(bld).buffer(self.building_offset)
+                                    for bld in buildings])
+            if type(union) == Polygon:
+                poly_offset = [union]
+            else:
+                poly_offset = list(union)
         else:
             poly_offset = [Polygon(bld).buffer(self.building_offset)
                            for bld in buildings]
