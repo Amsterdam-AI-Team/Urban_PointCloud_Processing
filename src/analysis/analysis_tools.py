@@ -65,14 +65,19 @@ def extract_pole(points, ground_est=None, step=0.1, percentile=25):
     z_max = np.max(points[:, 2])
     if ground_est is None:
         ground_est = z_min
+    elif np.isnan(ground_est):
+        ground_est = z_min
     xyzstd = np.array([[*get_xystd(points, z, step)]
                        for z in np.arange(z_min + step, z_max, 2*step)])
-    valid_mask = xyzstd[:, 3] <= np.nanpercentile(xyzstd[:, 3], percentile)
+    if len(xyzstd) > 0:
+        valid_mask = xyzstd[:, 3] <= np.nanpercentile(xyzstd[:, 3], percentile)
+    else:
+        valid_mask = np.zeros((len(points),), dtype=bool)
     if np.count_nonzero(valid_mask) == 0:
         logger.debug('Not enough data to extract pole.')
         debug = 4
         origin = np.mean(points, axis=0)
-        direction_vector = np.array([0, 0, 1])
+        direction_vector = np.array([0., 0., 1.])
     elif np.count_nonzero(valid_mask) == 1:
         logger.debug('Not enough data to determine slope.')
         debug = 3
@@ -96,7 +101,7 @@ def extract_pole(points, ground_est=None, step=0.1, percentile=25):
 def get_pole_locations(
         points, labels, probabilities, target_label, ground_label,
         ahn_reader=None, tilecode=None, building_polygons=None,
-        min_component_size=100, octree_level=5):
+        min_component_size=100, octree_level=8):
     """
     Returns a list of locations and dimensions of pole-like objects
     corresponding to the target_label in a given point cloud.
@@ -122,7 +127,7 @@ def get_pole_locations(
         Used to flag whether extracted pole is inside a building.
     min_component_size : int (default: 100)
         Minimum size of a component to be considered.
-    octree_level : int (default: 6)
+    octree_level : int (default: 8)
         Octree level for the LabelConnectedComp algorithm.
 
     Returns
@@ -207,7 +212,7 @@ def get_pole_locations(
                 if poly.contains(point):
                     in_building = 1
                     break
-            dims = (*dims, proba, n_points, in_building, debug)
+            dims = (*dims, round(proba, 2), n_points, in_building, debug)
             pole_locations.append(dims)
     return pole_locations
 
