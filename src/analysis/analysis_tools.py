@@ -101,7 +101,7 @@ def extract_pole(points, ground_est=None, step=0.1, percentile=25):
 def get_pole_locations(
         points, labels, probabilities, target_label, ground_label,
         ahn_reader=None, tilecode=None, building_polygons=None,
-        min_component_size=100, octree_level=8):
+        min_component_size=100, octree_grid_size=0.2):
     """
     Returns a list of locations and dimensions of pole-like objects
     corresponding to the target_label in a given point cloud.
@@ -127,7 +127,7 @@ def get_pole_locations(
         Used to flag whether extracted pole is inside a building.
     min_component_size : int (default: 100)
         Minimum size of a component to be considered.
-    octree_level : int (default: 8)
+    octree_grid_size : float (default: 0.2)
         Octree level for the LabelConnectedComp algorithm.
 
     Returns
@@ -141,13 +141,17 @@ def get_pole_locations(
     mask_ids = np.where(labels == target_label)[0]
 
     if len(mask_ids) > 0:
+        octree_level = math_utils.get_octree_level(
+                            points[mask_ids], octree_grid_size)
         noise_components = (LabelConnectedComp(
-                                octree_level=8,
+                                octree_level=octree_level,
                                 min_component_size=10)
                             .get_components(points[mask_ids]))
         noise_filter = noise_components != -1
         if np.count_nonzero(noise_filter) < min_component_size:
             return pole_locations
+        octree_level = math_utils.get_octree_level(
+                        points[mask_ids[noise_filter], 0:2], octree_grid_size)
         point_components = (LabelConnectedComp(
                                 octree_level=octree_level,
                                 min_component_size=min_component_size)
@@ -218,7 +222,8 @@ def get_pole_locations(
 
 
 def get_pole_locations_pred(cloud_folder, pred_folder, target_label,
-                            ground_label, ahn_reader=None, bld_reader=None,
+                            ground_label, tilecodes=None,
+                            ahn_reader=None, bld_reader=None,
                             cloud_prefix='filtered', pred_prefix='pred',
                             min_component_size=100, hide_progress=False):
     """
@@ -259,14 +264,16 @@ def get_pole_locations_pred(cloud_folder, pred_folder, target_label,
 
     locations = []
 
-    cloud_files = list(pathlib.Path(cloud_folder)
-                       .glob(cloud_prefix + "_*.laz"))
-    pred_files = list(pathlib.Path(pred_folder)
-                      .glob(pred_prefix + "_*.laz"))
-    tilecodes = set([las_utils.get_tilecode_from_filename(f.name)
-                     for f in cloud_files])
-    tilecodes = list(tilecodes.intersection(set(
-        [las_utils.get_tilecode_from_filename(f.name) for f in pred_files])))
+    if tilecodes is None:
+        cloud_files = list(pathlib.Path(cloud_folder)
+                           .glob(cloud_prefix + "_*.laz"))
+        pred_files = list(pathlib.Path(pred_folder)
+                          .glob(pred_prefix + "_*.laz"))
+        tilecodes = set([las_utils.get_tilecode_from_filename(f.name)
+                         for f in cloud_files])
+        tilecodes = list(tilecodes.intersection(set(
+                                [las_utils.get_tilecode_from_filename(f.name)
+                                 for f in pred_files])))
     files_tqdm = tqdm(tilecodes, unit="file", disable=hide_progress,
                       smoothing=0)
     logger.debug(f'{len(tilecodes)} files found.')
