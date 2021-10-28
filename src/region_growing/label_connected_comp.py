@@ -55,7 +55,10 @@ class LabelConnectedComp(AbstractProcessor):
         # python land)
         xs = (points[self.mask, 0]).astype(pycc.PointCoordinateType)
         ys = (points[self.mask, 1]).astype(pycc.PointCoordinateType)
-        zs = (points[self.mask, 2]).astype(pycc.PointCoordinateType)
+        if points.shape[1] == 2:
+            zs = np.zeros(xs.shape).astype(pycc.PointCoordinateType)
+        else:
+            zs = (points[self.mask, 2]).astype(pycc.PointCoordinateType)
         point_cloud = pycc.ccPointCloud(xs, ys, zs)
 
         # (Optional) Create (if it does not exists already)
@@ -77,7 +80,7 @@ class LabelConnectedComp(AbstractProcessor):
 
         # Get the scalar field with labels and points coords as numpy array
         labels_sf = self.point_cloud.getScalarField(self.labels_sf_idx)
-        self.point_components = labels_sf.asArray()
+        self.point_components = np.around(labels_sf.asArray())
 
         # Filter based on min_component_size
         if self.min_component_size > 1:
