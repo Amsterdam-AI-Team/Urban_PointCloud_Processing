@@ -6,6 +6,7 @@
 *.gml
 *.npz
 *.TIF
+*.png
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
