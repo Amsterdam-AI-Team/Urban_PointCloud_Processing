@@ -116,7 +116,7 @@ def label_and_save_las(las, labels, outfile):
     """Label a las file using the provided class labels and save to outfile."""
     assert len(labels) == las.header.point_count
     if 'label' not in las.point_format.extra_dimension_names:
-        las.add_extra_dim(laspy.ExtraBytesParams(name="label", type="uint16",
+        las.add_extra_dim(laspy.ExtraBytesParams(name="label", type="uint8",
                           description="Labels"))
     las.label = labels
     las.write(outfile)
