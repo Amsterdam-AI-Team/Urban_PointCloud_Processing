@@ -8,6 +8,7 @@ import logging
 from tqdm import tqdm
 
 from .utils import las_utils
+from .analysis import analysis_tools
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +130,7 @@ class Pipeline:
         las_utils.label_and_save_las(pointcloud, labels, out_file)
 
         duration = time.time() - start
-        stats = las_utils.get_stats(labels)
+        stats = analysis_tools.get_label_stats(labels)
         logger.info('STATISTICS\n' + stats)
         logger.info(f'File processed in {duration:.2f}s, ' +
                     f'output written to {out_file}.\n' + '='*20)
