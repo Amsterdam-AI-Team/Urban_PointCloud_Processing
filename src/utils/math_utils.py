@@ -12,6 +12,19 @@ def vector_angle(u, v=np.array([0., 0., 1.])):
     return np.rad2deg(np.arccos(clip))
 
 
+@jit(nopython=True)
+def get_octree_level(points, grid_size):
+    """Compute nearest octree level based on a desired grid_size."""
+    dims = np.zeros((points.shape[1],))
+    for d in range(points.shape[1]):
+        dims[d] = np.max(points[:, d]) - np.min(points[:, d])
+    max_dim = np.max(dims)
+    if max_dim < 0.001:
+        return 0
+    octree_level = np.rint(-np.log(grid_size / max_dim) / (np.log(2)))
+    if octree_level > 0:
+        return np.int64(octree_level)
+    return 1
 
 
 @jit(nopython=True)
