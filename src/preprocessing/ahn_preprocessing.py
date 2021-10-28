@@ -59,8 +59,8 @@ def clip_ahn_las_tile(ahn_cloud, las_file, out_folder='', buffer=1):
     y_min -= buffer
     y_max += buffer
 
-    clip_idx = np.where((x_min <= ahn_cloud.X) & (ahn_cloud.X <= x_max)
-                        & (y_min <= ahn_cloud.Y) & (ahn_cloud.Y <= y_max))[0]
+    clip_idx = np.where((x_min <= ahn_cloud.x) & (ahn_cloud.x <= x_max)
+                        & (y_min <= ahn_cloud.y) & (ahn_cloud.y <= y_max))[0]
 
     ahn_tile = laspy.LasData(ahn_cloud.header)
     ahn_tile.points = ahn_cloud.points[clip_idx]
@@ -169,11 +169,10 @@ def _get_ground_surface(ahn_las, grid_x, grid_y, n_neighbors=8, max_dist=1,
     if np.count_nonzero(mask) <= 1:
         return np.full(grid_x.shape, np.nan, dtype='float16')
 
-    coordinates = np.vstack((ahn_las.X[mask], ahn_las.Y[mask])).T
-    values = ahn_las.Z[mask]
+    points = np.vstack((ahn_las.x, ahn_las.y, ahn_las.z)).T[mask]
     positions = np.vstack((grid_x.reshape(-1), grid_y.reshape(-1))).T
 
-    idw = SpatialInterpolator(coordinates, values, method='idw')
+    idw = SpatialInterpolator(points[:, 0:2], points[:, 2], method='idw')
     ahn_gnd_grid = idw(positions, n_neighbors=n_neighbors, max_dist=max_dist,
                        power=power, fill_value=fill_value)
 
@@ -220,11 +219,10 @@ def _get_building_surface(ahn_las, grid_x, grid_y, n_neighbors=8, max_dist=0.5,
     if np.count_nonzero(mask) <= 1:
         return np.full(grid_x.shape, np.nan, dtype='float16')
 
-    coordinates = np.vstack((ahn_las.X[mask], ahn_las.Y[mask])).T
-    values = ahn_las.Z[mask]
+    points = np.vstack((ahn_las.x, ahn_las.y, ahn_las.z)).T[mask]
     positions = np.vstack((grid_x.reshape(-1), grid_y.reshape(-1))).T
 
-    idw = SpatialInterpolator(coordinates, values, method='max')
+    idw = SpatialInterpolator(points[:, 0:2], points[:, 2], method='max')
     ahn_bd_grid = idw(positions, n_neighbors=n_neighbors, max_dist=max_dist,
                       fill_value=fill_value)
 
