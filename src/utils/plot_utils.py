@@ -320,7 +320,7 @@ def plot_tiles_map(tiles, train_tiles=[], width=1024, height=1024,
 
     f = folium.Figure(width=width, height=height)
 
-    # Maak kaart van Nederland
+    # Create Folium background map.
     tiles_map = (folium.Map(location=center, tiles='cartodbpositron',
                             min_zoom=10, max_zoom=20, zoom_start=zoom_start,
                             zoom_control=zoom_control, control_scale=True)

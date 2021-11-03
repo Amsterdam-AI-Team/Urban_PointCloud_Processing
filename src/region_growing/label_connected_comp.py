@@ -134,8 +134,9 @@ class LabelConnectedComp(AbstractProcessor):
 
         Parameters
         ----------
-        points : array of shape (n_points, 3)
-            The point cloud <x, y, z>.
+        points : array of shape (n_points, 3) or (n_points, 2)
+            The point cloud <x, y, z>. If only two dimensions are provided, 'z'
+            is assumed to be all zeros.
         labels : array of shape (n_points,)
             The labels corresponding to each point.
         mask : array of shape (n_points,) with dtype=bool
@@ -181,8 +182,9 @@ class LabelConnectedComp(AbstractProcessor):
 
         Parameters
         ----------
-        points : array of shape (n_points, 3)
-            The point cloud <x, y, z>.
+        points : array of shape (n_points, 3) or (n_points, 2)
+            The point cloud <x, y, z>. If only two dimensions are provided, 'z'
+            is assumed to be all zeros.
         labels : array of shape (n_points,)
             The labels corresponding to each point. Optional, only used in
             combination with `exclude_labels`.
