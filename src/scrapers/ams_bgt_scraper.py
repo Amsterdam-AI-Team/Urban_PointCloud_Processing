@@ -40,7 +40,10 @@ def scrape_amsterdam_bgt(layer_name, bbox=None):
     params = params + 'OUTPUTFORMAT=geojson'
 
     response = requests.get(WFS_URL + params)
-    return response.json()
+    try:
+        return response.json()
+    except ValueError:
+        return None
 
 
 def parse_buildings(json_response, prepare_csv=False):

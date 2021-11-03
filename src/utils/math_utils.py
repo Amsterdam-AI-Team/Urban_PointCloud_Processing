@@ -1,21 +1,36 @@
 import numpy as np
+from numba import jit
 from scipy.spatial import ConvexHull
 
 
-def _unit_vector(vector):
-    """ Returns the unit vector of the vector. """
-    return vector / np.linalg.norm(vector)
+@jit(nopython=True)
+def vector_angle(u, v=np.array([0., 0., 1.])):
+    """
+    Returns the angle in degrees between vectors 'u' and 'v'. If only 'u' is
+    provided, the angle between 'u' and the vertical axis is returned.
+    """
+    # see https://stackoverflow.com/a/2827466/425458
+    c = np.dot(u/np.linalg.norm(u), v/np.linalg.norm(v))
+    clip = np.minimum(1, np.maximum(c, -1))
+    return np.rad2deg(np.arccos(clip))
 
 
-def angle_between(v1, v2):
-    """ Returns the angle in degrees between vectors 'v1' and 'v2'. """
-    v1_u = _unit_vector(v1)
-    v2_u = _unit_vector(v2)
-    dot_product = np.dot(v1_u, v2_u)
-    rad = np.arccos(np.clip(dot_product, -1.0, 1.0))
-    return np.degrees(rad)
+@jit(nopython=True)
+def get_octree_level(points, grid_size):
+    """Compute nearest octree level based on a desired grid_size."""
+    dims = np.zeros((points.shape[1],))
+    for d in range(points.shape[1]):
+        dims[d] = np.max(points[:, d]) - np.min(points[:, d])
+    max_dim = np.max(dims)
+    if max_dim < 0.001:
+        return 0
+    octree_level = np.rint(-np.log(grid_size / max_dim) / (np.log(2)))
+    if octree_level > 0:
+        return np.int64(octree_level)
+    return 1
 
 
+@jit(nopython=True)
 def compute_bounding_box(points):
     """
     Get the min/max values of a point list.
@@ -30,9 +45,12 @@ def compute_bounding_box(points):
     list
         Bounding box with outer points of a polygon
     """
-    x_coord, y_coord = zip(*points)
+    min_x = np.min(points[:, 0])
+    max_x = np.max(points[:, 0])
+    min_y = np.min(points[:, 1])
+    max_y = np.max(points[:, 1])
 
-    return min(x_coord), max(y_coord), max(x_coord), min(y_coord)
+    return min_x, max_y, max_x, min_y
 
 
 def minimum_bounding_rectangle(points):

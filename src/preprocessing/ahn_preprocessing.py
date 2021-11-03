@@ -122,7 +122,7 @@ def clip_ahn_las_folder(ahn_cloud, in_folder, out_folder=None, buffer=1,
                    for file in pathlib.Path(out_folder).glob('ahn_*.laz'))
         files = [f for f in files if f.name[-13:-4] not in done]
 
-    for file in tqdm(files, unit="file", disable=hide_progress):
+    for file in tqdm(files, unit="file", disable=hide_progress, smoothing=0):
         clip_ahn_las_tile(ahn_cloud, file, out_folder=out_folder,
                           buffer=buffer)
 

@@ -5,12 +5,17 @@ import re
 import os
 import laspy
 
-from ..utils.labels import Labels
-
 
 def get_tilecode_from_filename(filename):
     """Extract the tile code from a file name."""
     return re.match(r'.*(\d{4}_\d{4}).*', filename)[1]
+
+
+def get_tilecodes_from_folder(las_folder, las_prefix=''):
+    """Get a set of unique tilecodes for the LAS files in a given folder."""
+    files = pathlib.Path(las_folder).glob(f'{las_prefix}*.laz')
+    tilecodes = set([get_tilecode_from_filename(file.name) for file in files])
+    return tilecodes
 
 
 def get_bbox_from_tile_code(tile_code, padding=0, width=50, height=50):
@@ -100,19 +105,6 @@ def get_bbox_from_las_folder(folder_path, padding=0):
     return ((x_min-padding, y_max+padding), (x_max+padding, y_min-padding))
 
 
-def get_stats(labels):
-    """Returns a string describing statistics based on labels."""
-    N = len(labels)
-    labels, counts = np.unique(labels, return_counts=True)
-    stats = f'Total: {N:25} points\n'
-    for label, cnt in zip(labels, counts):
-        name = Labels.get_str(label)
-        perc = (float(cnt) / N) * 100
-        stats += f'Class {label:2}, {name:14} ' +\
-                 f'{cnt:7} points ({perc:4.1f} %)\n'
-    return stats
-
-
 def read_las(las_file):
     """Read a las file and return the las object."""
     return laspy.read(las_file)
@@ -122,7 +114,60 @@ def label_and_save_las(las, labels, outfile):
     """Label a las file using the provided class labels and save to outfile."""
     assert len(labels) == las.header.point_count
     if 'label' not in las.point_format.extra_dimension_names:
-        las.add_extra_dim(laspy.ExtraBytesParams(name="label", type="uint16",
+        las.add_extra_dim(laspy.ExtraBytesParams(name="label", type="uint8",
                           description="Labels"))
     las.label = labels
+    las.write(outfile)
+
+
+def create_pole_las(outfile, point_objects, labels=0, z_step=0.1):
+    """
+    Create a LAS file based on a set of given point objects. The LAS file will
+    contain columns of points visualising the given objects.
+
+    Parameters
+    ----------
+    outfile : str
+        Path to output file.
+    point_objects : list
+        Each entry represents one point object: (x, y, z, height) or
+        (bottom, top) as ((x, y, z), (x, y, z))
+    labels : int or list of integers (optional)
+        Either provide one label for all point objects, or a list of labels
+        (one for each object).
+    z_step : float (default: 0.1)
+        Resolution (step size) of the output columns in the z axis.
+    """
+    points = np.empty((0, 3))
+    point_labels = []
+    for i, obj in enumerate(point_objects):
+        if type(obj[1]) == int:
+            loc = obj[0]
+            height = obj[1]
+            steps = int(height / z_step)
+            obj_points = [[loc[0], loc[1], z]
+                          for z in np.linspace(loc[2], loc[2]+height, steps)]
+        else:
+            bottom = obj[0]
+            top = obj[1]
+            steps = int((top[2] - bottom[2]) / z_step)
+            xs = np.linspace(bottom[0], top[0], steps)
+            ys = np.linspace(bottom[1], top[1], steps)
+            zs = np.linspace(bottom[2], top[2], steps)
+            obj_points = np.stack((xs, ys, zs), axis=1)
+        points = np.vstack((points, obj_points))
+        if isinstance(labels, int):
+            obj_label = labels
+        else:
+            obj_label = labels[i]
+        point_labels.extend([obj_label]*len(obj_points))
+
+    las = laspy.create(file_version="1.2", point_format=3)
+    las.header.offsets = np.min(points, axis=0)
+    las.x = points[:, 0]
+    las.y = points[:, 1]
+    las.z = points[:, 2]
+    las.add_extra_dim(laspy.ExtraBytesParams(name="label", type="uint8",
+                                             description="Labels"))
+    las.label = point_labels
     las.write(outfile)
