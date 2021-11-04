@@ -5,7 +5,7 @@ import logging
 
 from ..fusion.bgt_fuser import BGTFuser
 from ..region_growing.label_connected_comp import LabelConnectedComp
-from ..utils.math_utils import minimum_bounding_rectangle
+from ..utils.math_utils import minimum_bounding_rectangle, get_octree_level
 from ..utils.las_utils import get_bbox_from_tile_code
 from ..utils.clip_utils import poly_box_clip
 from ..utils.labels import Labels
@@ -36,14 +36,14 @@ class CarFuser(BGTFuser):
 
     def __init__(self, label, ahn_reader,
                  bgt_file=None, bgt_folder=None, file_prefix='bgt_roads',
-                 octree_level=9, min_component_size=5000,
+                 grid_size=0.1, min_component_size=5000,
                  min_height=1.2, max_height=2.2,
                  min_width=1.4, max_width=2.2,
                  min_length=3.0, max_length=6.0):
         super().__init__(label, bgt_file, bgt_folder, file_prefix)
 
         self.ahn_reader = ahn_reader
-        self.octree_level = octree_level
+        self.grid_size = grid_size
         self.min_component_size = min_component_size
         self.min_height = min_height
         self.max_height = max_height
@@ -140,7 +140,8 @@ class CarFuser(BGTFuser):
                             tilecode, points[mask], mask, 'ground_surface')
 
         # Create lcc object and perform lcc
-        lcc = LabelConnectedComp(self.label, octree_level=self.octree_level,
+        octree_level = get_octree_level(points, self.grid_size)
+        lcc = LabelConnectedComp(self.label, octree_level=octree_level,
                                  min_component_size=self.min_component_size)
         point_components = lcc.get_components(points[mask])
 
