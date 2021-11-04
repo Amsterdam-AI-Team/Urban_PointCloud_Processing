@@ -214,7 +214,8 @@ def poly_clip(points, poly):
         logger.warning('Polygon should be a closed ring!')
 
     # Clip to bounding box
-    x_min, y_max, x_max, y_min = math_utils.compute_bounding_box(poly)
+    x_min, y_max, x_max, y_min = math_utils.compute_bounding_box(
+                                                            np.array(poly))
     pre_clip_mask = rectangle_clip(points, (x_min, y_min, x_max, y_max))
 
     # Clip to poly
