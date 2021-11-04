@@ -6,6 +6,7 @@ import logging
 from ..abstract_processor import AbstractProcessor
 from ..region_growing.label_connected_comp import LabelConnectedComp
 from ..utils.labels import Labels
+from ..utils import math_utils
 
 logger = logging.getLogger(__name__)
 
@@ -24,18 +25,18 @@ class NoiseFilter(AbstractProcessor):
         Elevation data reader.
     epsilon : float (default: 0.2)
         Precision of the fuser.
-    octree_level : int (default: 9)
-        Octree level for clustering connected components.
+    grid_size : float (default: 0.1)
+        Octree grid size for clustering connected components.
     min_component_size : int (default: 100)
         Minimum size of a cluster below which it is regarded as noise.
     """
     def __init__(self, label, ahn_reader, epsilon=0.2,
-                 octree_level=9, min_component_size=100):
+                 grid_size=0.1, min_component_size=100):
         super().__init__(label)
 
         self.ahn_reader = ahn_reader
         self.epsilon = epsilon
-        self.octree_level = octree_level
+        self.grid_size = grid_size
         self.min_component_size = min_component_size
 
     def get_label_mask(self, points, labels, mask, tilecode):
@@ -61,7 +62,8 @@ class NoiseFilter(AbstractProcessor):
         logger.info('Noise filter ' +
                     f'(label={self.label}, {Labels.get_str(self.label)}).')
         # Create lcc object and perform lcc
-        lcc = LabelConnectedComp(self.label, octree_level=self.octree_level,
+        octree_level = math_utils.get_octree_level(points, self.grid_size)
+        lcc = LabelConnectedComp(self.label, octree_level=octree_level,
                                  min_component_size=self.min_component_size)
         point_components = lcc.get_components(points[mask])
         cc_mask = point_components == -1
