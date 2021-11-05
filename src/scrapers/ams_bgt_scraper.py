@@ -4,6 +4,7 @@ The documentation can be found at:
 https://www.amsterdam.nl/stelselpedia/bgt-index/producten-bgt/prodspec-bgt-dgn-imgeo/
 """
 
+import numpy as np
 import requests
 
 from ..utils.clip_utils import poly_offset
@@ -62,7 +63,8 @@ def parse_buildings(json_response, prepare_csv=False):
         pand_polygon = item['geometry']['coordinates'][0]
 
         if prepare_csv:
-            x_min, y_max, x_max, y_min = compute_bounding_box(pand_polygon)
+            x_min, y_max, x_max, y_min = compute_bounding_box(
+                                                    np.array(pand_polygon))
             parsed_content.append([str(pand_id), pand_polygon, x_min, y_max,
                                   x_max, y_min])
         else:
@@ -94,7 +96,8 @@ def parse_polygons(json_response, offset_meter=0.0, prepare_csv=False):
             polygon = poly_offset(polygon, offset_meter)
 
         if prepare_csv:
-            x_min, y_max, x_max, y_min = compute_bounding_box(polygon)
+            x_min, y_max, x_max, y_min = compute_bounding_box(
+                                                        np.array(polygon))
             parsed_content.append([name, polygon, x_min, y_max, x_max, y_min])
         else:
             parsed_content.append(polygon)

@@ -4,6 +4,7 @@ import logging
 from ..abstract_processor import AbstractProcessor
 from ..region_growing import LabelConnectedComp
 from ..utils.labels import Labels
+from ..utils import math_utils
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +35,9 @@ class LayerLCC(AbstractProcessor):
         Height above ground at which the layer starts.
     'top': inf
         Height above ground at which the layer stops.
-    'octree_level': 9
-        Octree level for LCC method, higher means more fine-grained.
+    'grid_size': 0.1
+        Octree grid size for LCC method, in meters. Lower means a more
+        fine-grained clustering.
     'min_comp_size': 100
         Minimum number of points for a component to be considered.
     'threshold': 0.5
@@ -56,8 +58,8 @@ class LayerLCC(AbstractProcessor):
                 layer['bottom'] = -np.inf
             if 'top' not in layer:
                 layer['top'] = np.inf
-            if 'octree_level' not in layer:
-                layer['octree_level'] = 9
+            if 'grid_size' not in layer:
+                layer['grid_size'] = 0.1
             if 'min_comp_size' not in layer:
                 layer['min_comp_size'] = 100
             if 'threshold' not in layer:
@@ -80,8 +82,9 @@ class LayerLCC(AbstractProcessor):
                          + f" -> {params['top']}.")
             return mask
 
+        octree_level = math_utils.get_octree_level(points, params['grid_size'])
         lcc = LabelConnectedComp(self.label, set_debug=True,
-                                 octree_level=params['octree_level'],
+                                 octree_level=octree_level,
                                  min_component_size=params['min_comp_size'],
                                  threshold=params['threshold'])
         lcc_mask = lcc.get_label_mask(points=points[height_mask_ids],
