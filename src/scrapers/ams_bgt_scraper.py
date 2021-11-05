@@ -70,10 +70,7 @@ def parse_buildings(json_response, prepare_csv=False):
         else:
             parsed_content.append(pand_polygon)
 
-    csv_headers = ['building_id', 'polygon', 'x_min', 'y_max', 'x_max',
-                   'y_min']
-
-    return parsed_content, csv_headers
+    return parsed_content
 
 
 def parse_polygons(json_response, offset_meter=0.0, prepare_csv=False):
@@ -102,10 +99,7 @@ def parse_polygons(json_response, offset_meter=0.0, prepare_csv=False):
         else:
             parsed_content.append(polygon)
 
-    csv_headers = ['bgt_name', 'polygon', 'x_min', 'y_max', 'x_max',
-                   'y_min']
-
-    return parsed_content, csv_headers
+    return parsed_content
 
 
 def parse_points_bgtplus(json_response):
