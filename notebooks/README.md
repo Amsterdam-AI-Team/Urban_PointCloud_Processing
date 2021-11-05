@@ -6,7 +6,7 @@ These jupyter notebooks serve as a tutorial and demonstration of the tools in th
 
 [1. AHN preprocessing](1.%20AHN%20preprocessing.ipynb) -- detailed instructions for pre-processing AHN data.
 
-[1. Generate reference data](1.%20Generate%20reference%20data.ipynb) -- detailed instructions for scraping reference data.
+[1. Generate reference data](1.%20Generate%20reference%20data.ipynb) -- detailed instructions for scraping and parsing reference data.
 
 [2. Ground and Buildings](2.%20Ground%20and%20Buildings.ipynb) -- labelling ground and buildings using data fusion with AHN and BGT data.
 
