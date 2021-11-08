@@ -99,10 +99,13 @@ class CarFuser(BGTFuser):
                             p2 = Polygon(road_polygon)
                             do_overlap = p1.intersects(p2)
                             if do_overlap:
-                                car_mask = car_mask | poly_box_clip(
-                                    points, poly, bottom=cc_z, top=max_z)
-                                car_count += 1
-                                break
+                                intersection_perc = (p1.intersection(p2).area
+                                                     / p1.area) * 100
+                                if intersection_perc > 20:
+                                    car_mask = car_mask | poly_box_clip(
+                                        points, poly, bottom=cc_z, top=max_z)
+                                    car_count += 1
+                                    break
         logger.debug(f'{car_count} cars labelled.')
         return car_mask
 
