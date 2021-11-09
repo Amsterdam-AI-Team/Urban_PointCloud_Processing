@@ -39,7 +39,8 @@ class CarFuser(BGTFuser):
                  grid_size=0.1, min_component_size=5000,
                  min_height=1.2, max_height=2.2,
                  min_width=1.4, max_width=2.2,
-                 min_length=3.0, max_length=6.0):
+                 min_length=3.0, max_length=6.0,
+                 overlap_perc=20):
         super().__init__(label, bgt_file, bgt_folder, file_prefix)
 
         self.ahn_reader = ahn_reader
@@ -51,6 +52,7 @@ class CarFuser(BGTFuser):
         self.max_width = max_width
         self.min_length = min_length
         self.max_length = max_length
+        self.overlap_perc = overlap_perc
 
     def _filter_tile(self, tilecode):
         """
@@ -101,7 +103,7 @@ class CarFuser(BGTFuser):
                             if do_overlap:
                                 intersection_perc = (p1.intersection(p2).area
                                                      / p1.area) * 100
-                                if intersection_perc > 20:
+                                if intersection_perc > self.overlap_perc:
                                     car_mask = car_mask | poly_box_clip(
                                         points, poly, bottom=cc_z, top=max_z)
                                     car_count += 1
