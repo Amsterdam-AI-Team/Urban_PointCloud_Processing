@@ -6,7 +6,6 @@ import logging
 from ..abstract_processor import AbstractProcessor
 from ..region_growing.label_connected_comp import LabelConnectedComp
 from ..utils.labels import Labels
-from ..utils import math_utils
 
 logger = logging.getLogger(__name__)
 
@@ -61,9 +60,7 @@ class NoiseFilter(AbstractProcessor):
         """
         logger.info('Noise filter ' +
                     f'(label={self.label}, {Labels.get_str(self.label)}).')
-        # Create lcc object and perform lcc
-        octree_level = math_utils.get_octree_level(points, self.grid_size)
-        lcc = LabelConnectedComp(self.label, octree_level=octree_level,
+        lcc = LabelConnectedComp(self.label, grid_size=self.grid_size,
                                  min_component_size=self.min_component_size)
         point_components = lcc.get_components(points[mask])
         cc_mask = point_components == -1

@@ -122,16 +122,19 @@ def plot_bgt(tilecode, building_file=None, road_file=None, point_file=None,
 
     for poly in [Polygon(bld) for bld in buildings]:
         x, y = poly.exterior.xy
-        ax.fill(x, y, c=bgt_colors['pand'], label=bgt_labels['pand'])
-        ax.plot(x, y, c=bgt_colors['pand_poly'])
+        ax.fill(x, y, c=bgt_colors['pand'], label=bgt_labels['pand'],
+                zorder=-1)
+        ax.plot(x, y, c=bgt_colors['pand_poly'], zorder=0)
 
     for poly in [Polygon(rd) for rd in roads]:
         x, y = poly.exterior.xy
-        ax.fill(x, y, c=bgt_colors['wegdeel'], label=bgt_labels['wegdeel'])
+        ax.fill(x, y, c=bgt_colors['wegdeel'], label=bgt_labels['wegdeel'],
+                zorder=-1)
 
     for pt in points:
         ax.scatter(pt[1], pt[2],
-                   c=bgt_colors[pt[0]], marker='x', label=bgt_labels[pt[0]])
+                   c=bgt_colors[pt[0]], marker='x', label=bgt_labels[pt[0]],
+                   zorder=1)
 
     box = patches.Rectangle((x_min, y_min), x_max-x_min, y_max-y_min,
                             linewidth=1, linestyle='--', edgecolor='black',

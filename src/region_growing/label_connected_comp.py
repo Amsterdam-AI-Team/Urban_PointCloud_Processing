@@ -8,6 +8,7 @@ import cccorelib
 
 from ..abstract_processor import AbstractProcessor
 from ..utils.labels import Labels
+from ..utils.math_utils import get_octree_level
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +24,9 @@ class LabelConnectedComp(AbstractProcessor):
         Label to use when labelling the grown region.
     exclude_labels : list-like (default: [])
         Which labels to exclude (optional).
-    octree_level : int (default: 9)
-        Used to construct the underlying octree, larger means more
-        fine-grained.
+    grid_size : float (default: 0.1)
+        Octree grid size for LCC method, in meters. Lower means a more
+        fine-grained clustering.
     min_component_size : int (default: 100)
         Minimum size of connected components to consider.
     threshold : float (default: 0.5)
@@ -33,10 +34,10 @@ class LabelConnectedComp(AbstractProcessor):
         already be labelled.
     """
     def __init__(self, label=-1, exclude_labels=[], set_debug=False,
-                 octree_level=9, min_component_size=100, threshold=0.1):
+                 grid_size=0.1, min_component_size=100, threshold=0.1):
         super().__init__(label)
         """ Init variables. """
-        self.octree_level = octree_level
+        self.grid_size = grid_size
         self.min_component_size = min_component_size
         self.threshold = threshold
         self.exclude_labels = exclude_labels
@@ -67,6 +68,9 @@ class LabelConnectedComp(AbstractProcessor):
         if labels_sf_idx == -1:
             labels_sf_idx = point_cloud.addScalarField('Labels')
         point_cloud.setCurrentScalarField(labels_sf_idx)
+
+        # Compute the octree level based on the grid_size
+        self.octree_level = get_octree_level(points, self.grid_size)
 
         self.labels_sf_idx = labels_sf_idx
         # You can access the x,y,z fields using self.point_cloud.points()

@@ -4,7 +4,6 @@ import logging
 from ..abstract_processor import AbstractProcessor
 from ..region_growing import LabelConnectedComp
 from ..utils.labels import Labels
-from ..utils import math_utils
 
 logger = logging.getLogger(__name__)
 
@@ -82,9 +81,8 @@ class LayerLCC(AbstractProcessor):
                          + f" -> {params['top']}.")
             return mask
 
-        octree_level = math_utils.get_octree_level(points, params['grid_size'])
         lcc = LabelConnectedComp(self.label, set_debug=True,
-                                 octree_level=octree_level,
+                                 grid_size=params['grid_size'],
                                  min_component_size=params['min_comp_size'],
                                  threshold=params['threshold'])
         lcc_mask = lcc.get_label_mask(points=points[height_mask_ids],

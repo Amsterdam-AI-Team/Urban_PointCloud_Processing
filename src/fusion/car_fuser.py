@@ -5,7 +5,7 @@ import logging
 
 from ..fusion.bgt_fuser import BGTFuser
 from ..region_growing.label_connected_comp import LabelConnectedComp
-from ..utils.math_utils import minimum_bounding_rectangle, get_octree_level
+from ..utils.math_utils import minimum_bounding_rectangle
 from ..utils.las_utils import get_bbox_from_tile_code
 from ..utils.clip_utils import poly_box_clip
 from ..utils.labels import Labels
@@ -39,7 +39,8 @@ class CarFuser(BGTFuser):
                  grid_size=0.1, min_component_size=5000,
                  min_height=1.2, max_height=2.2,
                  min_width=1.4, max_width=2.2,
-                 min_length=3.0, max_length=6.0):
+                 min_length=3.0, max_length=6.0,
+                 overlap_perc=20):
         super().__init__(label, bgt_file, bgt_folder, file_prefix)
 
         self.ahn_reader = ahn_reader
@@ -51,6 +52,7 @@ class CarFuser(BGTFuser):
         self.max_width = max_width
         self.min_length = min_length
         self.max_length = max_length
+        self.overlap_perc = overlap_perc
 
     def _filter_tile(self, tilecode):
         """
@@ -99,10 +101,13 @@ class CarFuser(BGTFuser):
                             p2 = Polygon(road_polygon)
                             do_overlap = p1.intersects(p2)
                             if do_overlap:
-                                car_mask = car_mask | poly_box_clip(
-                                    points, poly, bottom=cc_z, top=max_z)
-                                car_count += 1
-                                break
+                                intersection_perc = (p1.intersection(p2).area
+                                                     / p1.area) * 100
+                                if intersection_perc > self.overlap_perc:
+                                    car_mask = car_mask | poly_box_clip(
+                                        points, poly, bottom=cc_z, top=max_z)
+                                    car_count += 1
+                                    break
         logger.debug(f'{car_count} cars labelled.')
         return car_mask
 
@@ -139,9 +144,7 @@ class CarFuser(BGTFuser):
         ground_z = self.ahn_reader.interpolate(
                             tilecode, points[mask], mask, 'ground_surface')
 
-        # Create lcc object and perform lcc
-        octree_level = get_octree_level(points, self.grid_size)
-        lcc = LabelConnectedComp(self.label, octree_level=octree_level,
+        lcc = LabelConnectedComp(self.label, grid_size=self.grid_size,
                                  min_component_size=self.min_component_size)
         point_components = lcc.get_components(points[mask])
 
