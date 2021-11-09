@@ -5,7 +5,7 @@ import logging
 
 from ..fusion.bgt_fuser import BGTFuser
 from ..region_growing.label_connected_comp import LabelConnectedComp
-from ..utils.math_utils import minimum_bounding_rectangle, get_octree_level
+from ..utils.math_utils import minimum_bounding_rectangle
 from ..utils.las_utils import get_bbox_from_tile_code
 from ..utils.clip_utils import poly_box_clip
 from ..utils.labels import Labels
@@ -142,9 +142,7 @@ class CarFuser(BGTFuser):
         ground_z = self.ahn_reader.interpolate(
                             tilecode, points[mask], mask, 'ground_surface')
 
-        # Create lcc object and perform lcc
-        octree_level = get_octree_level(points, self.grid_size)
-        lcc = LabelConnectedComp(self.label, octree_level=octree_level,
+        lcc = LabelConnectedComp(self.label, grid_size=self.grid_size,
                                  min_component_size=self.min_component_size)
         point_components = lcc.get_components(points[mask])
 
