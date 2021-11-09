@@ -69,7 +69,7 @@ class LabelConnectedComp(AbstractProcessor):
             labels_sf_idx = point_cloud.addScalarField('Labels')
         point_cloud.setCurrentScalarField(labels_sf_idx)
 
-        # Create lcc object
+        # Compute the octree level based on the grid_size
         self.octree_level = get_octree_level(points, self.grid_size)
 
         self.labels_sf_idx = labels_sf_idx
