@@ -12,9 +12,11 @@ We supply two point cloud tiles for demonstration purposes, as well as the neces
   BGT building footprint polygons for the two demo tiles.
 * `bgt/bgt_roads_demo.csv`  
   BGT road part polygons of the parking spots and road surfaces in the area.
-* `bgt/custom_points_demo.csv`  
+* `bgt/custom_pole_points_demo.csv`  
   This contains <x,y> coordinates of pole-like objects and trees. These were collected manually from different sources, but can also be scraped from PDOK.
-
+  * `bgt/bgt_street_furniture_points_demo.csv`  
+  This contains <x,y> coordinates of street furniture objects scraped from BGT.
+    
 These files are sufficient to run the [notebooks](../notebooks). Some additional required data files can be downloaded with provided scripts.
 
 
@@ -23,7 +25,7 @@ These files are sufficient to run the [notebooks](../notebooks). Some additional
 This repository was designed to be used with specific data sources:
 
 * LAS point clouds of urban scenes supplied by [CycloMedia](https://www.cyclomedia.com/).
-* AHN3 point clouds downloaded from [ArcGIS](https://www.arcgis.com/apps/Embed/index.html?appid=a3dfa5a818174aa787392e461c80f781)
+* AHN3 or AHN4 point clouds downloaded from [ArcGIS](https://www.arcgis.com/apps/Embed/index.html?appid=a3dfa5a818174aa787392e461c80f781) or [GeoTiles](https://geotiles.nl).
 * BGT data down from [PDOK](https://www.pdok.nl/) or the [Amsterdam API](https://map.data.amsterdam.nl/maps/bgtobjecten?).
 
 The latter two sources are specific to The Netherlands.
