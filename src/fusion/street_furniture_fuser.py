@@ -10,7 +10,7 @@ from ..utils.labels import Labels
 logger = logging.getLogger(__name__)
 
 
-class StreetFurnitureFuser(BGTFuser):
+class BGTStreetFurnitureFuser(BGTFuser):
     """
     Data Fuser class for automatic labelling of street furniture (point)
     objects such as trash bins and city benches using BGT data.
