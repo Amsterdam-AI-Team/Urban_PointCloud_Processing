@@ -14,7 +14,7 @@ from shapely.ops import cascaded_union
 from ..utils import clip_utils
 from ..utils import las_utils
 from ..utils import bgt_utils
-from ..utils.labels import Labels
+from ..labels import Labels
 from ..utils.rd_converter import RDWGS84Converter
 
 
