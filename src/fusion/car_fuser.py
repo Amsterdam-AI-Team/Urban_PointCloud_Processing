@@ -36,7 +36,7 @@ class CarFuser(BGTFuser):
 
     def __init__(self, label, ahn_reader,
                  bgt_file=None, bgt_folder=None, file_prefix='bgt_roads',
-                 grid_size=0.1, min_component_size=5000,
+                 grid_size=0.05, min_component_size=5000,
                  overlap_perc=20, params={}):
         super().__init__(label, bgt_file, bgt_folder, file_prefix)
         self.ahn_reader = ahn_reader
