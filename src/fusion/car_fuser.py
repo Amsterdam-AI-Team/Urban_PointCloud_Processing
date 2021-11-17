@@ -37,22 +37,13 @@ class CarFuser(BGTFuser):
     def __init__(self, label, ahn_reader,
                  bgt_file=None, bgt_folder=None, file_prefix='bgt_roads',
                  grid_size=0.1, min_component_size=5000,
-                 min_height=1.2, max_height=2.2,
-                 min_width=1.4, max_width=2.2,
-                 min_length=3.0, max_length=6.0,
-                 overlap_perc=20):
+                 overlap_perc=20, params={}):
         super().__init__(label, bgt_file, bgt_folder, file_prefix)
-
         self.ahn_reader = ahn_reader
         self.grid_size = grid_size
         self.min_component_size = min_component_size
-        self.min_height = min_height
-        self.max_height = max_height
-        self.min_width = min_width
-        self.max_width = max_width
-        self.min_length = min_length
-        self.max_length = max_length
         self.overlap_perc = overlap_perc
+        self.params = params
 
     def _filter_tile(self, tilecode):
         """
@@ -68,7 +59,9 @@ class CarFuser(BGTFuser):
         return road_polygons
 
     def _label_car_like_components(self, points, ground_z, point_components,
-                                   road_polygons):
+                                   road_polygons, min_height, max_height,
+                                   min_width, max_width, min_length,
+                                   max_length):
         """ Based on certain properties of a car we label clusters.  """
 
         car_mask = np.zeros(len(points), dtype=bool)
@@ -87,15 +80,15 @@ class CarFuser(BGTFuser):
 
             if valid_values.size != 0:
                 cc_z = np.mean(valid_values)
-                min_z = cc_z + self.min_height
-                max_z = cc_z + self.max_height
+                min_z = cc_z + min_height
+                max_z = cc_z + max_height
                 cluster_height = np.amax(points[cc_mask][:, 2])
                 if min_z <= cluster_height <= max_z:
                     mbrect, _, mbr_width, mbr_length, _ =\
                         minimum_bounding_rectangle(points[cc_mask][:, :2])
                     poly = np.vstack((mbrect, mbrect[0]))
-                    if (self.min_width < mbr_width < self.max_width and
-                            self.min_length < mbr_length < self.max_length):
+                    if (min_width < mbr_width < max_width and
+                            min_length < mbr_length < max_length):
                         p1 = Polygon(poly)
                         for road_polygon in road_polygons:
                             p2 = Polygon(road_polygon)
@@ -152,7 +145,8 @@ class CarFuser(BGTFuser):
         # Label car like clusters
         car_mask = self._label_car_like_components(points[mask], ground_z,
                                                    point_components,
-                                                   road_polygons)
+                                                   road_polygons,
+                                                   **self.params)
         label_mask[mask] = car_mask
 
         return label_mask

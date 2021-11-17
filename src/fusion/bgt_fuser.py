@@ -568,7 +568,10 @@ class BGTStreetFurnitureFuser(BGTFuser):
         return [(x, y) for (t, x, y) in bgt_points if t == self.bgt_type]
 
     def _label_street_furniture_like_components(self, points, ground_z,
-                                                point_components, bgt_points):
+                                                point_components, bgt_points,
+                                                min_height, max_height,
+                                                min_width, max_width,
+                                                min_length, max_length):
         """
         Based on certain properties of street furniture objects we label
         clusters.
@@ -590,14 +593,14 @@ class BGTStreetFurnitureFuser(BGTFuser):
 
             if valid_values.size != 0:
                 cc_z = np.mean(valid_values)
-                min_z = cc_z + self.min_height
-                max_z = cc_z + self.max_height
+                min_z = cc_z + min_height
+                max_z = cc_z + max_height
                 cluster_height = np.amax(points[cc_mask][:, 2])
                 if min_z <= cluster_height <= max_z:
                     mbrect, _, mbr_width, mbr_length, center_point =\
                         minimum_bounding_rectangle(points[cc_mask][:, :2])
-                    if (self.min_width < mbr_width < self.max_width and
-                            self.min_length < mbr_length < self.max_length):
+                    if (min_width < mbr_width < max_width and
+                            min_length < mbr_length < max_length):
                         for bgt_point in bgt_points:
                             dist = euclid_distance(bgt_point, center_point)
                             if dist <= self.max_dist:
@@ -650,7 +653,7 @@ class BGTStreetFurnitureFuser(BGTFuser):
         # Label street_furniture like clusters
         street_furniture_mask = (self._label_street_furniture_like_components(
                                  points[mask], ground_z, point_components,
-                                 bgt_points))
+                                 bgt_points, **self.params))
         label_mask[mask] = street_furniture_mask
 
         return label_mask
