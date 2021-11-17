@@ -190,7 +190,12 @@ class BGTBuildingFuser(BGTFuser):
         logger.info('BGT building fuser ' +
                     f'(label={self.label}, {Labels.get_str(self.label)}).')
 
+        label_mask = np.zeros((len(points),), dtype=bool)
+
         building_polygons = self._filter_tile(tilecode)
+        if len(building_polygons) == 0:
+            logger.debug('No buildings found in reference csv file.')
+            return label_mask
 
         if mask is None:
             mask = np.ones((len(points),), dtype=bool)
@@ -213,7 +218,6 @@ class BGTBuildingFuser(BGTFuser):
 
         logger.debug(f'{len(building_polygons)} building polygons labelled.')
 
-        label_mask = np.zeros(len(points), dtype=bool)
         label_mask[mask_ids[building_mask]] = True
 
         return label_mask
@@ -476,6 +480,9 @@ class BGTPointFuser(BGTFuser):
         label_mask = np.zeros((len(points),), dtype=bool)
 
         bgt_points = self._filter_tile(tilecode)
+        if len(bgt_points) == 0:
+            logger.debug(f'No {self.bgt_type} objects in reference csv file.')
+            return label_mask
 
         ahn_tile = self.ahn_reader.filter_tile(tilecode)
         fast_z = FastGridInterpolator(ahn_tile['x'], ahn_tile['y'],

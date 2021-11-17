@@ -53,6 +53,10 @@ def compute_bounding_box(points):
     return min_x, max_y, max_x, min_y
 
 
+def euclid_distance(v1, v2):
+    return np.sqrt(np.sum((v1 - v2) ** 2))
+
+
 def minimum_bounding_rectangle(points):
     """
     Find the smallest bounding rectangle for a set of points.
@@ -104,6 +108,11 @@ def minimum_bounding_rectangle(points):
     y2 = min_y[best_idx]
     r = rotations[best_idx]
 
+    # Calculate center point and project onto rotated frame
+    center_x = (x1 + x2) / 2
+    center_y = (y1 + y2) / 2
+    center_point = np.dot([center_x, center_y], r)
+
     min_bounding_rect = np.zeros((4, 2))
     min_bounding_rect[0] = np.dot([x1, y2], r)
     min_bounding_rect[1] = np.dot([x2, y2], r)
@@ -113,4 +122,4 @@ def minimum_bounding_rectangle(points):
     # Compute the dims of the min bounding rectangle
     dims = [(x1 - x2), (y1 - y2)]
 
-    return min_bounding_rect, hull_points, min(dims), max(dims)
+    return min_bounding_rect, hull_points, min(dims), max(dims), center_point
