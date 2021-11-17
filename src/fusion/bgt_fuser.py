@@ -16,7 +16,7 @@ from ..abstract_processor import AbstractProcessor
 from ..utils import clip_utils
 from ..utils.interpolation import FastGridInterpolator
 from ..utils.las_utils import get_bbox_from_tile_code
-from ..utils.labels import Labels
+from ..labels import Labels
 from ..region_growing.label_connected_comp import LabelConnectedComp
 from ..utils.math_utils import minimum_bounding_rectangle, euclid_distance
 
@@ -514,7 +514,7 @@ class BGTPoleFuser(BGTFuser):
 class BGTStreetFurnitureFuser(BGTFuser):
     """
     Data Fuser class for automatic labelling of street furniture (point)
-    objects such as trash bins and city benches using BGT data.
+    objects such as trash cans and city benches using BGT data.
     Data files are assumed to be in CSV format and contain three columns:
     [Object type, X, Y].
 
@@ -543,23 +543,16 @@ class BGTStreetFurnitureFuser(BGTFuser):
     def __init__(self, label, bgt_type, ahn_reader,
                  bgt_file=None, bgt_folder=None,
                  file_prefix='bgt_street_furniture',
-                 grid_size=0.1, min_component_size=5000,
-                 min_height=1.2, max_height=2.2,
-                 min_width=1.4, max_width=2.2,
-                 min_length=3.0, max_length=6.0,
-                 padding=0, max_dist=1):
+                 grid_size=0.05, min_component_size=1500,
+                 padding=0, max_dist=1., params={}):
         super().__init__(label, bgt_file, bgt_folder, file_prefix)
         self.bgt_type = bgt_type
         self.ahn_reader = ahn_reader
         self.grid_size = grid_size
         self.min_component_size = min_component_size
-        self.min_height = min_height
-        self.max_height = max_height
-        self.min_width = min_width
-        self.max_width = max_width
-        self.min_length = min_length
-        self.max_length = max_length
         self.padding = padding
+        self.max_dist = max_dist
+        self.params = params
 
     def _filter_tile(self, tilecode):
         """

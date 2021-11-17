@@ -5,7 +5,7 @@ import os
 import logging
 
 from ..abstract_processor import AbstractProcessor
-from ..utils.labels import Labels
+from ..labels import Labels
 
 logger = logging.getLogger(__name__)
 

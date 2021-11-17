@@ -8,7 +8,7 @@ from ..region_growing.label_connected_comp import LabelConnectedComp
 from ..utils.math_utils import minimum_bounding_rectangle
 from ..utils.las_utils import get_bbox_from_tile_code
 from ..utils.clip_utils import poly_box_clip
-from ..utils.labels import Labels
+from ..labels import Labels
 
 logger = logging.getLogger(__name__)
 

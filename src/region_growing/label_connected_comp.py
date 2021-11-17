@@ -7,7 +7,7 @@ import pycc
 import cccorelib
 
 from ..abstract_processor import AbstractProcessor
-from ..utils.labels import Labels
+from ..labels import Labels
 from ..utils.math_utils import get_octree_level
 
 logger = logging.getLogger(__name__)

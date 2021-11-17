@@ -11,7 +11,7 @@ class Labels:
     TRAFFIC_SIGN = 5
     TRAFFIC_LIGHT = 6
     CAR = 7
-    STREET_FURNITURE = 8
+    CITY_BENCH = 8
     NOISE = 99
 
     STR_DICT = {0: 'Unlabelled',
@@ -22,7 +22,7 @@ class Labels:
                 5: 'Traffic sign',
                 6: 'Traffic light',
                 7: 'Car',
-                8: 'Street furniture',
+                8: 'City bench',
                 99: 'Noise'}
 
     @staticmethod
