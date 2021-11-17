@@ -1,6 +1,6 @@
 import numpy as np
 
-from ..utils.labels import Labels
+from ..labels import Labels
 
 
 def get_label_stats(labels):
