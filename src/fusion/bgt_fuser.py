@@ -18,7 +18,7 @@ from ..utils.interpolation import FastGridInterpolator
 from ..utils.las_utils import get_bbox_from_tile_code
 from ..labels import Labels
 from ..region_growing.label_connected_comp import LabelConnectedComp
-from ..utils.math_utils import minimum_bounding_rectangle, euclid_distance
+from ..utils.math_utils import minimum_bounding_rectangle
 
 logger = logging.getLogger(__name__)
 
@@ -602,7 +602,7 @@ class BGTStreetFurnitureFuser(BGTFuser):
                     if (min_width < mbr_width < max_width and
                             min_length < mbr_length < max_length):
                         for bgt_point in bgt_points:
-                            dist = euclid_distance(bgt_point, center_point)
+                            dist = np.linalg.norm(bgt_point - center_point)
                             if dist <= self.max_dist:
                                 street_furniture_mask[cc_mask] = True
                                 object_count += 1

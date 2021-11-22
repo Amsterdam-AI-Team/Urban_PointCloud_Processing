@@ -15,8 +15,8 @@ We supply two point cloud tiles for demonstration purposes, as well as the neces
 * `bgt/custom_pole_points_demo.csv`  
   This contains <x,y> coordinates of pole-like objects and trees. These were collected manually from different sources, but can also be scraped from PDOK.
 * `bgt/bgt_street_furniture_points_demo.csv`  
-  This contains <x,y> coordinates of street furniture objects scraped from BGT.
-    
+  This contains manually generated data (<x,y> coordinates) of street furniture objects for demonstration purposes.
+
 These files are sufficient to run the [notebooks](../notebooks). Some additional required data files can be downloaded with provided scripts.
 
 

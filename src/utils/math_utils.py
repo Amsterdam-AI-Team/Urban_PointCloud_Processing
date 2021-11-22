@@ -53,10 +53,6 @@ def compute_bounding_box(points):
     return min_x, max_y, max_x, min_y
 
 
-def euclid_distance(v1, v2):
-    return np.sqrt(np.sum((v1 - v2) ** 2))
-
-
 def minimum_bounding_rectangle(points):
     """
     Find the smallest bounding rectangle for a set of points.

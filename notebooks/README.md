@@ -16,6 +16,6 @@ These jupyter notebooks serve as a tutorial and demonstration of the tools in th
 
 [5. Street furniture](4.%20Street%20furniture.ipynb) -- labelling street furniture objects such as trash cans and city benches using clustering techniques and BGT data.
 
-[9. Region growing](9.%20Region%20growing.ipynb) -- two region growing implementations for the refinement of labeled objects.
+[X. Region growing](X.%20Region%20growing.ipynb) -- two region growing implementations for the refinement of labeled objects.
 
-[Visualisations](Visualisations.ipynb) -- examples of different data visualisations.
+[X. Visualisations](X.%20Visualisations.ipynb) -- examples of different data visualisations.

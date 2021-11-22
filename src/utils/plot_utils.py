@@ -24,7 +24,7 @@ bgt_labels = {'boom': 'Tree',
               'pand': 'Building',
               'wegdeel': 'Road',
               'bank': 'City bench',
-              'afvalbak': 'Trash can'}
+              'afvalbak': 'Rubbish bin'}
 bgt_colors = {'boom': 'green',
               'lichtmast': 'orange',
               'verkeersbord': 'crimson',
@@ -41,7 +41,7 @@ cloud_colors = {'Unlabelled': 'lightgrey',
                 'Traffic sign': 'crimson',
                 'Traffic light': 'red',
                 'City bench': 'darkviolet',
-                'Trash can': 'pink',
+                'Rubbish bin': 'pink',
                 'Car': 'grey',
                 'Noise': 'whitesmoke'}
 
@@ -149,7 +149,7 @@ def plot_bgt(tilecode, building_file=None, road_file=None, pole_file=None,
 
     for pt in street_furniture:
         ax.scatter(pt[1], pt[2],
-                   c=bgt_colors[pt[0]], marker='x', label=bgt_labels[pt[0]],
+                   c=bgt_colors[pt[0]], marker='*', label=bgt_labels[pt[0]],
                    zorder=1)
 
     box = patches.Rectangle((x_min, y_min), x_max-x_min, y_max-y_min,
