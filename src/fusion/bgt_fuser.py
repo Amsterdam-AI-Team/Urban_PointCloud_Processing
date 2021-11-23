@@ -514,7 +514,7 @@ class BGTPoleFuser(BGTFuser):
 class BGTStreetFurnitureFuser(BGTFuser):
     """
     Data Fuser class for automatic labelling of street furniture (point)
-    objects such as trash cans and city benches using BGT data.
+    objects such as rubbish bins and city benches using BGT data.
     Data files are assumed to be in CSV format and contain three columns:
     [Object type, X, Y].
 
