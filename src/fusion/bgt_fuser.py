@@ -506,7 +506,7 @@ class BGTPoleFuser(BGTFuser):
         match_str = ', '.join([f'{obj}->{cand}'
                                for (obj, cand) in matches.items()])
         logger.debug(f'{len(seeds)}/{len(bgt_points)} objects labelled.')
-        logger.debug('Matches for [{self.bgt_type}]: ' + match_str)
+        logger.debug(f'Matches for [{self.bgt_type}]: {match_str}')
 
         return label_mask
 
