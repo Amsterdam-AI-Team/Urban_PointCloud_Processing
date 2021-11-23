@@ -5,7 +5,7 @@ import logging
 
 from ..abstract_processor import AbstractProcessor
 from ..region_growing.label_connected_comp import LabelConnectedComp
-from ..utils.labels import Labels
+from ..labels import Labels
 
 logger = logging.getLogger(__name__)
 

@@ -17,6 +17,8 @@
             <step r="239" g="41" b="41" pos="0.0505050505051"/>
             <step r="173" g="127" b="168" pos="0.0606060606061"/>
             <step r="85" g="87" b="83" pos="0.0707070707071"/>
+            <step r="178" g="102" b="255" pos="0.0808080808081"/>
+            <step r="255" g="0" b="127" pos="0.0909090909091"/>
             <step r="255" g="255" b="255" pos="1"/>
             <label val="0"/>
             <label val="1"/>
@@ -26,6 +28,8 @@
             <label val="5"/>
             <label val="6"/>
             <label val="7"/>
+            <label val="8"/>
+            <label val="9"/>
             <label val="99"/>
         </Data>
     </ColorScale>

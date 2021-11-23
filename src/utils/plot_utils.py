@@ -14,7 +14,7 @@ from shapely.ops import cascaded_union
 from ..utils import clip_utils
 from ..utils import las_utils
 from ..utils import bgt_utils
-from ..utils.labels import Labels
+from ..labels import Labels
 from ..utils.rd_converter import RDWGS84Converter
 
 
@@ -22,20 +22,26 @@ bgt_labels = {'boom': 'Tree',
               'lichtmast': 'Lamp post',
               'verkeersbord': 'Traffic sign',
               'pand': 'Building',
-              'wegdeel': 'Road'}
+              'wegdeel': 'Road',
+              'bank': 'City bench',
+              'afvalbak': 'Rubbish bin'}
 bgt_colors = {'boom': 'green',
               'lichtmast': 'orange',
-              'verkeersbord': 'darkviolet',
+              'verkeersbord': 'crimson',
               'pand': 'lightblue',
               'pand_poly': 'royalblue',
-              'wegdeel': 'lightgrey'}
+              'wegdeel': 'lightgrey',
+              'bank': 'darkviolet',
+              'afvalbak': 'pink'}
 cloud_colors = {'Unlabelled': 'lightgrey',
                 'Ground': 'peru',
                 'Building': 'lightblue',
                 'Tree': 'green',
                 'Street light': 'orange',
-                'Traffic sign': 'darkviolet',
+                'Traffic sign': 'crimson',
                 'Traffic light': 'red',
+                'City bench': 'darkviolet',
+                'Rubbish bin': 'pink',
                 'Car': 'grey',
                 'Noise': 'whitesmoke'}
 
@@ -93,8 +99,9 @@ def plot_cloud_slice(las_file, ahn_reader, plane_height=1.5, hide_noise=False,
         plt.show()
 
 
-def plot_bgt(tilecode, building_file=None, road_file=None, point_file=None,
-             ax=None, title=None, show_legend=True, legend_below=False):
+def plot_bgt(tilecode, building_file=None, road_file=None, pole_file=None,
+             street_furniture_file=None, ax=None, title=None, show_legend=True,
+             legend_below=False):
     padding = 2.5
 
     full_plot = False
@@ -108,14 +115,18 @@ def plot_bgt(tilecode, building_file=None, road_file=None, point_file=None,
 
     buildings = []
     roads = []
-    points = []
+    poles = []
+    street_furniture = []
 
     if building_file:
         buildings = bgt_utils.get_polygons(building_file, tilecode)
     if road_file:
         roads = bgt_utils.get_polygons(road_file, tilecode)
-    if point_file:
-        points = bgt_utils.get_points(point_file, tilecode, padding=padding)
+    if pole_file:
+        poles = bgt_utils.get_points(pole_file, tilecode, padding=padding)
+    if street_furniture_file:
+        street_furniture = bgt_utils.get_points(street_furniture_file,
+                                                tilecode, padding=padding)
 
     ((x_min, y_max), (x_max, y_min)) =\
         las_utils.get_bbox_from_tile_code(tilecode)
@@ -131,9 +142,14 @@ def plot_bgt(tilecode, building_file=None, road_file=None, point_file=None,
         ax.fill(x, y, c=bgt_colors['wegdeel'], label=bgt_labels['wegdeel'],
                 zorder=-1)
 
-    for pt in points:
+    for pt in poles:
         ax.scatter(pt[1], pt[2],
                    c=bgt_colors[pt[0]], marker='x', label=bgt_labels[pt[0]],
+                   zorder=1)
+
+    for pt in street_furniture:
+        ax.scatter(pt[1], pt[2],
+                   c=bgt_colors[pt[0]], marker='*', label=bgt_labels[pt[0]],
                    zorder=1)
 
     box = patches.Rectangle((x_min, y_min), x_max-x_min, y_max-y_min,
@@ -169,18 +185,19 @@ def plot_bgt(tilecode, building_file=None, road_file=None, point_file=None,
 
 def plot_bgt_and_cloudslice(tilecode, las_file, ahn_reader,
                             building_file=None, road_file=None,
-                            point_file=None, plane_height=1.5,
-                            hide_noise=False):
+                            pole_file=None, street_furniture_file=None,
+                            plane_height=1.5, hide_noise=False):
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5.5))
-    plot_bgt(tilecode, building_file, road_file, point_file,
-             title='BGT data', ax=ax1, legend_below=True)
+    plot_bgt(tilecode, building_file, road_file, pole_file,
+             street_furniture_file, title='BGT data', ax=ax1,
+             legend_below=True)
     plot_cloud_slice(las_file, ahn_reader, plane_height=plane_height,
                      hide_noise=hide_noise, title='LAS labels', ax=ax2,
                      legend_below=True)
     ax2.set_yticklabels([])
     ax2.yaxis.label.set_visible(False)
     fig.suptitle(f'Tile {tilecode}', fontsize=14)
-    fig.subplots_adjust(top=0.95)
+    fig.subplots_adjust(top=1)
     plt.show()
 
 

@@ -4,7 +4,7 @@ import copy
 import logging
 
 from ..utils.math_utils import vector_angle
-from ..utils.labels import Labels
+from ..labels import Labels
 from ..abstract_processor import AbstractProcessor
 
 logger = logging.getLogger(__name__)
