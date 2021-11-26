@@ -52,7 +52,8 @@ class CarFuser(BGTFuser):
         """
         ((bx_min, by_max), (bx_max, by_min)) =\
             get_bbox_from_tile_code(tilecode)
-        df = self.bgt_df.query('(x_min < @bx_max) & (x_max > @bx_min)' +
+        df = self.bgt_df.query('(bgt_name != "fietspad") &' +
+                               '(x_min < @bx_max) & (x_max > @bx_min)' +
                                ' & (y_min < @by_max) & (y_max > @by_min)')
         road_polygons = df['polygon'].apply(ast.literal_eval).tolist()
 
