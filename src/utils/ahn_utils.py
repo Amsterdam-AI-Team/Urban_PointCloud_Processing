@@ -295,7 +295,8 @@ def load_ahn_tile(ahn_file):
     ahn_tile = {'x': ahn['x'],
                 'y': ahn['y'],
                 'ground_surface': ahn['ground'].astype(float),
-                'building_surface': ahn['building'].astype(float)}
+                'building_surface': ahn['building'].astype(float),
+                'bridge_surface': ahn['bridge'].astype(float)}
     return ahn_tile
 
 

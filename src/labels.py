@@ -13,6 +13,8 @@ class Labels:
     CAR = 7
     CITY_BENCH = 8
     RUBBISH_BIN = 9
+    ROAD = 10
+    BRIDGE = 11
     NOISE = 99
 
     STR_DICT = {0: 'Unlabelled',
@@ -25,6 +27,8 @@ class Labels:
                 7: 'Car',
                 8: 'City bench',
                 9: 'Rubbish bin',
+                10: 'Road',
+                11: 'Bridge',
                 99: 'Noise'}
 
     @staticmethod
