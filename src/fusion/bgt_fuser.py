@@ -159,7 +159,7 @@ class BGTRoadFuser(BGTFuser):
         An array of shape (n_points,) with dtype=bool indicating which points
         should be labelled according to this fuser.
         """
-        logger.info('BGT building fuser ' +
+        logger.info('BGT road fuser ' +
                     f'(label={self.label}, {Labels.get_str(self.label)}).')
 
         road_polygons = self._filter_tile(tilecode)
@@ -170,8 +170,6 @@ class BGTRoadFuser(BGTFuser):
 
         road_mask = np.zeros((len(mask_ids),), dtype=bool)
         for polygon in road_polygons:
-            # TODO if there are multiple buildings we could mask the points
-            # iteratively to ignore points already labelled.
             clip_mask = clip_utils.poly_clip(points[mask, :], polygon)
             road_mask = road_mask | clip_mask
 
