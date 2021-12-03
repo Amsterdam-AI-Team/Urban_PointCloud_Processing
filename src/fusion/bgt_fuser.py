@@ -9,7 +9,7 @@ from pathlib import Path
 from sklearn.cluster import DBSCAN
 from scipy.stats import binned_statistic_2d
 from shapely.geometry import Polygon
-from shapely.ops import cascaded_union
+from shapely.ops import unary_union
 from abc import ABC, abstractmethod
 
 from ..abstract_processor import AbstractProcessor
@@ -159,9 +159,9 @@ class BGTBuildingFuser(BGTFuser):
                                ' & (y_min < @by_max) & (y_max > @by_min)')
         buildings = [ast.literal_eval(poly) for poly in df.Polygon.values]
         if len(buildings) > 1 and merge:
-            poly_offset = list(cascaded_union(
+            poly_offset = list(unary_union(
                                 [Polygon(bld).buffer(self.building_offset)
-                                 for bld in buildings]))
+                                 for bld in buildings]).geoms)
         else:
             poly_offset = [Polygon(bld).buffer(self.building_offset)
                            for bld in buildings]
