@@ -3,7 +3,7 @@
 import ast
 import pandas as pd
 from shapely.geometry import Polygon
-from shapely.ops import cascaded_union
+from shapely.ops import unary_union
 
 from ..utils.las_utils import get_bbox_from_tile_code
 
@@ -27,12 +27,12 @@ class BGTPolyReader():
                                ' & (y_min < @by_max) & (y_max > @by_min)')
         buildings = [ast.literal_eval(poly) for poly in df.Polygon.values]
         if len(buildings) > 1 and merge:
-            union = cascaded_union([Polygon(bld).buffer(self.building_offset)
-                                    for bld in buildings])
+            union = unary_union([Polygon(bld).buffer(self.building_offset)
+                                for bld in buildings])
             if type(union) == Polygon:
                 poly_offset = [union]
             else:
-                poly_offset = list(union)
+                poly_offset = list(union.geoms)
         else:
             poly_offset = [Polygon(bld).buffer(self.building_offset)
                            for bld in buildings]
