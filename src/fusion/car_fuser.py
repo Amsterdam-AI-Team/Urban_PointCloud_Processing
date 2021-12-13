@@ -37,13 +37,14 @@ class CarFuser(BGTFuser):
     def __init__(self, label, ahn_reader,
                  bgt_file=None, bgt_folder=None, file_prefix='bgt_roads',
                  grid_size=0.05, min_component_size=5000,
-                 overlap_perc=20, params={}):
+                 overlap_perc=20, params={}, exclude_layers=["fietspad"]):
         super().__init__(label, bgt_file, bgt_folder, file_prefix)
         self.ahn_reader = ahn_reader
         self.grid_size = grid_size
         self.min_component_size = min_component_size
         self.overlap_perc = overlap_perc
         self.params = params
+        self.exclude_layers = exclude_layers
 
     def _filter_tile(self, tilecode):
         """
@@ -52,7 +53,12 @@ class CarFuser(BGTFuser):
         """
         ((bx_min, by_max), (bx_max, by_min)) =\
             get_bbox_from_tile_code(tilecode)
-        df = self.bgt_df.query('(bgt_name != "fietspad") &' +
+
+        exclude_string = ""
+        for layer in self.exclude_layers:
+            exclude_string += f'(bgt_name != "{layer}") &'
+
+        df = self.bgt_df.query(exclude_string +
                                '(x_min < @bx_max) & (x_max > @bx_min)' +
                                ' & (y_min < @by_max) & (y_max > @by_min)')
         road_polygons = df['polygon'].apply(ast.literal_eval).tolist()
