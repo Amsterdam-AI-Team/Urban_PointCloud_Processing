@@ -128,10 +128,10 @@ def clip_ahn_las_folder(ahn_cloud, in_folder, out_folder=None, buffer=1,
 
 
 def _get_ahn_surface(ahn_las, grid_x, grid_y, si_method, ahn_label,
-                     n_neighbors=8, max_dist=1, power=1., fill_value=np.nan):
+                     n_neighbors=8, max_dist=1, power=2., fill_value=np.nan):
     """
-    Use inverse distance weighted interpolation (IDW) to generate a surface
-    (grid) from a given AHN cloud.
+    Use maximum-based interpolation or inverse distance weighted interpolation
+    (IDW) to generate a surface (grid) from a given AHN cloud.
 
     For more information on IDW see:
     utils.interpolation.SpatialInterpolator
@@ -159,7 +159,7 @@ def _get_ahn_surface(ahn_las, grid_x, grid_y, si_method, ahn_label,
     max_dist : float (default: 1.0)
         Maximum distance of neighbours to consider for IDW.
 
-    power : float (default: 1.0)
+    power : float (default: 2.0)
         Power to use for IDW.
 
     fill_value : float (default: np.nan)
@@ -218,11 +218,11 @@ def process_ahn_las_tile(ahn_las_file, out_folder='', resolution=0.1):
     grid_y, grid_x = np.mgrid[y_max-resolution/2:y_min:-resolution,
                               x_min+resolution/2:x_max:resolution]
 
-    # TODO Voor grond wil je smooth service (IDW). Voor gebouwen willen we upper threshold voor hoekjes voor gebouwen.
+    # Methods for generating surfaces (grids)
     ground_surface = _get_ahn_surface(ahn_las, grid_x, grid_y, 'idw',
-                                      AHN_GROUND, power=2.)
+                                      AHN_GROUND)
     building_surface = _get_ahn_surface(ahn_las, grid_x, grid_y, 'max',
-                                        AHN_BUILDING, max_dist=0.5)  # TODO moet dit
+                                        AHN_BUILDING, power=1., max_dist=0.5)
 
     filename = os.path.join(out_folder, 'ahn_' + tile_code + '.npz')
     np.savez_compressed(filename,

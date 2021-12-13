@@ -95,8 +95,7 @@ class BGTRoadFuser(BGTFuser):
             return label_mask
 
         # Already labelled ground points can be labelled as road.
-        mask = np.ones((len(points),), dtype=bool)
-        mask = mask & (labels == Labels.GROUND)
+        mask = labels == Labels.GROUND
         mask_ids = np.where(mask)[0]
 
         road_mask = np.zeros((len(mask_ids),), dtype=bool)
