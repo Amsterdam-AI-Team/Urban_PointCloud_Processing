@@ -99,8 +99,8 @@ class BGTPointReader(BGTReader):
     def filter_tile(self, tilecode, bgt_types=[], exclude_types=[],
                     padding=0, return_types=False):
         """
-        Return a list of points representing each of the objects found in
-        the area represented by the given CycloMedia tile-code.
+        Return a list of points representing each of the objects found in the
+        area represented by the given CycloMedia tile-code.
         """
         ((bx_min, by_max), (bx_max, by_min)) = \
             get_bbox_from_tile_code(tilecode, padding=padding)
@@ -127,8 +127,8 @@ class BGTPolyReader(BGTReader):
     def filter_tile(self, tilecode, bgt_types=[], exclude_types=[],
                     padding=0, offset=0, merge=False):
         """
-        Return a list of polygons representing found in the area represented by
-        the given CycloMedia tile-code.
+        Return a list of polygons found in the area represented by the given
+        CycloMedia tile-code.
         """
         ((bx_min, by_max), (bx_max, by_min)) =\
             get_bbox_from_tile_code(tilecode, padding=padding)
