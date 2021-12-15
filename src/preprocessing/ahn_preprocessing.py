@@ -222,7 +222,7 @@ def process_ahn_las_tile(ahn_las_file, out_folder='', resolution=0.1):
     ground_surface = _get_ahn_surface(ahn_las, grid_x, grid_y, 'idw',
                                       AHN_GROUND)
     building_surface = _get_ahn_surface(ahn_las, grid_x, grid_y, 'max',
-                                        AHN_BUILDING, power=1., max_dist=0.5)
+                                        AHN_BUILDING, max_dist=0.5)
 
     filename = os.path.join(out_folder, 'ahn_' + tile_code + '.npz')
     np.savez_compressed(filename,
