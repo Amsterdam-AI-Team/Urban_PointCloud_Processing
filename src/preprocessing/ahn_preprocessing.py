@@ -127,11 +127,11 @@ def clip_ahn_las_folder(ahn_cloud, in_folder, out_folder=None, buffer=1,
                           buffer=buffer)
 
 
-def _get_ground_surface(ahn_las, grid_x, grid_y, n_neighbors=8, max_dist=1,
-                        power=2., fill_value=np.nan):
+def _get_ahn_surface(ahn_las, grid_x, grid_y, si_method, ahn_label,
+                     n_neighbors=8, max_dist=1, power=2., fill_value=np.nan):
     """
-    Use inverse distance weighted interpolation (IDW) to generate a ground
-    surface (grid) from a given AHN cloud.
+    Use maximum-based interpolation or inverse distance weighted interpolation
+    (IDW) to generate a surface (grid) from a given AHN cloud.
 
     For more information on IDW see:
     utils.interpolation.SpatialInterpolator
@@ -146,6 +146,12 @@ def _get_ground_surface(ahn_las, grid_x, grid_y, n_neighbors=8, max_dist=1,
 
     grid_y : list of floats
         Y-values for the interpolation grid.
+
+    si_method : string
+        Spatial interpolator method
+
+    ahn_label : int
+        AHN classification codes
 
     n_neighbours : int (default: 8)
         Maximum number of neighbours to use for IDW.
@@ -164,7 +170,7 @@ def _get_ground_surface(ahn_las, grid_x, grid_y, n_neighbors=8, max_dist=1,
     -------
     2d array of interpolation values for each <y,x> grid cell.
     """
-    mask = ahn_las.classification == AHN_GROUND
+    mask = ahn_las.classification == ahn_label
 
     if np.count_nonzero(mask) <= 1:
         return np.full(grid_x.shape, np.nan, dtype='float16')
@@ -172,61 +178,11 @@ def _get_ground_surface(ahn_las, grid_x, grid_y, n_neighbors=8, max_dist=1,
     points = np.vstack((ahn_las.x, ahn_las.y, ahn_las.z)).T[mask]
     positions = np.vstack((grid_x.reshape(-1), grid_y.reshape(-1))).T
 
-    idw = SpatialInterpolator(points[:, 0:2], points[:, 2], method='idw')
+    idw = SpatialInterpolator(points[:, 0:2], points[:, 2], method=si_method)
     ahn_gnd_grid = idw(positions, n_neighbors=n_neighbors, max_dist=max_dist,
                        power=power, fill_value=fill_value)
 
     return (np.around(ahn_gnd_grid.reshape(grid_x.shape), decimals=2)
-            .astype('float16'))
-
-
-def _get_building_surface(ahn_las, grid_x, grid_y, n_neighbors=8, max_dist=0.5,
-                          fill_value=np.nan):
-    """
-    Use maximum-based interpolation to generate a building surface (grid) from
-    a given AHN cloud.
-
-    For more information on maximum-based interpolation see:
-    utils.interpolation.SpatialInterpolator
-
-    Parameters
-    ----------
-    ahn_las : laspy point cloud
-        The AHN point cloud.
-
-    grid_x : list of floats
-        X-values for the interpolation grid.
-
-    grid_y : list of floats
-        Y-values for the interpolation grid.
-
-    n_neighbours : int (default: 8)
-        Maximum number of neighbours to use for interpolation.
-
-    max_dist : float (default: 0.5)
-        Maximum distance of neighbours to consider for interpolation.
-
-    fill_value : float (default: np.nan)
-        Fill value to use for 'empty' grid cells for which no interpolation
-        could be computed.
-
-    Returns
-    -------
-    2d array of interpolation values for each <y,x> grid cell.
-    """
-    mask = ahn_las.classification == AHN_BUILDING
-
-    if np.count_nonzero(mask) <= 1:
-        return np.full(grid_x.shape, np.nan, dtype='float16')
-
-    points = np.vstack((ahn_las.x, ahn_las.y, ahn_las.z)).T[mask]
-    positions = np.vstack((grid_x.reshape(-1), grid_y.reshape(-1))).T
-
-    idw = SpatialInterpolator(points[:, 0:2], points[:, 2], method='max')
-    ahn_bd_grid = idw(positions, n_neighbors=n_neighbors, max_dist=max_dist,
-                      fill_value=fill_value)
-
-    return (np.around(ahn_bd_grid.reshape(grid_x.shape), decimals=2)
             .astype('float16'))
 
 
@@ -262,8 +218,11 @@ def process_ahn_las_tile(ahn_las_file, out_folder='', resolution=0.1):
     grid_y, grid_x = np.mgrid[y_max-resolution/2:y_min:-resolution,
                               x_min+resolution/2:x_max:resolution]
 
-    ground_surface = _get_ground_surface(ahn_las, grid_x, grid_y)
-    building_surface = _get_building_surface(ahn_las, grid_x, grid_y)
+    # Methods for generating surfaces (grids)
+    ground_surface = _get_ahn_surface(ahn_las, grid_x, grid_y, 'idw',
+                                      AHN_GROUND)
+    building_surface = _get_ahn_surface(ahn_las, grid_x, grid_y, 'max',
+                                        AHN_BUILDING, max_dist=0.5)
 
     filename = os.path.join(out_folder, 'ahn_' + tile_code + '.npz')
     np.savez_compressed(filename,

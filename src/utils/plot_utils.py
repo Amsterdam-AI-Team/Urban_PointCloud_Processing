@@ -9,7 +9,7 @@ import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from shapely.geometry import Polygon
-from shapely.ops import cascaded_union
+from shapely.ops import unary_union
 
 from ..utils import clip_utils
 from ..utils import las_utils
@@ -257,9 +257,9 @@ def plot_buildings_ahn_bgt(tilecode, ahn_reader, building_file, offset=1,
     ahn_tile = ahn_reader.filter_tile(tilecode)
     buildings = bgt_utils.get_polygons(building_file, tilecode)
     if offset > 0:
-        buildings_ofs = list(cascaded_union(
-            [Polygon(clip_utils.poly_offset(bld, offset))
-             for bld in buildings]))
+        buildings_ofs = list(unary_union(
+                                [Polygon(clip_utils.poly_offset(bld, offset))
+                                 for bld in buildings]).geoms)
     else:
         buildings_ofs = []
     ((x_min, y_max), (x_max, y_min)) =\
