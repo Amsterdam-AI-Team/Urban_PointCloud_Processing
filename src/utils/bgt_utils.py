@@ -93,6 +93,10 @@ class BGTReader(ABC):
 
 
 class BGTPointReader(BGTReader):
+    """
+    Data files are assumed to be in CSV format and contain three columns:
+    [bgt_type, x, y].
+    """
 
     COLUMNS = ['bgt_type', 'x', 'y']
 
@@ -121,6 +125,10 @@ class BGTPointReader(BGTReader):
 
 
 class BGTPolyReader(BGTReader):
+    """
+    Data files are assumed to be in CSV format and contain six columns:
+    [bgt_type, polygon, x_min, y_max, x_max, y_min].
+    """
 
     COLUMNS = ['bgt_type', 'polygon', 'x_min', 'y_max', 'x_max', 'y_min']
 

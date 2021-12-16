@@ -1,19 +1,19 @@
-import numpy as np
-from shapely.geometry import Polygon
-import ast
-import logging
+"""Car Fuser"""
 
-from ..fusion.bgt_fuser import BGTFuser
+import numpy as np
+import logging
+from shapely.geometry import Polygon
+
+from ..abstract_processor import AbstractProcessor
 from ..region_growing.label_connected_comp import LabelConnectedComp
 from ..utils.math_utils import minimum_bounding_rectangle
-from ..utils.las_utils import get_bbox_from_tile_code
 from ..utils.clip_utils import poly_box_clip
 from ..labels import Labels
 
 logger = logging.getLogger(__name__)
 
 
-class CarFuser(BGTFuser):
+class CarFuser(AbstractProcessor):
     """
     Parameters
     ----------
@@ -21,49 +21,21 @@ class CarFuser(BGTFuser):
         Class label to use for this fuser.
     ahn_reader : AHNReader object
         Elevation data reader.
-    bgt_file : str or Path or None (default: None)
-        File containing data files needed for this fuser. Either a file or a
-        folder should be provided, but not both.
-    bgt_folder : str or Path or None (default: None)
-        Folder containing data files needed for this fuser. Data files are
-        assumed to be prefixed by "bgt_roads", unless otherwise specified.
-        Either a file or a folder should be provided, but not both.
-    file_prefix : str (default: 'bgt_roads')
-        Prefix used to load the correct files; only used with bgt_folder.
+    bgt_reader : BGTPolyReader object
+        Used to load road part polygons.
     """
 
-    COLUMNS = ['bgt_name', 'polygon', 'x_min', 'y_max', 'x_max', 'y_min']
-
-    def __init__(self, label, ahn_reader,
-                 bgt_file=None, bgt_folder=None, file_prefix='bgt_roads',
+    def __init__(self, label, ahn_reader, bgt_reader,
                  grid_size=0.05, min_component_size=5000,
-                 overlap_perc=20, params={}, exclude_layers=["fietspad"]):
-        super().__init__(label, bgt_file, bgt_folder, file_prefix)
+                 overlap_perc=20, params={}, exclude_types=["fietspad"]):
+        super().__init__(label)
         self.ahn_reader = ahn_reader
+        self.bgt_reader = bgt_reader
         self.grid_size = grid_size
         self.min_component_size = min_component_size
         self.overlap_perc = overlap_perc
         self.params = params
-        self.exclude_layers = exclude_layers
-
-    def _filter_tile(self, tilecode):
-        """
-        Return a list of polygons representing each of the road segments found
-        in the area represented by the given CycloMedia tile-code.
-        """
-        ((bx_min, by_max), (bx_max, by_min)) =\
-            get_bbox_from_tile_code(tilecode)
-
-        exclude_string = ""
-        for layer in self.exclude_layers:
-            exclude_string += f'(bgt_name != "{layer}") &'
-
-        df = self.bgt_df.query(exclude_string +
-                               '(x_min < @bx_max) & (x_max > @bx_min)' +
-                               ' & (y_min < @by_max) & (y_max > @by_min)')
-        road_polygons = df['polygon'].apply(ast.literal_eval).tolist()
-
-        return road_polygons
+        self.exclude_types = exclude_types
 
     def _label_car_like_components(self, points, ground_z, point_components,
                                    road_polygons, min_height, max_height,
@@ -138,9 +110,10 @@ class CarFuser(BGTFuser):
 
         label_mask = np.zeros((len(points),), dtype=bool)
 
-        road_polygons = self._filter_tile(tilecode)
+        road_polygons = self.bgt_reader.filter_tile(
+                    tilecode, exclude_types=self.exclude_types, merge=False)
         if len(road_polygons) == 0:
-            logger.debug('No road parts found in reference csv file.')
+            logger.debug('No road parts found for tile, skipping.')
             return label_mask
 
         # Get the interpolated ground points of the tile
