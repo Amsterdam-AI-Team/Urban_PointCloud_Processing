@@ -7,7 +7,6 @@ https://www.amsterdam.nl/stelselpedia/bgt-index/producten-bgt/prodspec-bgt-dgn-i
 import numpy as np
 import requests
 
-from ..utils.clip_utils import poly_offset
 from ..utils.math_utils import compute_bounding_box
 
 WFS_URL = 'https://map.data.amsterdam.nl/maps/bgtobjecten?'
@@ -47,33 +46,7 @@ def scrape_amsterdam_bgt(layer_name, bbox=None):
         return None
 
 
-def parse_buildings(json_response, prepare_csv=False):
-    """
-    Parse the JSON content and transform it into a table structure.
-    Dutch-English translation of pand is building.
-
-    Parameters
-    ----------
-    json_response : dict
-        JSON response from a WFS request.
-    """
-    parsed_content = []
-    for item in json_response['features']:
-        pand_id = item['properties']['identificatieBAGPND']
-        pand_polygon = item['geometry']['coordinates'][0]
-
-        if prepare_csv:
-            x_min, y_max, x_max, y_min = compute_bounding_box(
-                                                    np.array(pand_polygon))
-            parsed_content.append([str(pand_id), pand_polygon, x_min, y_max,
-                                  x_max, y_min])
-        else:
-            parsed_content.append(pand_polygon)
-
-    return parsed_content
-
-
-def parse_polygons(json_response, offset_meter=0.0, prepare_csv=False):
+def parse_polygons(json_response, include_bbox=True):
     """
     Parse the JSON content and transform it into a table structure.
 
@@ -81,23 +54,21 @@ def parse_polygons(json_response, offset_meter=0.0, prepare_csv=False):
     ----------
     json_response : dict
         JSON response from a WFS request.
-    offset_meter : int
-        Offset to inflate/deflate the polygon.
+    include_bbox : bool (default: True)
+        Whether to include a bounding box for each poly.
     """
     parsed_content = []
+    name = '_'.join(json_response['name'].split('_')[2:])
     for item in json_response['features']:
-        name = item['properties']['bgt_functie']
+        # name = item['properties']['bgt_functie']
         polygon = item['geometry']['coordinates'][0]
 
-        if offset_meter:
-            polygon = poly_offset(polygon, offset_meter)
-
-        if prepare_csv:
+        if include_bbox:
             x_min, y_max, x_max, y_min = compute_bounding_box(
                                                         np.array(polygon))
             parsed_content.append([name, polygon, x_min, y_max, x_max, y_min])
         else:
-            parsed_content.append(polygon)
+            parsed_content.append([name, polygon])
 
     return parsed_content
 
