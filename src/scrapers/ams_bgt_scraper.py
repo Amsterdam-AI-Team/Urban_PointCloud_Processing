@@ -64,7 +64,7 @@ def parse_polygons(json_response, include_bbox=True):
         polygon = item['geometry']['coordinates'][0]
 
         if include_bbox:
-            x_min, y_max, x_max, y_min = compute_bounding_box(
+            (x_min, y_min, x_max, y_max) = compute_bounding_box(
                                                         np.array(polygon))
             parsed_content.append([name, polygon, x_min, y_max, x_max, y_min])
         else:

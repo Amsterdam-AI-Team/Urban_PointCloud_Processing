@@ -11,7 +11,6 @@ import numpy as np
 from numba import jit
 import numba
 import logging
-from shapely.geometry import Polygon
 
 from ..utils import math_utils
 
@@ -200,32 +199,35 @@ def poly_clip(points, poly):
     ----------
     points : array of shape (n_points, 2)
         The points.
-    poly : list of tuples
-        Coordinates of polygon (closed ring).
+    poly : shapely.geometry Polygon object
+        Polygon to clip. Can have interior gaps.
 
     Returns
     -------
     A boolean mask with True entries for all points within the polygon.
     """
     # Convert to numpy to work with numba jit in nopython mode.
-    np_poly = np.array(poly)
-
-    if not np.array_equal(poly[0], poly[-1]):
-        logger.warning('Polygon should be a closed ring!')
-
-    # Clip to bounding box
-    x_min, y_max, x_max, y_min = math_utils.compute_bounding_box(
-                                                            np.array(poly))
-    pre_clip_mask = rectangle_clip(points, (x_min, y_min, x_max, y_max))
-
-    # Clip to poly
-    post_clip_mask = is_inside(points[pre_clip_mask, 0],
-                               points[pre_clip_mask, 1],
-                               np_poly)
+    exterior = np.array(poly.exterior.coords)
+    interiors = [np.array(interior.coords) for interior in poly.interiors]
 
     clip_mask = np.zeros((len(points),), dtype=bool)
-    pre_clip_inds = np.where(pre_clip_mask)[0]
-    clip_mask[pre_clip_inds[post_clip_mask]] = True
+
+    # Clip exterior to include points.
+    bbox_mask = rectangle_clip(
+                    points, math_utils.compute_bounding_box(exterior))
+    exterior_mask = is_inside(points[bbox_mask, 0], points[bbox_mask, 1],
+                              exterior)
+    bbox_inds = np.where(bbox_mask)[0]
+    clip_mask[bbox_inds[exterior_mask]] = True
+
+    # Clip interior(s) to exclude points.
+    for interior in interiors:
+        bbox_mask = rectangle_clip(
+                        points, math_utils.compute_bounding_box(interior))
+        interior_mask = is_inside(points[bbox_mask, 0], points[bbox_mask, 1],
+                                  interior)
+        bbox_inds = np.where(bbox_mask)[0]
+        clip_mask[bbox_inds[interior_mask]] = False
 
     return clip_mask
 
@@ -238,8 +240,8 @@ def poly_box_clip(points, poly, bottom=-np.inf, top=np.inf):
     ----------
     points : array of shape (n_points, 2)
         The points.
-    poly : list of tuples
-        Coordinates of polygon (closed ring).
+    poly : shapely.geometry Polygon object
+        Polygon to clip. Can have interior gaps.
     bottom : float (default: -inf)
         Bottom height of the 3D polygon.
     top : float (default: inf)
@@ -252,23 +254,3 @@ def poly_box_clip(points, poly, bottom=-np.inf, top=np.inf):
     clip_mask = poly_clip(points, poly)
     clip_mask = clip_mask & ((points[:, 2] <= top) & (points[:, 2] >= bottom))
     return clip_mask
-
-
-def poly_offset(polygon, offset_meter):
-    """
-    Inflate or deflate a polygon.
-
-    Parameters
-    ----------
-    polygon : list
-        One polygon in list format
-    offset_meter : int
-        Offset in meters (negative value means deflation)
-
-    Returns
-    -------
-    list
-        Inflated polygon in a 1D list
-    """
-    shpl_poly = Polygon(polygon).buffer(offset_meter)
-    return shpl_poly.exterior.coords

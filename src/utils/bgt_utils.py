@@ -159,7 +159,7 @@ class BGTPolyReader(BGTReader):
         else:
             poly_offset = [Polygon(poly).buffer(offset)
                            for poly in polygons]
-        poly_valid = [poly.exterior.coords for poly in poly_offset
+        poly_valid = [poly for poly in poly_offset
                       if len(poly.exterior.coords) > 1]
         return poly_valid
 

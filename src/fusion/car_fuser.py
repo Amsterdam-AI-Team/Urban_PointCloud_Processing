@@ -69,15 +69,14 @@ class CarFuser(AbstractProcessor):
                     if (min_width < mbr_width < max_width and
                             min_length < mbr_length < max_length):
                         p1 = Polygon(poly)
-                        for road_polygon in road_polygons:
-                            p2 = Polygon(road_polygon)
+                        for p2 in road_polygons:
                             do_overlap = p1.intersects(p2)
                             if do_overlap:
                                 intersection_perc = (p1.intersection(p2).area
                                                      / p1.area) * 100
                                 if intersection_perc > self.overlap_perc:
                                     car_mask = car_mask | poly_box_clip(
-                                        points, poly, bottom=cc_z, top=max_z)
+                                        points, p1, bottom=cc_z, top=max_z)
                                     car_count += 1
                                     break
 
