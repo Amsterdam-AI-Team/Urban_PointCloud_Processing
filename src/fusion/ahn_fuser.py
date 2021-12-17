@@ -1,7 +1,6 @@
 """AHN Data Fuser"""
 
 import numpy as np
-import os
 import logging
 
 from ..abstract_processor import AbstractProcessor
@@ -21,8 +20,6 @@ class AHNFuser(AbstractProcessor):
     ----------
     label : int
         Class label to use for this fuser.
-    data_folder : str or Path
-        Folder containing data files needed for this fuser.
     ahn_reader : AHNReader object
         Used to read the AHN data.
     target : str (default: 'ground')
@@ -34,12 +31,8 @@ class AHNFuser(AbstractProcessor):
 
     TARGETS = ('ground', 'building')
 
-    def __init__(self, label, data_folder, ahn_reader,
-                 target='ground', epsilon=0.2):
+    def __init__(self, label, ahn_reader, target='ground', epsilon=0.2):
         super().__init__(label)
-        if not os.path.isdir(data_folder):
-            logger.error('The data folder specified does not exist')
-            return None
         if target not in self.TARGETS:
             logger.error(f'Target should be one of {self.TARGETS}.')
             return None
@@ -48,7 +41,6 @@ class AHNFuser(AbstractProcessor):
                 f'The {ahn_reader.NAME} reader cannot supply {target} data.')
             return None
 
-        self.data_folder = data_folder
         self.ahn_reader = ahn_reader
         self.method = ahn_reader.NAME
         self.target = target
