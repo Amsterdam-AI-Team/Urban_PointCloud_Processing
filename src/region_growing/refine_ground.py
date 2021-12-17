@@ -5,16 +5,14 @@ from ..abstract_processor import AbstractProcessor
 from ..region_growing import LabelConnectedComp
 from ..labels import Labels
 from ..utils import clip_utils
+from ..utils import math_utils
 
 logger = logging.getLogger(__name__)
 
-
-POLE_LIKE = {Labels.TREE,
-             Labels.TRAFFIC_SIGN,
-             Labels.TRAFFIC_LIGHT,
-             Labels.STREET_LIGHT}
-POLE_RAD_EPS = 0.05
-POLE_GND_EPS = 0.02
+GROUND_LABELS = {Labels.GROUND,
+                 Labels.ROAD}
+POLY_BUFFER = 0.05
+GND_EPS = 0.02
 
 
 class RefineGround(AbstractProcessor):
@@ -39,12 +37,13 @@ class RefineGround(AbstractProcessor):
             params['min_comp_size'] = 50
         return params
 
-    def _filter_layer(self, points, points_z,
-                      labels, ground_mask, target_label):
+    def _process_layer(self, points, points_z,
+                       labels, ground_mask, target_label):
         """Process a layer of the region grower."""
 
         mask = np.zeros((len(points),), dtype=bool)
         label_ids = np.where(labels == target_label)[0]
+        ground_ids = np.where(ground_mask)[0]
 
         lcc = LabelConnectedComp(
                     target_label, grid_size=self.params['grid_size'],
@@ -60,24 +59,17 @@ class RefineGround(AbstractProcessor):
         for cc in cc_labels:
             # select points that belong to the cluster
             cc_mask = (point_components == cc)
-            if target_label in POLE_LIKE:
-                ctr = np.mean(points[label_ids[cc_mask], 0:2], axis=0)
-                r = np.max(np.max(points[label_ids[cc_mask], 0:2], axis=0)
-                           - np.min(points[label_ids[cc_mask], 0:2], axis=0))
-                r = r / 2
-                cm = clip_utils.circle_clip(points, ctr, r + POLE_RAD_EPS)
-                gm = cm & ground_mask
-                logger.debug(f'Center: {ctr}, r: {r}, ' +
-                             f'clipped {np.count_nonzero(gm)} ground points')
-                if np.count_nonzero(gm) > 0:
-                    gz = np.mean(points_z[gm])
-                    cand_m = points[gm, 2] > gz + POLE_GND_EPS
-                    gm_ids = np.where(gm)[0]
-                    mask[gm_ids[cand_m]] = True
-                    # logger.debug(f'Cands: {np.count_nonzero(cand_m)}')
-                    logger.debug(f'Added: {len(gm_ids[cand_m])} points.')
-            else:
-                logger.debug('Not pole-like, skipping..')
+            # Compute convex hull
+            hull_poly = math_utils.convex_hull_poly(
+                                        points[label_ids[cc_mask], 0:2])
+            # Add small buffer
+            poly = clip_utils.poly_offset(hull_poly, POLY_BUFFER)
+            # Selects ground points within poly and above ground + eps
+            poly_mask = clip_utils.poly_clip(points[ground_mask], poly)
+            local_hm = (points[ground_ids[poly_mask], 2] >
+                        points_z[ground_ids[poly_mask]] + GND_EPS)
+            mask[ground_ids[poly_mask][local_hm]] = True
+            logger.debug(f'Added: {np.count_nonzero(poly_mask)} points.')
         return mask
 
     def get_label_mask(self, points, labels, mask, tilecode):
@@ -107,7 +99,8 @@ class RefineGround(AbstractProcessor):
         for lab in self.label:
             mask[labels == lab] = True
         # Un-mask ground points.
-        mask[labels == Labels.GROUND] = True
+        for lab in GROUND_LABELS:
+            mask[labels == lab] = True
 
         points_z = self.ahn_reader.interpolate(
                     tilecode, points[mask], None, 'ground_surface')
@@ -115,14 +108,16 @@ class RefineGround(AbstractProcessor):
                        & (points[mask, 2] <= points_z + self.params['top']))
         mask[mask] = height_mask
 
-        ground_mask = labels[mask] == Labels.GROUND
+        ground_mask = np.zeros((np.count_nonzero(mask),), dtype=bool)
+        for lab in GROUND_LABELS:
+            ground_mask[labels[mask] == lab] = True
 
         return_mask = []
 
         for lab in self.label:
             if np.count_nonzero(labels[mask] == lab) > 0:
                 label_mask = np.zeros((len(points),), dtype=bool)
-                add_mask = self._filter_layer(
+                add_mask = self._process_layer(
                                         points[mask, :], points_z[height_mask],
                                         labels[mask], ground_mask, lab)
                 label_mask[mask] = add_mask

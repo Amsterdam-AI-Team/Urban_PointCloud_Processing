@@ -53,6 +53,12 @@ def compute_bounding_box(points):
     return min_x, max_y, max_x, min_y
 
 
+def convex_hull_poly(points):
+    """Return convex hull as a closed ring."""
+    hull = points[ConvexHull(points).vertices]
+    return np.vstack((hull, hull[0]))
+
+
 def minimum_bounding_rectangle(points):
     """
     Find the smallest bounding rectangle for a set of points.
