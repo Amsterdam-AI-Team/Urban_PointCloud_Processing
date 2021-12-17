@@ -162,7 +162,7 @@ def _point_inside_poly(polygon, point):
     return intersections & 1
 
 
-@jit(nopython=True)
+@jit(nopython=True, parallel=True)
 def is_inside(x, y, polygon):
     """
     Checks for each point in a list whether that point is inside a polygon.
@@ -183,10 +183,7 @@ def is_inside(x, y, polygon):
     """
     n = len(x)
     mask = np.empty((n,), dtype=numba.boolean)
-    # Can be parallelized by replacing this line with <for i in
-    # numba.prange(ln):> and decorating the function with
-    # <@njit(parallel=True)>
-    for i in range(n):
+    for i in numba.prange(n):
         mask[i] = _point_inside_poly(polygon, (x[i], y[i]))
     return mask
 
