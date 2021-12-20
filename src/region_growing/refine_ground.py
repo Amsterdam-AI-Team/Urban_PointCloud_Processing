@@ -67,12 +67,11 @@ class RefineGround(AbstractProcessor):
         for cc in cc_labels:
             # select points that belong to the cluster
             cc_mask = (point_components == cc)
-            # Compute convex hull
-            hull_poly = math_utils.convex_hull_poly(
-                                        points[label_ids[cc_mask], 0:2])
-            # Add small buffer
-            poly = clip_utils.poly_offset(hull_poly, self.POLY_BUFFER)
-            # Selects ground points within poly and above ground + eps
+            # Compute convex hull and add a small buffer
+            poly = (math_utils
+                    .convex_hull_poly(points[label_ids[cc_mask], 0:2])
+                    .buffer(self.POLY_BUFFER))
+            # Select ground points within poly and above ground + eps
             poly_mask = clip_utils.poly_clip(points[ground_mask], poly)
             local_hm = (points[ground_ids[poly_mask], 2] >
                         points_z[ground_ids[poly_mask]] + self.GND_EPS)

@@ -1,6 +1,7 @@
 import numpy as np
 from numba import jit
 from scipy.spatial import ConvexHull
+from shapely.geometry import Polygon
 
 
 @jit(nopython=True)
@@ -55,9 +56,9 @@ def compute_bounding_box(points):
 
 
 def convex_hull_poly(points):
-    """Return convex hull as a closed ring."""
+    """Return convex hull as a shapely Polygon."""
     hull = points[ConvexHull(points).vertices]
-    return np.vstack((hull, hull[0]))
+    return Polygon(np.vstack((hull, hull[0])))
 
 
 def minimum_bounding_rectangle(points):
