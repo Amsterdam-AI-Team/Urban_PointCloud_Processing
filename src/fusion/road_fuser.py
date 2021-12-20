@@ -22,7 +22,9 @@ class BGTRoadFuser(AbstractProcessor):
     bgt_reader : BGTPolyReader object
         Used to load road part polygons.
     bgt_types : str or list of [str] (default: all available)
-        Which road part types to label for this fuser.
+        Indicates which road part types (BGT layers) to label as road. By
+        default, all available types returned by the BGTPolyReader will be
+        used.
     offset : int (default: 0)
         The road polygon will be extended by this amount (in meters).
     padding : float (default: 0)
