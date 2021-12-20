@@ -1,4 +1,4 @@
-"""BGT Data Fuser"""
+"""Road Fuser"""
 
 import numpy as np
 import logging

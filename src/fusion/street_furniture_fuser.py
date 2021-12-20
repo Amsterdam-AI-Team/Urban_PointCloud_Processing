@@ -21,8 +21,7 @@ class BGTStreetFurnitureFuser(AbstractProcessor):
     label : int
         Class label to use for this fuser.
     bgt_type : str
-        Specify the 'type' of point object: 'bank', 'afval_apart_plaats', or
-        'afvalbak'
+        Specify the 'type' of point object: 'bank' or 'afvalbak'
     bgt_reader : BGTPointReader object
         Used to load street furniture points.
     ahn_reader : AHNReader object
