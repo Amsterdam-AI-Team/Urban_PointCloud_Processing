@@ -6,20 +6,21 @@
             <uuid>{f2a40b4d-2773-4f0a-8fb3-287b67a560fa}</uuid>
             <absolute>1</absolute>
             <minValue>0</minValue>
-            <range>99</range>
+            <range>100</range>
         </Properties>
         <Data>
             <step r="211" g="215" b="207" pos="0"/>
-            <step r="193" g="125" b="17" pos="0.010101010101"/>
-            <step r="114" g="159" b="207" pos="0.020202020202"/>
-            <step r="78" g="154" b="6" pos="0.030303030303"/>
-            <step r="252" g="233" b="79" pos="0.040404040404"/>
-            <step r="239" g="41" b="41" pos="0.0505050505"/>
-            <step r="173" g="127" b="168" pos="0.0606060606"/>
-            <step r="85" g="87" b="83" pos="0.0707070707"/>
-            <step r="178" g="102" b="255" pos="0.0808080808"/>
-            <step r="255" g="0" b="127" pos="0.0909090909"/>
-            <step r="255" g="197" b="98" pos="0.09090909095"/>
+            <step r="193" g="125" b="17" pos="0.01"/>
+            <step r="114" g="159" b="207" pos="0.02"/>
+            <step r="78" g="154" b="6" pos="0.03"/>
+            <step r="252" g="233" b="79" pos="0.04"/>
+            <step r="239" g="41" b="41" pos="0.05"/>
+            <step r="150" g="18" b="157" pos="0.06"/>
+            <step r="85" g="87" b="83" pos="0.07"/>
+            <step r="139" g="69" b="19" pos="0.08"/>
+            <step r="255" g="0" b="127" pos="0.09"/>
+            <step r="255" g="197" b="98" pos="0.1"/>
+            <step r="255" g="255" b="255" pos="0.99"/>
             <step r="255" g="255" b="255" pos="1"/>
             <label val="0"/>
             <label val="1"/>
@@ -33,6 +34,7 @@
             <label val="9"/>
             <label val="10"/>
             <label val="99"/>
+            <label val="100"/>
         </Data>
     </ColorScale>
 </CloudCompare>

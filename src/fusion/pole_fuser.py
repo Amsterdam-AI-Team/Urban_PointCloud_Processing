@@ -1,24 +1,22 @@
-"""BGT Data Fuser"""
+"""Pole Fuser"""
 
 import numpy as np
 import logging
 from sklearn.cluster import DBSCAN
 from scipy.stats import binned_statistic_2d
 
-from ..fusion.bgt_fuser import BGTFuser
+from ..abstract_processor import AbstractProcessor
 from ..utils import clip_utils
 from ..utils.interpolation import FastGridInterpolator
-from ..utils.las_utils import get_bbox_from_tile_code
 from ..labels import Labels
 
 logger = logging.getLogger(__name__)
 
 
-class BGTPoleFuser(BGTFuser):
+class BGTPoleFuser(AbstractProcessor):
     """
     Data Fuser class for automatic labelling of pole (point) objects such as
-    trees, street lights, and traffic signs using BGT data. Data files are
-    assumed to be in CSV format and contain three columns: [Object type, X, Y].
+    trees, street lights, and traffic signs using BGT data.
 
     Parameters
     ----------
@@ -27,15 +25,8 @@ class BGTPoleFuser(BGTFuser):
     bgt_type : str
         Specify the 'type' of point object: 'boom', 'lichtmast', or
         'verkeersbord'
-    bgt_file : str or Path or None (default: None)
-        File containing data files needed for this fuser. Either a file or a
-        folder should be provided, but not both.
-    bgt_folder : str or Path or None (default: None)
-        Folder containing data files needed for this fuser. Data files are
-        assumed to be prefixed by "bgt_points", unless otherwise specified.
-        Either a file or a folder should be provided, but not both.
-    file_prefix : str (default: 'bgt_points')
-        Prefix used to load the correct files; only used with bgt_folder.
+    bgt_reader : BGTPointReader object
+        Used to load pole points.
     ahn_reader : AHNReader object
         AHNReader to retrieve elevation data.
     padding : float (default: 1)
@@ -73,13 +64,12 @@ class BGTPoleFuser(BGTFuser):
     'label_height': 4.
         Maximum height for initial (cylinder-based) labelling.
     """
-    COLUMNS = ['Type', 'X', 'Y']
 
-    def __init__(self, label, bgt_type, bgt_file=None,
-                 bgt_folder=None, file_prefix='bgt_points', ahn_reader=None,
+    def __init__(self, label, bgt_type, bgt_reader, ahn_reader=None,
                  padding=0, params={}):
-        super().__init__(label, bgt_file, bgt_folder, file_prefix)
+        super().__init__(label)
         self.bgt_type = bgt_type
+        self.bgt_reader = bgt_reader
         if ahn_reader is None:
             logger.warning('No ahn_reader specified. Assuming elevation=0.')
         self.ahn_reader = ahn_reader
@@ -93,22 +83,6 @@ class BGTPoleFuser(BGTFuser):
         if 'label_height' not in params:
             params['label_height'] = 4.
         self.params = params
-
-        # TODO will this speedup the process?
-        self.bgt_df.sort_values(by=['X', 'Y'], ignore_index=True, inplace=True)
-
-    def _filter_tile(self, tilecode):
-        """
-        Return a list of points representing each of the objects found in
-        the area represented by the given CycloMedia tile-code.
-        """
-        ((bx_min, by_max), (bx_max, by_min)) = \
-            get_bbox_from_tile_code(tilecode, padding=self.padding)
-        df = self.bgt_df.query('(X <= @bx_max) & (X >= @bx_min)' +
-                               ' & (Y <= @by_max) & (Y >= @by_min)')
-        bgt_points = list(df.to_records(index=False))
-
-        return [(x, y) for (t, x, y) in bgt_points if t == self.bgt_type]
 
     def _find_point_cluster(self, points, point, plane_height,
                             plane_buffer=0.1, search_radius=1, max_dist=0.1,
@@ -270,9 +244,12 @@ class BGTPoleFuser(BGTFuser):
 
         label_mask = np.zeros((len(points),), dtype=bool)
 
-        bgt_points = self._filter_tile(tilecode)
+        bgt_points = self.bgt_reader.filter_tile(
+                                    tilecode, bgt_types=[self.bgt_type],
+                                    padding=self.padding, return_types=False)
         if len(bgt_points) == 0:
-            logger.debug(f'No {self.bgt_type} objects in reference csv file.')
+            logger.debug(f'No {self.bgt_type} objects found in tile, ' +
+                         ' skipping.')
             return label_mask
 
         ahn_tile = self.ahn_reader.filter_tile(tilecode)

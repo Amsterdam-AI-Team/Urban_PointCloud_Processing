@@ -37,20 +37,21 @@ def compute_bounding_box(points):
 
     Parameters
     ----------
-    points : list
-        List of x and y points that belong to a polygon
+    points : array of shape (n_points, 2)
+        The (x, y) coordinates of the points. Any further dimensions will be
+        ignored.
 
     Returns
     -------
-    list
-        Bounding box with outer points of a polygon
+    tuple
+        (x_min, y_min, x_max, y_max)
     """
-    min_x = np.min(points[:, 0])
-    max_x = np.max(points[:, 0])
-    min_y = np.min(points[:, 1])
-    max_y = np.max(points[:, 1])
+    x_min = np.min(points[:, 0])
+    x_max = np.max(points[:, 0])
+    y_min = np.min(points[:, 1])
+    y_max = np.max(points[:, 1])
 
-    return min_x, max_y, max_x, min_y
+    return (x_min, y_min, x_max, y_max)
 
 
 def convex_hull_poly(points):
