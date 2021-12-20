@@ -9,16 +9,24 @@ from ..utils import math_utils
 
 logger = logging.getLogger(__name__)
 
-GROUND_LABELS = {Labels.GROUND,
-                 Labels.ROAD}
-POLY_BUFFER = 0.05
-GND_EPS = 0.02
-
 
 class RefineGround(AbstractProcessor):
     """
 
     """
+
+    GROUND_LABELS = [Labels.GROUND,
+                     Labels.ROAD]
+    TARGET_LABELS = [Labels.BUILDING,
+                     Labels.CAR,
+                     Labels.TREE,
+                     Labels.TRAFFIC_SIGN,
+                     Labels.TRAFFIC_LIGHT,
+                     Labels.STREET_LIGHT,
+                     Labels.CITY_BENCH,
+                     Labels.RUBBISH_BIN]
+    POLY_BUFFER = 0.05
+    GND_EPS = 0.02
 
     def __init__(self, label, ahn_reader, params=[]):
         super().__init__(label)
@@ -63,13 +71,14 @@ class RefineGround(AbstractProcessor):
             hull_poly = math_utils.convex_hull_poly(
                                         points[label_ids[cc_mask], 0:2])
             # Add small buffer
-            poly = clip_utils.poly_offset(hull_poly, POLY_BUFFER)
+            poly = clip_utils.poly_offset(hull_poly, self.POLY_BUFFER)
             # Selects ground points within poly and above ground + eps
             poly_mask = clip_utils.poly_clip(points[ground_mask], poly)
             local_hm = (points[ground_ids[poly_mask], 2] >
-                        points_z[ground_ids[poly_mask]] + GND_EPS)
+                        points_z[ground_ids[poly_mask]] + self.GND_EPS)
             mask[ground_ids[poly_mask][local_hm]] = True
-            logger.debug(f'Added: {np.count_nonzero(poly_mask)} points.')
+            cnt = np.count_nonzero(ground_ids[poly_mask][local_hm])
+            logger.debug(f'Added {cnt} points.')
         return mask
 
     def get_label_mask(self, points, labels, mask, tilecode):
@@ -99,7 +108,7 @@ class RefineGround(AbstractProcessor):
         for lab in self.label:
             mask[labels == lab] = True
         # Un-mask ground points.
-        for lab in GROUND_LABELS:
+        for lab in self.GROUND_LABELS:
             mask[labels == lab] = True
 
         points_z = self.ahn_reader.interpolate(
@@ -109,22 +118,22 @@ class RefineGround(AbstractProcessor):
         mask[mask] = height_mask
 
         ground_mask = np.zeros((np.count_nonzero(mask),), dtype=bool)
-        for lab in GROUND_LABELS:
+        for lab in self.GROUND_LABELS:
             ground_mask[labels[mask] == lab] = True
 
         return_mask = []
 
         for lab in self.label:
+            label_mask = np.zeros((len(points),), dtype=bool)
             if np.count_nonzero(labels[mask] == lab) > 0:
-                label_mask = np.zeros((len(points),), dtype=bool)
                 add_mask = self._process_layer(
                                         points[mask, :], points_z[height_mask],
                                         labels[mask], ground_mask, lab)
                 label_mask[mask] = add_mask
-                return_mask.append(label_mask)
                 logger.info(f'Label {lab}: ' +
                             f'{np.count_nonzero(add_mask)} points added.')
             else:
                 logger.info(f'Label {lab} not present, skipping.')
+            return_mask.append(label_mask)
 
         return return_mask
