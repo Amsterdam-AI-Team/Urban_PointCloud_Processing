@@ -1,72 +1,45 @@
-"""BGT Data Fuser"""
+"""Street Furniture Fuser"""
 
 import numpy as np
 import logging
 
-from ..fusion.bgt_fuser import BGTFuser
+from ..abstract_processor import AbstractProcessor
 from ..region_growing.label_connected_comp import LabelConnectedComp
-from ..utils.las_utils import get_bbox_from_tile_code
 from ..utils.math_utils import minimum_bounding_rectangle
 from ..labels import Labels
 
 logger = logging.getLogger(__name__)
 
 
-class BGTStreetFurnitureFuser(BGTFuser):
+class BGTStreetFurnitureFuser(AbstractProcessor):
     """
     Data Fuser class for automatic labelling of street furniture (point)
     objects such as rubbish bins and city benches using BGT data.
-    Data files are assumed to be in CSV format and contain three columns:
-    [Object type, X, Y].
 
     Parameters
     ----------
     label : int
         Class label to use for this fuser.
     bgt_type : str
-        Specify the 'type' of point object: 'bank', 'afval_apart_plaats', or
-        'afvalbak'
+        Specify the 'type' of point object: 'bank' or 'afvalbak'
+    bgt_reader : BGTPointReader object
+        Used to load street furniture points.
     ahn_reader : AHNReader object
         Elevation data reader.
-    bgt_file : str or Path or None (default: None)
-        File containing data files needed for this fuser. Either a file or a
-        folder should be provided, but not both.
-    bgt_folder : str or Path or None (default: None)
-        Folder containing data files needed for this fuser. Data files are
-        assumed to be prefixed by "bgt_roads", unless otherwise specified.
-        Either a file or a folder should be provided, but not both.
-    file_prefix : str (default: 'bgt_roads')
-        Prefix used to load the correct files; only used with bgt_folder.
     """
 
-    COLUMNS = ['Type', 'X', 'Y']
-
-    def __init__(self, label, bgt_type, ahn_reader,
-                 bgt_file=None, bgt_folder=None,
-                 file_prefix='bgt_street_furniture',
+    def __init__(self, label, bgt_type, bgt_reader, ahn_reader,
                  grid_size=0.05, min_component_size=1500,
                  padding=0, max_dist=1., params={}):
-        super().__init__(label, bgt_file, bgt_folder, file_prefix)
+        super().__init__(label)
         self.bgt_type = bgt_type
+        self.bgt_reader = bgt_reader
         self.ahn_reader = ahn_reader
         self.grid_size = grid_size
         self.min_component_size = min_component_size
         self.padding = padding
         self.max_dist = max_dist
         self.params = params
-
-    def _filter_tile(self, tilecode):
-        """
-        Return a list of points representing each of the objects found in
-        the area represented by the given CycloMedia tile-code.
-        """
-        ((bx_min, by_max), (bx_max, by_min)) = \
-            get_bbox_from_tile_code(tilecode, padding=self.padding)
-        df = self.bgt_df.query('(X <= @bx_max) & (X >= @bx_min)' +
-                               ' & (Y <= @by_max) & (Y >= @by_min)')
-        bgt_points = list(df.to_records(index=False))
-
-        return [(x, y) for (t, x, y) in bgt_points if t == self.bgt_type]
 
     def _label_street_furniture_like_components(self, points, ground_z,
                                                 point_components, bgt_points,
@@ -137,10 +110,12 @@ class BGTStreetFurnitureFuser(BGTFuser):
 
         label_mask = np.zeros((len(points),), dtype=bool)
 
-        bgt_points = self._filter_tile(tilecode)
+        bgt_points = self.bgt_reader.filter_tile(
+                                    tilecode, bgt_types=[self.bgt_type],
+                                    padding=self.padding, return_types=False)
         if len(bgt_points) == 0:
-            logger.debug(f'No {self.bgt_type} objects found in reference ' +
-                         'csv file.')
+            logger.debug(f'No {self.bgt_type} objects found in tile, ' +
+                         ' skipping.')
             return label_mask
 
         # Get the interpolated ground points of the tile
