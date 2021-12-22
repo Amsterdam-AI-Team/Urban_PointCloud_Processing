@@ -4,7 +4,10 @@ import numpy as np
 import logging
 
 from ..abstract_processor import AbstractProcessor
+from ..region_growing import LabelConnectedComp
 from ..labels import Labels
+from ..utils import clip_utils
+from ..utils import math_utils
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +34,8 @@ class AHNFuser(AbstractProcessor):
 
     TARGETS = ('ground', 'building')
 
-    def __init__(self, label, ahn_reader, target='ground', epsilon=0.2):
+    def __init__(self, label, ahn_reader, target='ground', epsilon=0.2,
+                 refine_ground=True, params={}):
         super().__init__(label)
         if target not in self.TARGETS:
             logger.error(f'Target should be one of {self.TARGETS}.')
@@ -45,6 +49,67 @@ class AHNFuser(AbstractProcessor):
         self.method = ahn_reader.NAME
         self.target = target
         self.epsilon = epsilon
+        self.refine_ground = refine_ground
+        self.params = self._set_defaults(params)
+
+    def _set_defaults(self, params):
+        """Set defaults for parameters if not provided."""
+        if 'bottom' not in params:
+            params['bottom'] = 0.02
+        if 'top' not in params:
+            params['top'] = 0.5
+        if 'grid_size' not in params:
+            params['grid_size'] = 0.4
+        if 'min_comp_size' not in params:
+            params['min_comp_size'] = 50
+        if 'buffer' not in params:
+            params['buffer'] = 0.05
+        return params
+
+    def _refine_layer(self, points, points_z,
+                      labels, ground_mask, target_label):
+        """Process a layer of the region grower."""
+
+        mask = np.zeros((len(points),), dtype=bool)
+        label_ids = np.where(labels == target_label)[0]
+        ground_ids = np.where(ground_mask)[0]
+
+        lcc = LabelConnectedComp(
+                    target_label, grid_size=self.params['grid_size'],
+                    min_component_size=self.params['min_comp_size'])
+        point_components = lcc.get_components(points[label_ids])
+
+        cc_labels = np.unique(point_components)
+        cc_labels = set(cc_labels).difference((-1,))
+
+        for cc in cc_labels:
+            # select points that belong to the cluster
+            cc_mask = (point_components == cc)
+            # Compute convex hull and add a small buffer
+            poly = (math_utils
+                    .convex_hull_poly(points[label_ids[cc_mask], 0:2])
+                    .buffer(self.params['buffer']))
+            # Select ground points within poly
+            poly_mask = clip_utils.poly_clip(points[ground_mask], poly)
+            mask[ground_ids[poly_mask]] = True
+        return mask
+
+    def _refine_ground(self, points, points_z, ground_mask,
+                       labels, target_label):
+        logger.info('Refining ground surface...')
+
+        mask = ((points[:, 2] <= points_z + self.params['top'])
+                & (points[:, 2] >= points_z - self.params['bottom']))
+
+        ref_mask = np.zeros((len(points),), dtype=bool)
+        if np.count_nonzero(labels[mask] == target_label) > 0:
+            add_mask = self._refine_layer(
+                                points[mask, :], points_z[mask], labels[mask],
+                                ground_mask[mask], target_label)
+            ref_mask[mask] = add_mask
+
+        logger.info(f'{np.count_nonzero(add_mask)} points removed.')
+        return ref_mask
 
     def get_label_mask(self, points, labels, mask, tilecode):
         """
@@ -78,8 +143,16 @@ class AHNFuser(AbstractProcessor):
 
         label_mask = np.zeros((len(points),), dtype=bool)
         if self.target == 'ground':
-            label_mask[mask] = (np.abs(points[mask, 2] - target_z)
-                                < self.epsilon)
+            ground_mask = (np.abs(points[mask, 2] - target_z) < self.epsilon)
+            if self.refine_ground:
+                logger.info(f'{np.count_nonzero(ground_mask)} points added.')
+                tmp_labels = labels[mask].copy()
+                tmp_labels[ground_mask] = self.label
+                ref_mask = self._refine_ground(
+                                    points[mask], target_z, ground_mask,
+                                    tmp_labels, Labels.UNLABELLED)
+                ground_mask = ground_mask & ~ref_mask
+            label_mask[mask] = ground_mask
         elif self.target == 'building':
             label_mask[mask] = points[mask, 2] < target_z + self.epsilon
 
