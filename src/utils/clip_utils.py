@@ -17,7 +17,7 @@ from ..utils import math_utils
 logger = logging.getLogger(__name__)
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def rectangle_clip(points, rect):
     """
     Clip all points within a rectangle.
@@ -38,7 +38,7 @@ def rectangle_clip(points, rect):
     return clip_mask
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def box_clip(points, rect, bottom=-np.inf, top=np.inf):
     """
     Clip all points within a 3D box.
@@ -63,7 +63,7 @@ def box_clip(points, rect, bottom=-np.inf, top=np.inf):
     return box_mask
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def circle_clip(points, center, radius):
     """
     Clip all points within a circle (or unbounded cylinder).
@@ -87,7 +87,7 @@ def circle_clip(points, center, radius):
     return clip_mask
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def cylinder_clip(points, center, radius, bottom=-np.inf, top=np.inf):
     """
     Clip all points within a cylinder.
@@ -114,7 +114,7 @@ def cylinder_clip(points, center, radius, bottom=-np.inf, top=np.inf):
     return clip_mask
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def _point_inside_poly(polygon, point):
     """
     Improved version of the Crossing Number algorithm that checks if a point is
@@ -162,7 +162,7 @@ def _point_inside_poly(polygon, point):
     return intersections & 1
 
 
-@jit(nopython=True, parallel=True)
+@jit(nopython=True, cache=True, parallel=True)
 def is_inside(x, y, polygon):
     """
     Checks for each point in a list whether that point is inside a polygon.

@@ -1,9 +1,10 @@
 import numpy as np
 from numba import jit
 from scipy.spatial import ConvexHull
+from shapely.geometry import Polygon
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True, parallel=True)
 def vector_angle(u, v=np.array([0., 0., 1.])):
     """
     Returns the angle in degrees between vectors 'u' and 'v'. If only 'u' is
@@ -15,7 +16,7 @@ def vector_angle(u, v=np.array([0., 0., 1.])):
     return np.rad2deg(np.arccos(clip))
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True, parallel=True)
 def get_octree_level(points, grid_size):
     """Compute nearest octree level based on a desired grid_size."""
     dims = np.zeros((points.shape[1],))
@@ -30,7 +31,7 @@ def get_octree_level(points, grid_size):
     return 1
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True, parallel=True)
 def compute_bounding_box(points):
     """
     Get the min/max values of a point list.
@@ -52,6 +53,12 @@ def compute_bounding_box(points):
     y_max = np.max(points[:, 1])
 
     return (x_min, y_min, x_max, y_max)
+
+
+def convex_hull_poly(points):
+    """Return convex hull as a shapely Polygon."""
+    hull = points[ConvexHull(points).vertices]
+    return Polygon(np.vstack((hull, hull[0])))
 
 
 def minimum_bounding_rectangle(points):
