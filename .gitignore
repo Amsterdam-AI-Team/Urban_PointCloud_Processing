@@ -3,9 +3,13 @@
 *.las
 *.LAZ
 *.csv
+*.txt
 *.gml
 *.npz
 *.TIF
+*.tif
+*.qgz
+*.html
 *.png
 
 # Byte-compiled / optimized / DLL files
