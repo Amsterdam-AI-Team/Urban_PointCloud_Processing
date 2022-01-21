@@ -9,7 +9,7 @@ from tqdm.contrib.concurrent import process_map  # or thread_map
 
 # Helper script to allow importing from parent folder.
 import set_path  # noqa: F401
-from src.preprocessing.ahn_preprocessing import process_ahn_las_tile
+from upcp.preprocessing.ahn_preprocessing import process_ahn_las_tile
 
 
 def _process_file(file):

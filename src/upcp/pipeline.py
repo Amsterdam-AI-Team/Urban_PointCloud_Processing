@@ -131,7 +131,7 @@ class Pipeline:
 
         duration = time.time() - start
         stats = analysis_tools.get_label_stats(labels)
-        logger.info('STATISTICS\n' + stats)
+        logger.info('\nSTATISTICS\n' + stats)
         logger.info(f'File processed in {duration:.2f}s, ' +
                     f'output written to {out_file}.\n' + '='*20)
 
@@ -170,7 +170,7 @@ class Pipeline:
         if suffix is None:
             suffix = ''
 
-        logger.info('===== PIPELINE =====' +
+        logger.info('\n===== PIPELINE =====\n' +
                     f'Processing folder {in_folder}, ' +
                     f'writing results in {out_folder}.')
 

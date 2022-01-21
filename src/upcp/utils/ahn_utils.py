@@ -43,12 +43,13 @@ class AHNReader(ABC):
         pass
 
     def set_caching(self, state):
-        self.caching = state
-        if not self.caching:
-            self._clear_cache()
-            logger.debug('Caching disabled.')
-        else:
-            logger.debug('Caching enabled.')
+        if not hasattr(self, 'caching') or (self.caching is not state):
+            self.caching = state
+            if not self.caching:
+                self._clear_cache()
+                logger.debug('Caching disabled.')
+            else:
+                logger.debug('Caching enabled.')
 
     def _clear_cache(self):
         self.cache = {'tilecode': ''}
