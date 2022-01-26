@@ -33,6 +33,7 @@ bgt_colors = {'boom': 'green',
               'afvalbak': 'pink'}
 cloud_colors = {'Unlabelled': 'lightgrey',
                 'Ground': 'peru',
+                'Road': 'sandybrown',
                 'Building': 'lightblue',
                 'Tree': 'green',
                 'Street light': 'orange',
