@@ -61,7 +61,7 @@ For a quick dive into this repository take a look at our [complete solution note
     ```bash
     pip install -r requirements.txt
     ```
-    Additionally, install `cccorelib` and `pycc` by following the [instructions on their GitHub page](https://github.com/tmontaigu/CloudCompare-PythonPlugin/blob/master/docs/building.rst#building-as-indenpendent-wheels).
+    Additionally, install `cccorelib` and `pycc` by following the [instructions on their GitHub page](https://github.com/tmontaigu/CloudCompare-PythonPlugin/blob/master/docs/building.rst#building-as-indenpendent-wheels). Please note, these two packages are not available on the Python Package Index (PyPi). 
 
 3. Check out the [notebooks](notebooks) for a demonstration.
 
