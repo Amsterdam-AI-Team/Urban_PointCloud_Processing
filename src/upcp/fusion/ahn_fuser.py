@@ -108,7 +108,7 @@ class AHNFuser(AbstractProcessor):
                                 ground_mask[mask], target_label)
             ref_mask[mask] = add_mask
 
-        logger.info(f'{np.count_nonzero(add_mask)} points removed.')
+        logger.info(f'{np.count_nonzero(ref_mask)} points removed.')
         return ref_mask
 
     def get_label_mask(self, points, labels, mask, tilecode):
@@ -144,7 +144,7 @@ class AHNFuser(AbstractProcessor):
         label_mask = np.zeros((len(points),), dtype=bool)
         if self.target == 'ground':
             ground_mask = (np.abs(points[mask, 2] - target_z) < self.epsilon)
-            if self.refine_ground:
+            if self.refine_ground and (np.count_nonzero(ground_mask) > 0):
                 logger.info(f'{np.count_nonzero(ground_mask)} points added.')
                 tmp_labels = labels[mask].copy()
                 tmp_labels[ground_mask] = self.label
