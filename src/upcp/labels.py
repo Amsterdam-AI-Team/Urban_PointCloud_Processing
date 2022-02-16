@@ -4,7 +4,6 @@ class Labels:
     """
     Convenience class for label codes.
     """
-    TEST = 'tadaa'
     UNLABELLED = 0
     GROUND = 1
     BUILDING = 2
