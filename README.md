@@ -64,12 +64,16 @@ python -m pip install -r requirements.txt
 # Optionally install JupyterLab to use the notebooks
 python -m pip install jupyterlab ipympl ipywidgets
 ```
-Additionally, install `cccorelib` and `pycc` by following the [instructions on their GitHub page](https://github.com/tmontaigu/CloudCompare-PythonPlugin/blob/master/docs/building.rst#building-as-indenpendent-wheels). Please note, these two packages are not available on the Python Package Index (PyPi).
+Additionally, install `cccorelib` and `pycc` by following the [instructions on their GitHub page](https://github.com/tmontaigu/CloudCompare-PythonPlugin/blob/master/docs/building.rst#building-as-independent-wheels). Please note, these two packages are not available on the Python Package Index (PyPi).
 
 Alternatively, the code can be installed as a Python package from source:
 
 ```bash
-# Latest version from Github
+# Install the latest release as Wheel
+python -m pip install
+https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing/archive/refs/tags/upcp-0.1-py3-none-any.whl
+
+# Alternatively, install the latest version from source
 python -m pip install git+https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing.git#egg=upcp
 
 # Or, after making changes in the code
