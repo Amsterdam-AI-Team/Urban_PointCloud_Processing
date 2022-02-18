@@ -53,37 +53,38 @@ For a quick dive into this repository take a look at our [complete solution note
 
 This code has been tested with `Python 3.8` on `Linux` and `MacOS`, and should likely work under Windows as well.
 
-To use this code in development mode simply clone the repository and install the dependencies.
+1.  To use this code in development mode simply clone the repository and install the dependencies.
 
-```bash
-# Clone the repository
-git clone https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing.git
+    ```bash
+    # Clone the repository
+    git clone https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing.git
 
-# Install dependencies
-cd Urban_PointCloud_Processing
-python -m pip install -r requirements.txt
+    # Install dependencies
+    cd Urban_PointCloud_Processing
+    python -m pip install -r requirements.txt
 
-# Optionally install JupyterLab to use the notebooks
-python -m pip install jupyterlab ipympl ipywidgets
-```
-Additionally, install `cccorelib` and `pycc` by following the [instructions on their GitHub page](https://github.com/tmontaigu/CloudCompare-PythonPlugin/blob/master/docs/building.rst#building-as-independent-wheels). Please note, these two packages are not available on the Python Package Index (PyPi).
+    # Optionally install JupyterLab to use the notebooks
+    python -m pip install jupyterlab ipympl ipywidgets
+    ```
 
-Alternatively, the code can be installed as a Python package from source:
+2.  Alternatively, the code can be installed as a Python package from source:
 
-```bash
-# Install the latest release as Wheel
-python -m pip install
-https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing/archive/refs/tags/upcp-0.1-py3-none-any.whl
+    ```bash
+    # Install the latest release as Wheel
+    python -m pip install
+    https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing/archive/refs/tags/upcp-0.1-py3-none-any.whl
 
-# Alternatively, install the latest version from source
-python -m pip install git+https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing.git#egg=upcp
+    # Alternatively, install the latest version from source
+    python -m pip install git+https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing.git#egg=upcp
 
-# Or, after making changes in the code
-cd Urban_PointCloud_Processing
-python -m pip install .
-```
+    # Or, after making changes in the code
+    cd Urban_PointCloud_Processing
+    python -m pip install .
+    ```
 
-If you use the latter and want your code changes to take effect without re-installing the package, use the `--editable` flag for pip.
+    If you use the latter and want your code changes to take effect without re-installing the package, use the `--editable` flag for pip.
+
+**Additionally**, install `cccorelib` and `pycc` by following the [instructions on their GitHub page](https://github.com/tmontaigu/CloudCompare-PythonPlugin/blob/master/docs/building.rst#building-as-independent-wheels). Please note, these two packages are not available on the Python Package Index (PyPi).
 
 ---
 
