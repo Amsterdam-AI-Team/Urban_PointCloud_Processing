@@ -72,7 +72,7 @@ This code has been tested with `Python 3.8` on `Linux` and `MacOS`, and should l
     ```bash
     # Install the latest release as Wheel
     python -m pip install
-    https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing/archive/refs/tags/upcp-0.1-py3-none-any.whl
+    https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing/releases/download/v0.1/upcp-0.1-py3-none-any.whl
 
     # Alternatively, install the latest version from source
     python -m pip install git+https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing.git#egg=upcp
