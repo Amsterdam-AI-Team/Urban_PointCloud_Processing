@@ -39,31 +39,45 @@ For a quick dive into this repository take a look at our [complete solution note
    * [`examples`](./media/examples)
  * [`notebooks`](./notebooks) _Jupyter notebook tutorials_
  * [`scripts`](./scripts) _Python scripts_
- * [`src`](./src) _Python source code_
-   * [`fusion`](./src/fusion) _Data fusion code_
-   * [`preprocessing`](./src/preprocessing) _Pre-processing code_
-   * [`region_growing`](./src/region_growing) _Region growing code_
-   * [`scrapers`](./src/scrapers) _Data scrapers_
-   * [`utils`](./src/utils) _Utility functions_
-
-
+ * [`src/upcp`](./src/upcp) _Python source code_
+   * [`analysis`](./src/upcp/analysis) _Dataset analysis code_
+   * [`fusion`](./src/upcp/fusion) _Data fusion code_
+   * [`preprocessing`](./src/upcp/preprocessing) _Pre-processing code_
+   * [`region_growing`](./src/upcp/region_growing) _Region growing code_
+   * [`scrapers`](./src/upcp/scrapers) _Data scrapers_
+   * [`utils`](./src/upcp/utils) _Utility functions_
 
 ---
 
 ## Installation
 
-1. Clone this repository:
-    ```bash
-    git clone https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing.git
-    ```
+To use this code in development mode simply clone the repository and install the dependencies.
 
-2. Install all dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
-    Additionally, install `cccorelib` and `pycc` by following the [instructions on their GitHub page](https://github.com/tmontaigu/CloudCompare-PythonPlugin/blob/master/docs/building.rst#building-as-indenpendent-wheels). Please note, these two packages are not available on the Python Package Index (PyPi). 
+```bash
+# Clone the repository
+git clone https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing.git
 
-3. Check out the [notebooks](notebooks) for a demonstration.
+# Install dependencies
+cd Urban_PointCloud_Processing
+python -m pip install -r requirements.txt
+
+# Optionally install JupyterLab to use the notebooks
+python -m pip install jupyterlab ipympl ipywidgets
+```
+Additionally, install `cccorelib` and `pycc` by following the [instructions on their GitHub page](https://github.com/tmontaigu/CloudCompare-PythonPlugin/blob/master/docs/building.rst#building-as-indenpendent-wheels). Please note, these two packages are not available on the Python Package Index (PyPi).
+
+Alternatively, the code can be installed as a Python package from source:
+
+```bash
+# Latest version from Github
+python -m pip install git+https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing.git#egg=upcp
+
+# Or, after making changes in the code
+cd Urban_PointCloud_Processing
+python -m pip install .
+```
+
+If you use the latter and want your code changes to take effect without re-installing the package, use the `--editable` flag for pip.
 
 ---
 
@@ -87,7 +101,6 @@ If you use (parts of) this repositiory in your work, please cite [our paper](htt
   year={2021}
 }
 ```
-
 
 ---
 
