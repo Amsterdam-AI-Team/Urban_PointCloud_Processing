@@ -51,6 +51,8 @@ For a quick dive into this repository take a look at our [complete solution note
 
 ## Installation
 
+This code has been tested with `Python 3.8` on `Linux` and `MacOS`, and should likely work under Windows as well.
+
 To use this code in development mode simply clone the repository and install the dependencies.
 
 ```bash
