@@ -16,7 +16,7 @@ import laspy
 import re
 from tqdm import tqdm
 
-from ..utils.las_utils import get_bbox_from_tile_code
+from ..utils import las_utils
 from ..utils.interpolation import SpatialInterpolator
 
 # AHN classification codes (see https://www.ahn.nl/4-classificatie)
@@ -53,13 +53,10 @@ def clip_ahn_las_tile(ahn_cloud, las_file, out_folder='', buffer=1):
     """
     if type(las_file) == str:
         las_file = pathlib.Path(las_file)
-    tile_code = re.match(r'.*(\d{4}_\d{4}).*', las_file.name)[1]
+    tile_code = las_utils.get_tilecode_from_filename(las_file.name)
 
-    ((x_min, y_max), (x_max, y_min)) = get_bbox_from_tile_code(tile_code)
-    x_min -= buffer
-    x_max += buffer
-    y_min -= buffer
-    y_max += buffer
+    ((x_min, y_max), (x_max, y_min)) = las_utils.get_bbox_from_tile_code(
+                                                    tile_code, padding=buffer)
 
     clip_idx = np.where((x_min <= ahn_cloud.x) & (ahn_cloud.x <= x_max)
                         & (y_min <= ahn_cloud.y) & (ahn_cloud.y <= y_max))[0]
@@ -210,9 +207,13 @@ def process_ahn_las_tile(ahn_las_file, out_folder='', resolution=0.1):
     """
     if type(ahn_las_file) == pathlib.PosixPath:
         ahn_las_file = ahn_las_file.as_posix()
-    tile_code = re.match(r'.*(\d{4}_\d{4}).*', ahn_las_file)[1]
+    tile_code = las_utils.get_tilecode_from_filename(ahn_las_file)
 
-    ((x_min, y_max), (x_max, y_min)) = get_bbox_from_tile_code(tile_code)
+    if out_folder != '':
+        pathlib.Path(out_folder).mkdir(parents=True, exist_ok=True)
+
+    ((x_min, y_max), (x_max, y_min)) = las_utils.get_bbox_from_tile_code(
+                                                                    tile_code)
 
     ahn_las = laspy.read(ahn_las_file)
 
