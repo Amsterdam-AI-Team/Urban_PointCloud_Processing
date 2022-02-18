@@ -1,3 +1,5 @@
+# Urban_PointCloud_Processing by Amsterdam Intelligence, GPL-3.0 license
+
 # Adapted from https://photutils.readthedocs.io/en/stable/_modules/photutils/
 #              utils/interpolation.html#ShepardIDWInterpolator
 #

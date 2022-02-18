@@ -1,3 +1,5 @@
+# Urban_PointCloud_Processing by Amsterdam Intelligence, GPL-3.0 license
+
 """
 This script scrapes building footprint data from the Amsterdam BGT API.
 The documentation can be found at:

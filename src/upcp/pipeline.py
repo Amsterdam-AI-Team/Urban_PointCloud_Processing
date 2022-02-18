@@ -1,3 +1,5 @@
+# Urban_PointCloud_Processing by Amsterdam Intelligence, GPL-3.0 license
+
 """Data Fusion Pipeline"""
 
 import numpy as np

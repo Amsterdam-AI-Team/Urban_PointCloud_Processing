@@ -1,3 +1,5 @@
+# Urban_PointCloud_Processing by Amsterdam Intelligence, GPL-3.0 license
+
 """This module provides utility methods for BGT data."""
 
 import ast

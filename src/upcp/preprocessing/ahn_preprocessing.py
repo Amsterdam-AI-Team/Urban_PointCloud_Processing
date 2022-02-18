@@ -1,3 +1,5 @@
+# Urban_PointCloud_Processing by Amsterdam Intelligence, GPL-3.0 license
+
 """
 This module provides methods to pre-process AHN data. In particular, starting
 from an AHN point cloud, there are methods to clip specific tiles from this

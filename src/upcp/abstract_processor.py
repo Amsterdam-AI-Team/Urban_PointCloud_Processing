@@ -1,3 +1,5 @@
+# Urban_PointCloud_Processing by Amsterdam Intelligence, GPL-3.0 license
+
 """Abstract base class for PipeLine processor objects."""
 
 from abc import ABC, abstractmethod

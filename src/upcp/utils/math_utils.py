@@ -1,3 +1,5 @@
+# Urban_PointCloud_Processing by Amsterdam Intelligence, GPL-3.0 license
+
 import numpy as np
 from numba import jit
 from scipy.spatial import ConvexHull

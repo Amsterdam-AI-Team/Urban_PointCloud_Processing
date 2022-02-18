@@ -1,3 +1,5 @@
+# Urban_PointCloud_Processing by Amsterdam Intelligence, GPL-3.0 license
+
 """
 This script scrapes street sign data from the National Road Traffic Data Portal
 (NDW) to enrich the data from Amsterdam BGT API.
