@@ -6,13 +6,14 @@ import sys
 import glob
 from pathlib import Path
 from tqdm.contrib.concurrent import process_map  # or thread_map
+from functools import partial
 
 # Helper script to allow importing from parent folder.
 import set_path  # noqa: F401
 from upcp.preprocessing.ahn_preprocessing import process_ahn_las_tile
 
 
-def _process_file(file):
+def _process_file(args, file):
     process_ahn_las_tile(file, out_folder=args.out_folder,
                          resolution=args.resolution)
 
@@ -63,5 +64,5 @@ if __name__ == '__main__':
         chunk = 10
 
     # Distribute the batch over _max_workers_ cores.
-    r = process_map(_process_file, files, max_workers=args.workers,
-                    chunksize=chunk)
+    r = process_map(partial(_process_file, args), files,
+                    max_workers=args.workers, chunksize=chunk)
