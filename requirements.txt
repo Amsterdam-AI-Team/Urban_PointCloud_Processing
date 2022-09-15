@@ -1,3 +1,6 @@
+ipympl
+ipywidgets
+jupyterlab
 folium>=0.12
 matplotlib>=3.4
 numba>=0.54

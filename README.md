@@ -51,7 +51,7 @@ For a quick dive into this repository take a look at our [complete solution note
 
 ## Installation
 
-This code has been tested with `Python 3.8` on `Linux` and `MacOS`, and should likely work under Windows as well.
+This code has been tested with `Python >= 3.8` on `Linux` and `MacOS`, and should likely work under Windows as well.
 
 1.  To use this code in development mode simply clone the repository and install the dependencies.
 
@@ -62,9 +62,11 @@ This code has been tested with `Python 3.8` on `Linux` and `MacOS`, and should l
     # Install dependencies
     cd Urban_PointCloud_Processing
     python -m pip install -r requirements.txt
+    ```
 
-    # Optionally install JupyterLab to use the notebooks
-    python -m pip install jupyterlab ipympl ipywidgets
+    or, with Conda:
+    ```bash
+    conda env create -f environment.yml
     ```
 
 2.  Alternatively, the code can be installed as a Python package from source:
