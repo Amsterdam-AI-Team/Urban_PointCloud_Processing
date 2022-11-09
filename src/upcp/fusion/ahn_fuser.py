@@ -130,8 +130,7 @@ class AHNFuser(AbstractProcessor):
 
         Returns
         -------
-        An array of shape (n_points,) with dtype=bool indicating which points
-        should be labelled according to this fuser.
+        An array of shape (n_points,) with the updated labels.
         """
         logger.info(f'AHN [{self.method}/{self.target}] fuser ' +
                     f'(label={self.label}, {Labels.get_str(self.label)}).')
@@ -158,4 +157,5 @@ class AHNFuser(AbstractProcessor):
         elif self.target == 'building':
             label_mask[mask] = points[mask, 2] < target_z + self.epsilon
 
-        return label_mask
+        labels[label_mask] = self.label
+        return labels

@@ -87,12 +87,12 @@ class Pipeline:
 
         for obj in self.processors:
             start = time.time()
-            label_mask = obj.get_label_mask(points, labels, mask, tilecode)
-            labels[label_mask] = obj.get_label()
-            mask[label_mask] = False
+            mask = (labels > 0)
+            labels = obj.get_label_mask(points, labels, mask, tilecode)
             duration = time.time() - start
+            diff = sum(labels > 0) - sum(mask)
             logger.info(f'Processor finished in {duration:.2f}s, ' +
-                        f'{np.count_nonzero(label_mask)} points labelled.')
+                        f'{diff} points labelled.')
 
         return labels
 

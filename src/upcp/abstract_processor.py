@@ -38,8 +38,7 @@ class AbstractProcessor(ABC):
 
         Returns
         -------
-        An array of shape (n_points,) with dtype=bool indicating which points
-        should be labelled according to this fuser.
+        An array of shape (n_points,) with the updated labels.
         """
         pass
 
