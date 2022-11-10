@@ -150,6 +150,9 @@ class BGTPoleFuser(AbstractProcessor):
             else:
                 # Get the ground elevation.
                 ground_z = fast_z(np.array([obj]))
+                if np.isnan(ground_z):
+                    # TODO: we could get a better estimate here.
+                    ground_z = 0.
 
             # Define the "box" within which to search for candidates.
             search_box = (obj[0]-search_pad, obj[1]-search_pad,
@@ -205,7 +208,7 @@ class BGTPoleFuser(AbstractProcessor):
             if min(dist) <= max_dist:
                 # Find a matching cluster.
                 clusters = self._find_point_cluster(
-                    points, c_prime, seed_height, max_r=max_r)
+                    points, c_prime, ground_z + seed_height, max_r=max_r)
                 if len(clusters) > 0:
                     # We simply take the first one (usually there is only one).
                     # TODO we could return a 'correspondence' so it's clear
