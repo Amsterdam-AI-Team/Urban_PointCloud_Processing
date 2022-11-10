@@ -113,9 +113,9 @@ class AHNFuser(AbstractProcessor):
         logger.info(f'{np.count_nonzero(ref_mask)} points removed.')
         return ref_mask
 
-    def get_label_mask(self, points, labels, mask, tilecode):
+    def get_labels(self, points, labels, mask, tilecode):
         """
-        Returns the label mask for the given pointcloud.
+        Returns the labels for the given pointcloud.
 
         Parameters
         ----------

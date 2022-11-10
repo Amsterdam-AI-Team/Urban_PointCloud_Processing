@@ -43,9 +43,9 @@ class BGTBuildingFuser(AbstractProcessor):
         self.ahn_reader = ahn_reader
         self.ahn_eps = ahn_eps
 
-    def get_label_mask(self, points, labels, mask, tilecode):
+    def get_labels(self, points, labels, mask, tilecode):
         """
-        Returns the label mask for the given pointcloud.
+        Returns the labels for the given pointcloud.
 
         Parameters
         ----------

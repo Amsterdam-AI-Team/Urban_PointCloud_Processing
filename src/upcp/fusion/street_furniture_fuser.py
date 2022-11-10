@@ -87,9 +87,9 @@ class BGTStreetFurnitureFuser(AbstractProcessor):
         logger.debug(f'{object_count} {self.bgt_type} objects labelled.')
         return street_furniture_mask
 
-    def get_label_mask(self, points, labels, mask, tilecode):
+    def get_labels(self, points, labels, mask, tilecode):
         """
-        Returns the label mask for the given pointcloud.
+        Returns the labels for the given pointcloud.
 
         Parameters
         ----------

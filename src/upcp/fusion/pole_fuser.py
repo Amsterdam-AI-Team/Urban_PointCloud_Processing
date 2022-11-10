@@ -224,9 +224,9 @@ class BGTPoleFuser(AbstractProcessor):
                 matches[obj] = None
         return seeds, matches
 
-    def get_label_mask(self, points, labels, mask, tilecode):
+    def get_labels(self, points, labels, mask, tilecode):
         """
-        Returns the label mask for the given pointcloud.
+        Returns the labels for the given pointcloud.
 
         Parameters
         ----------
