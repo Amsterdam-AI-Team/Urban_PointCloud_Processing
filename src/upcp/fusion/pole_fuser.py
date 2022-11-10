@@ -238,8 +238,7 @@ class BGTPoleFuser(AbstractProcessor):
 
         Returns
         -------
-        An array of shape (n_points,) with dtype=bool indicating which points
-        should be labelled according to this fuser.
+        An array of shape (n_points,) with the updated labels.
         """
         logger.info(f'BGT [{self.bgt_type}] point fuser ' +
                     f'(label={self.label}, {Labels.get_str(self.label)}).')
@@ -276,4 +275,6 @@ class BGTPoleFuser(AbstractProcessor):
         logger.debug(f'{len(seeds)}/{len(bgt_points)} objects labelled.')
         logger.debug(f'Matches for [{self.bgt_type}]: {match_str}')
 
-        return label_mask
+        labels[label_mask] = self.label
+
+        return labels

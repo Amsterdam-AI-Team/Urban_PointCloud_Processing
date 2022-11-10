@@ -103,8 +103,7 @@ class CarFuser(AbstractProcessor):
 
         Returns
         -------
-        An array of shape (n_points,) with dtype=bool indicating which points
-        should be labelled according to this fuser.
+        An array of shape (n_points,) with the updated labels.
         """
         logger.info('Car fuser ' +
                     f'(label={self.label}, {Labels.get_str(self.label)}).')
@@ -131,5 +130,6 @@ class CarFuser(AbstractProcessor):
                                                    road_polygons,
                                                    **self.params)
         label_mask[mask] = car_mask
+        labels[label_mask] = self.label
 
-        return label_mask
+        return labels
