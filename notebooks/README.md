@@ -10,11 +10,13 @@ These jupyter notebooks serve as a tutorial and demonstration of the tools in th
 
 [2. Ground and Buildings](2.%20Ground%20and%20Buildings.ipynb) -- labelling ground and buildings using data fusion with AHN and BGT data.
 
-[3. Cars](3.%20Cars.ipynb) -- label objects as cars based on dimensions of a cluster and BGT data.
+[3. Suspended cables and streetlights](3.%20Cables.ipynb) -- labelling suspended objects such as utility cables, tram cables, and streetlights.
 
-[4. Pole-like objects](4.%20Pole-like%20objects.ipynb) -- labelling objects such as trees, street lights, and traffic signs using BGT data.
+[4. Cars](4.%20Cars.ipynb) -- label objects as cars based on dimensions of a cluster and BGT data.
 
-[5. Street furniture](5.%20Street%20furniture.ipynb) -- labelling street furniture objects such as rubbish bins and city benches using clustering techniques and BGT data.
+[5. Pole-like objects](5.%20Pole-like%20objects.ipynb) -- labelling objects such as trees, street lights, and traffic signs using BGT data.
+
+[6. Street furniture](6.%20Street%20furniture.ipynb) -- labelling street furniture objects such as rubbish bins and city benches using clustering techniques and BGT data.
 
 [Region growing](Region%20growing.ipynb) -- two region growing implementations for the refinement of labeled objects.
 

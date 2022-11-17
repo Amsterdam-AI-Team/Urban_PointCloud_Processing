@@ -1,22 +1,23 @@
-# Urban_PointCloud_Processing by Amsterdam Intelligence, GPL-3.0 license
-
 """Cable Fuser"""
 
-import numpy as np
 import logging
 import warnings
+import numpy as np
 
-from ..utils import clip_utils
 from ..labels import Labels
 from ..abstract_processor import AbstractProcessor
 from ..utils.interpolation import FastGridInterpolator
 from ..utils.ahn_utils import fill_gaps_intuitive
 from ..utils.clip_utils import poly_clip, poly_box_clip
 from ..utils.las_utils import get_bbox_from_tile_code
+from ..utils.math_utils import compute_bounding_box, minimum_bounding_rectangle
 
 import open3d as o3d
+import pandas as pd
+from pyntcloud import PyntCloud
 from shapely.geometry import Polygon, LineString
 from shapely.ops import unary_union
+from scipy import ndimage
 from scipy.spatial import KDTree
 from sklearn.cluster import DBSCAN
 from scipy.spatial.distance import cdist
@@ -49,13 +50,17 @@ class CableFuser(AbstractProcessor):
         Precision for the AHN elevation cut-off for buildings.
     """
 
-    def __init__(self, label, cable_label, streetlight_label, ahn_reader,
-                 bag_reader, bgt_tram_reader, min_cable_height=4.5, max_cable_height=12,
-                 building_offset=1.25, voxel_size=, neigh_radius=, 
-                 linearity_thres=, max_v_angle=, max_merge_angle=,
-                 min_segment_length=,max_tramcable_height=,):
+    def __init__(self, label, cable_label, tramcable_label, streetlight_label, 
+                 ahn_reader, bag_reader, bgt_tram_reader, min_cable_height=4.5,
+                 max_cable_height=12, building_offset=1.25, voxel_size=.09,
+                 neigh_radius=.5, linearity_thres=.9, max_v_angle=20, 
+                 grow_radius=.3, max_merge_angle=3, min_segment_length=3,
+                 cable_size=0.1, max_tramcable_height=7.5, min_cable_bending=2, 
+                 armatuur_params={'width': (.2, 1), 'height': (.15, 1.),
+                 'axis_offset': 0.2}, cable_sag_span=2):
         super().__init__(label)
         self.cable_label = cable_label
+        self.tramcable_label = tramcable_label
         self.streetlight_label = streetlight_label
         self.ahn_reader = ahn_reader
         self.bag_reader = bag_reader
@@ -67,10 +72,14 @@ class CableFuser(AbstractProcessor):
         self.neigh_radius = neigh_radius
         self.linearity_thres = linearity_thres
         self.max_v_angle = max_v_angle
+        self.grow_radius = grow_radius
         self.max_merge_angle = max_merge_angle
         self.min_segment_length = min_segment_length
         self.cable_size = cable_size
         self.max_tramcable_height = max_tramcable_height
+        self.min_cable_bending = min_cable_bending
+        self. armatuur_params = armatuur_params
+        self.cable_sag_span = cable_sag_span
 
     def _vertical_segmentation(self, points, tilecode):
         '''Removes low and high height points from mask'''
@@ -81,7 +90,7 @@ class CableFuser(AbstractProcessor):
         ground_z = fast_z(points)
 
         # Segmentate points above and below min and max cable height
-        vertical_seg_mask = (points[:, 2] > ground_z + self.min_cable_height) and \
+        vertical_seg_mask = (points[:, 2] > ground_z + self.min_cable_height) & \
                             (points[:, 2] < ground_z + self.max_cable_height)
                             
 
@@ -150,7 +159,7 @@ class CableFuser(AbstractProcessor):
     def _candidate_cable_points(self, points, voxel_size, radius, linearity_thres, max_angle):
         
         if voxel_size is not None:
-            _, voxel_centers, inv_voxel_idx = self._voxelize(points, voxel_size)
+            _, voxel_centers, inv_voxel_idx = voxelize(points, voxel_size)
             candidate_mask, principal_axis = self._neighborhood_analysis(voxel_centers, radius, linearity_thres, max_angle)
             
             # convert voxel features back to point features
@@ -263,7 +272,7 @@ class CableFuser(AbstractProcessor):
 
         return merge_bool, dir_dist, (O, A)
 
-    def _catenary_merge(self, points, cl_labels, a, b, pt_a, pt_b, cable_width=.15):
+    def _catenary_merge(self, points, cl_labels, a, b, pt_a, pt_b, cable_width=.1):
 
         unmasked_idx = np.where(cl_labels<1)[0]
         merge_line = LineString([pt_a, pt_b])
@@ -305,7 +314,7 @@ class CableFuser(AbstractProcessor):
 
         return fit_score, gap_score, inlier_idx
 
-    def _box_merge(self, points, cl_labels, pt_a, pt_b, cable_width=.15):
+    def _box_merge(self, points, cl_labels, pt_a, pt_b, cable_width=.1):
 
         unmasked_idx = np.where(cl_labels<1)[0]
 
@@ -395,11 +404,11 @@ class CableFuser(AbstractProcessor):
         cable_labels[candidate_mask] = clustering.labels_
 
         # 3. Growing
-        logger.info('Growing cables...')
+        logger.debug('Growing cables...')
         cable_labels, principal_axis = self._grow_cables(points, cable_labels, principal_axis, radius=self.grow_radius)
 
         # 4. Merging
-        logger.info('Merging cables...')
+        logger.debug('Merging cables...')
         cable_labels, ccl_dict = self._cable_merging(points, cable_labels, max_merge_angle=self.max_merge_angle)
         
         # 5. Remove short cables
@@ -451,6 +460,9 @@ class CableFuser(AbstractProcessor):
         return cable_axisline
 
     def _classify_tram_cables(self, points, cable_labels, tilecode):
+        '''
+        Returns a list of labels that are tram cables.
+        '''
 
         logger.debug('Classifying tram cables...')
         tram_cabel_labels = []
@@ -467,7 +479,8 @@ class CableFuser(AbstractProcessor):
             ground_z = self.ahn_reader.interpolate(
                         tilecode, points[cable_mask], cable_mask, 'ground_surface')
 
-            tramtracks_polygon = unary_union(tramtracks).buffer(2.8+self.track_buffer).buffer(-2.8)
+            track_buffer = 2
+            tramtracks_polygon = unary_union(tramtracks).buffer(2.8+track_buffer).buffer(-2.8)
 
             # Check each cable for intersection with tramtrack
             for cl in set(np.unique(cable_labels[cable_mask])).difference((-1,)):
@@ -489,7 +502,192 @@ class CableFuser(AbstractProcessor):
 
         return tram_cabel_labels
 
-    def get_label_mask(self, points, labels, mask, tilecode):
+    def _clip_cable_area(self, points, cable_yline, cable_zline, h_buffer=.5, w_buffer=.5):
+
+        cable_zpoly = cable_zline.buffer(h_buffer, cap_style=3)
+        height_mask = poly_clip(points[:,[0,2]], cable_zpoly)
+
+        # Direction clip
+        cable_axispoly = cable_yline.buffer(w_buffer, cap_style=3)
+        axis_mask = poly_clip(points[:,[0,1]], cable_axispoly)
+
+        # Clip
+        mask = height_mask & axis_mask
+
+        return mask
+
+    def _pc_cable_rotation(self, points, mask):
+        direction = main_direction(points[mask][:,:2])
+        cable_dir_axis = np.dot(points[:,:2], direction)
+
+        # rotation matrix
+        theta = np.arctan2(direction[1],direction[0])
+        c, s = np.cos(theta), np.sin(theta)
+        R = np.array(((c, -s, 0), (s, c, 0),(0,0,1)))
+
+        points_rotated = points.copy()
+        points_rotated[:,:2] -= cable_dir_axis[mask].min() * direction
+        points_rotated = points_rotated.dot(R)
+
+        return points_rotated
+
+    def _fit_linestring(self, points, bin_width=.75):
+        """
+        Returns linetring fits for both z and xy projections.
+
+        Parameters
+        ----------
+        points : array of shape (n_points, 2)
+            The point cloud <x, y, z>.
+        binwidth : float (default .75)
+            The bindwithd used to calculate the statistic over.
+
+        Returns
+        -------
+        cable_line : LineString
+            linestring fit on Y axis.
+        """
+
+        line_max = points[:,0].max()
+        
+        # LineString fit Z projection
+        bins = np.linspace(0 - (bin_width/2), line_max + (bin_width/2),
+                             int(round(line_max/bin_width)+2))
+        means, bin_edges, _ = binned_statistic(points[:,0], points[:, 1],
+                             statistic='mean', bins=bins)
+        x_coords = (bin_edges[:-1] + bin_edges[1:]) / 2
+        line_pts = np.vstack((x_coords, means)).T
+        line_pts = line_pts[~np.isnan(line_pts).any(axis=1)]
+        cable_line = LineString(line_pts)
+        
+        return cable_line
+
+    def _compute_saggign_angle(self, x, z, span, d, fill=np.inf):
+        d = int(span/d)
+        bendings = np.full(len(x), fill)
+        for i in range(len(x)):
+            if i - d >=0 and i + d < len(x):
+                O = np.array([0, z[i+1]])
+                v_a = np.array([-span, z[i-d]]) - O
+                v_b = np.array([span, z[i+d]]) - O
+                bendings[i] = 180 - angle_between(v_a, v_b)
+        return bendings
+
+    def _search_armaturen(self, points, cable_mask):
+
+        # parameters
+        slice_width = 3
+        armatuurs_mask = np.zeros(len(points), dtype=bool)
+
+        points_rotated = self._pc_cable_rotation(points, cable_mask)
+        cable_yline = self._fit_linestring(points_rotated[cable_mask][:,[0,1]])
+        cable_zline = self._fit_linestring(points_rotated[cable_mask][:,[0,2]])
+        
+        # 1. Clip Cable Area
+        clip_mask = self._clip_cable_area(points_rotated, cable_yline, cable_zline, 1, 1)
+        search_mask = clip_mask & ~cable_mask
+
+        logger.debug(f'\t{np.sum(search_mask)} points in neighbourhood of cable')
+
+        if np.sum(search_mask) < 10:
+            return armatuurs_mask
+
+        # 3. Voxelize
+        voxel_grid = voxelize(points_rotated[search_mask], 0.05)[0]
+        voxel_space = voxel_grid.get_feature_vector()
+
+        # 4. Gridify Cable LineStrings
+        min_x = voxel_grid.voxel_centers[0][0]
+        max_x = voxel_grid.voxel_centers[-1][0]
+        x_ = np.arange(min_x,max_x+2*voxel_grid.sizes[0],voxel_grid.sizes[0])
+        z_ = np.interp(x_,cable_zline.xy[0],cable_zline.xy[1])
+        y_ = np.interp(x_,cable_yline.xy[0],cable_yline.xy[1])
+        a_ = self._compute_saggign_angle(x_, z_, self.cable_sag_span, voxel_grid.sizes[0])
+
+        # 5. Loop through slices
+        attachment_voxel_space = np.zeros(voxel_space.shape).flatten()
+        for i in range(0, voxel_space.shape[0], slice_width):
+
+            # 5.1 Slice Density Analysis
+            row_slice = voxel_space[i:i+slice_width].sum(axis=0)>0
+
+            t = int((z_[i+1] - voxel_grid.voxel_centers[0][2]) / voxel_grid.sizes[0]) + 1
+            if np.sum(row_slice[:,:t]) > 5: # Check for points below cable
+
+                # 5.2 Morophology filter on cable slice
+                row_slice_closed = np.pad(row_slice, 2)
+                row_slice_closed = ndimage.binary_dilation(row_slice_closed, iterations=2)
+                row_slice_closed = ndimage.binary_erosion(row_slice_closed, iterations=2)
+                row_slice_closed = row_slice_closed[2:-2,2:-2]
+
+                # 5.3 Label Connected Components
+                lcc, n_lcc = ndimage.label(row_slice_closed)
+                for l in range(1,n_lcc+1):
+
+                    cl = np.vstack(np.where(lcc==l)).T
+                    if len(cl) > 5:
+
+                        # 5.4 Component Boundingbox Analysis
+                        (x_min, y_min, x_max, y_max) = compute_bounding_box(cl)
+                        y_center = int(np.round(y_min + (y_max-y_min)/2))
+                        x_center = int(np.round(x_min + (x_max-x_min)/2))
+                        box_width = (x_max-x_min)*voxel_grid.sizes[0]
+                        box_heigth = (y_max-y_min)*voxel_grid.sizes[0]
+                        cl_center = voxel_grid.voxel_centers[np.ravel_multi_index((min(voxel_space.shape[0]-1,i+1),
+                                                                x_center,y_center),voxel_space.shape)]
+                        target_center = np.array([y_[i+1],z_[i+1]-(box_heigth/2)])
+                        z_off = z_[i+1]-cl_center[2]
+                        axis_off = np.abs(target_center[0]-cl_center[1])
+
+                        if box_width >= self.armatuur_params['width'][0] and \
+                            box_width < self.armatuur_params['width'][1] and \
+                            box_heigth >= self.armatuur_params['height'][0] and \
+                            box_heigth < self.armatuur_params['height'][1]  and \
+                            axis_off < self.armatuur_params['axis_offset'] and \
+                            z_off > max(.1, box_heigth/2) and \
+                            a_[i+1] > self.min_cable_bending:
+
+                            cl_indices = np.repeat((lcc==l)[np.newaxis,:,:], 3, axis=0)
+                            
+                            cl_indices = np.pad(cl_indices, ((min(i,1),1),(0,0),(0,0)))
+                            cl_indices = ndimage.binary_dilation(cl_indices, iterations=1)
+                            index_start = np.ravel_multi_index((max(i-1,0),0,0), voxel_space.shape)
+                            cl_indices = index_start + np.where(cl_indices.flatten())[0]
+
+                            # add attachment to space
+                            attachment_voxel_space[cl_indices[cl_indices < len(attachment_voxel_space)]] = 1
+
+        # 6. Label Connected Components [Attachment Grid]
+        arm_lcc, arm_n_lcc = ndimage.label(attachment_voxel_space.reshape(voxel_space.shape))
+        logger.debug(f'\tFound {arm_n_lcc} blobs under cable.')
+        for arm_l in range(1,arm_n_lcc+1):
+            arm_idx = np.isin(voxel_grid.voxel_n, np.where((arm_lcc==arm_l).flatten())[0])
+            arm_mask = np.zeros(len(search_mask),dtype=bool)
+            arm_mask[np.where(search_mask)[0][arm_idx]] = True
+
+            # Bounding box analysis
+            mbr, _, min_dim, max_dim, center = minimum_bounding_rectangle(points[arm_mask,:2])
+            if min_dim > self.armatuur_params['width'][0] and max_dim < self.armatuur_params['width'][1]:
+                armatuurs_mask[arm_mask] = True
+
+        return armatuurs_mask
+
+    def _detect_streetlights(self, points, cable_labels):
+
+        streetlights_mask = np.zeros(len(points), dtype=bool)
+        for label in set(np.unique(cable_labels)).difference((-1,)):
+
+            # select points that belong to the cluster
+            cable_mask = (cable_labels == label)
+
+            if np.sum(cable_mask) > 100:
+                logger.debug(f'Looking for streetlights for cable {label} of {np.sum(cable_mask)} points.')
+                search_mask = self._search_armaturen(points, cable_mask)
+                streetlights_mask[search_mask] = True
+
+        return streetlights_mask
+
+    def get_labels(self, points, labels, mask, tilecode):
         """
         Returns the label mask for the given pointcloud.
 
@@ -524,32 +722,42 @@ class CableFuser(AbstractProcessor):
 
         # Detect cables
         cable_labels = self._detect_cables(points[label_mask])
-        # cable_labels.length == label_mask trues
+        num_cables = np.sum(np.unique(cable_labels)>-1)
+        logger.debug(f'Detected {num_cables} cables.')
 
-        # Classify tram cables
-        tram_cable_labels = self._classify_tram_cables(points[label_mask], cable_labels, tilecode)
+        if num_cables > 0:
 
-        # Assign labels
-        np.full(,CABLE)
-        tramcable_mask = np.isin(cable_labels, tram_cable_labels) = TRAMCABLE
-        nocable_mask = (cable_labels == -1) = NOISE
+            # Classify tram cables
+            tram_cable_labels = self._classify_tram_cables(points[label_mask], cable_labels, tilecode)
+            tramcable_mask = np.isin(cable_labels, tram_cable_labels)
+            cable_labels[tramcable_mask] = -1
 
+            # Assign labels
+            labels[np.where(label_mask)[0][cable_labels > -1]] = self.cable_label
+            labels[np.where(label_mask)[0][tramcable_mask]] = self.tramcable_label
 
-
-        new_mask_labels = np.copy(labels[mask])
-        new_mask_labels[np.where(label_mask] = 
-
-        logger.debug(f'{np.sum(labels[mask]!=new_mask_labels)} points labelled.')
-        labels[mask] = new_mask_labels
-
-
-        lanp.where(mask)[0][]
+            # Detect streetlights
+            num_cables = np.sum(np.unique(cable_labels)>-1)
+            if num_cables > 0:
+                streetlight_mask = self._detect_streetlights(points[label_mask], cable_labels)
+                labels[np.where(label_mask)[0][streetlight_mask]] = self.streetlight_label
 
         return labels
 
 def get_polygon_from_tile_code(tilecode, padding=0, width=50, height=50):
     bbox = get_bbox_from_tile_code(tilecode, padding, width, height)
     return Polygon([bbox[0],(bbox[0][0],bbox[1][1]), bbox[1],(bbox[1][0],bbox[0][1])])
+
+def voxelize(points, voxel_size):
+    """ Returns the voxelization of a Point Cloud."""
+
+    cloud = PyntCloud(pd.DataFrame(points, columns=['x','y','z']))
+    voxelgrid_id = cloud.add_structure("voxelgrid", size_x=voxel_size, size_y=voxel_size, size_z=voxel_size, regular_bounding_box=False)
+    voxel_grid = cloud.structures[voxelgrid_id]
+    voxel_centers = voxel_grid.voxel_centers[np.unique(voxel_grid.voxel_n)]
+    inv_voxel_idx = np.unique(voxel_grid.voxel_n, return_inverse=True)[1]
+
+    return voxel_grid, voxel_centers, inv_voxel_idx
 
 def to_open3d(points):
     pcd = o3d.geometry.PointCloud()
@@ -562,6 +770,12 @@ def catenary_func(x, a, b, c):
 def unit_vector(v1):
     """ Returns the unit vector of `v1`"""
     return v1 / np.linalg.norm(v1)
+
+def angle_between(v1, v2):
+    """ Returns the angle in degree between vectors 'v1' and 'v2'"""
+    v1_u = unit_vector(v1)
+    v2_u = unit_vector(v2)
+    return np.rad2deg(np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0)))
 
 def main_direction(points):
     """ Returns the eigenvector corresponding to the largest eigenvalue of `points`"""
