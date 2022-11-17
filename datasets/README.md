@@ -18,7 +18,7 @@ We supply two point cloud tiles for demonstration purposes, as well as the neces
   This contains manually generated data (<x,y> coordinates) of street furniture objects for demonstration purposes.
 * `bgt/bgt_tramtracks_demo.csv`  
   BGT tram track linestrings in the area.
-* `bag/bag_building_demo.csv`  
+* `bag/bag_buildings_demo.csv`  
   BAG building outline polygons for the two demo tiles.
 
 
