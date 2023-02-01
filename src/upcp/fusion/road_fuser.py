@@ -87,6 +87,7 @@ class BGTRoadFuser(AbstractProcessor):
             road_mask = road_mask | clip_mask
 
         logger.debug(f'{len(road_polygons)} road polygons labelled.')
+        logger.info(f'{np.count_nonzero(road_mask)} ground points relabelled.')
 
         label_mask[mask_ids[road_mask]] = True
         labels[label_mask] = self.label
