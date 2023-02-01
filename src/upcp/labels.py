@@ -4,38 +4,65 @@ class Labels:
     """
     Convenience class for label codes.
     """
+    # TODO
     UNLABELLED = 0
-    GROUND = 1
-    BUILDING = 2
-    TREE = 3
-    STREET_LIGHT = 4
-    TRAFFIC_SIGN = 5
-    TRAFFIC_LIGHT = 6
-    CAR = 7
-    CITY_BENCH = 8
-    RUBBISH_BIN = 9
-    ROAD = 10
-    CABLE = 11
-    LIGHT_CABLE = 12
-    TRAM_CABLE = 13
-    ARMATUUR = 14
+    GROUND = 9
+    BUILDING = 10
+    TREE = 30
+    STREET_LIGHT = 60
+    TRAFFIC_SIGN = 62
+    TRAFFIC_LIGHT = 61
+    CAR = 40
+    CITY_BENCH = 80
+    RUBBISH_BIN = 81
+    ROAD = 1
+    CABLE = 79
+    TRAM_CABLE = 70
+    ARMATUUR = 88
     NOISE = 99
 
-    STR_DICT = {0: 'Unlabelled',
-                1: 'Ground',
-                2: 'Building',
-                3: 'Tree',
-                4: 'Street light',
-                5: 'Traffic sign',
-                6: 'Traffic light',
-                7: 'Car',
-                8: 'City bench',
-                9: 'Rubbish bin',
-                10: 'Road',
-                11: 'Cable',
-                12: 'Light cable',
-                13: 'Tram cable',
-                14: 'Suspended streetlight',
+    STR_DICT = {0: 'Unknown',
+                1: 'Road',
+                2: 'Sidewalk',
+                9: 'Other ground',
+                10: 'Building',
+                11: 'Wall (free standing)',
+                12: 'Fence',
+                13: 'Houseboat',
+                14: 'Bus / tram shelter',
+                29: 'Other structure',
+                30: 'Tree',
+                31: 'Potted plant',
+                39: 'Other vegetation ',
+                40: 'Car',
+                41: 'Truck',
+                42: 'Bus',
+                43: 'Tram',
+                44: 'Bicycle',
+                45: 'Scooter / Motorcycle',
+                49: 'Other vehicle',
+                50: 'Person',
+                51: 'Cyclist',
+                60: 'Streetlight',
+                61: 'Traffic light',
+                62: 'Traffic sign',
+                63: 'Signpost',
+                64: 'Flagpole',
+                65: 'Bollard',
+                68: 'Complex pole',
+                69: 'Other pole',
+                70: 'Tram cable',
+                79: 'Other cable',
+                80: 'City bench',
+                81: 'Rubbish bin',
+                82: 'Letter box',
+                83: 'Parking meter',
+                84: 'EV charging station',
+                85: 'Fire hydrant',
+                86: 'Bicycle rack',
+                87: 'Terrace',
+                88: 'Hanging streetlight',
+                89: 'Other object',
                 99: 'Noise'}
 
     @staticmethod
