@@ -40,9 +40,9 @@ class NoiseFilter(AbstractProcessor):
         self.grid_size = grid_size
         self.min_component_size = min_component_size
 
-    def get_label_mask(self, points, labels, mask, tilecode):
+    def get_labels(self, points, labels, mask, tilecode):
         """
-        Returns the label mask for the given pointcloud.
+        Returns the labels for the given pointcloud.
 
         Parameters
         ----------
@@ -57,8 +57,7 @@ class NoiseFilter(AbstractProcessor):
 
         Returns
         -------
-        An array of shape (n_points,) with dtype=bool indicating which points
-        should be labelled according to this fuser.
+        An array of shape (n_points,) with the updated labels.
         """
         logger.info('Noise filter ' +
                     f'(label={self.label}, {Labels.get_str(self.label)}).')
@@ -80,5 +79,6 @@ class NoiseFilter(AbstractProcessor):
         label_mask = np.zeros((len(points),), dtype=bool)
         # Label points below ground and points in small components.
         label_mask[mask] = cc_mask | ground_mask
+        labels[label_mask] = self.label
 
-        return label_mask
+        return labels

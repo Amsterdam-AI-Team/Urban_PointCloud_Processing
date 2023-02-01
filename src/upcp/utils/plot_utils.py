@@ -10,7 +10,7 @@ import subprocess
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, LineString
 
 from ..utils import las_utils
 from ..utils import bgt_utils
@@ -195,6 +195,88 @@ def plot_bgt_and_cloudslice(tilecode, las_file, ahn_reader,
     plot_cloud_slice(las_file, ahn_reader, plane_height=plane_height,
                      hide_noise=hide_noise, title='LAS labels', ax=ax2,
                      legend_below=True)
+    ax2.set_yticklabels([])
+    ax2.yaxis.label.set_visible(False)
+    fig.suptitle(f'Tile {tilecode}', fontsize=14)
+    fig.subplots_adjust(top=1)
+    plt.show()
+
+
+def plot_bag_bgt(tilecode, building_file=None, tram_file=None, ax=None, title=None, show_legend=True,
+             legend_below=False, padding = 2.5, offset=0):
+    
+    full_plot = False
+    if ax is None:
+        width = 7 if show_legend else 5
+        fig, ax = plt.subplots(1, figsize=(width, 5), constrained_layout=True)
+        full_plot = True
+
+    if title is None:
+        title = f'Tile {tilecode}'
+
+    tram_tracks = []
+    buildings = []
+
+    if building_file:
+        buildings = bgt_utils.get_polygons(building_file, tilecode, padding=padding, offset=offset)
+    if tram_file:
+        tram_tracks = bgt_utils.get_linestrings(tram_file, tilecode, padding=padding)
+
+    ((x_min, y_max), (x_max, y_min)) =\
+        las_utils.get_bbox_from_tile_code(tilecode)
+
+    for poly in [Polygon(bld) for bld in buildings]:
+        x, y = poly.exterior.xy
+        ax.fill(x, y, c='tab:red', alpha=.25, label='Building',
+                zorder=-1)
+        ax.plot(x, y, c='tab:red', zorder=0)
+
+    for line in [LineString(track) for track in tram_tracks]:
+        x, y = line.xy
+        ax.plot(x, y, c='yellow', label='Tram track',
+                zorder=1)
+
+    box = patches.Rectangle((x_min, y_min), x_max-x_min, y_max-y_min,
+                            linewidth=1, linestyle='--', edgecolor='black',
+                            fill=False)
+    ax.add_patch(box)
+
+    ax.set_title(title)
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+
+    if show_legend:
+        handles, labels = ax.get_legend_handles_labels()
+        by_label = dict(zip(labels, handles))
+        if not legend_below:
+            ax.legend(by_label.values(), by_label.keys(),
+                      loc='center left', bbox_to_anchor=(1, 0.5))
+        else:
+            ax.legend(by_label.values(), by_label.keys(),
+                      loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=3)
+
+    ax.set_xticks(range(x_min, x_max+1, 10))
+    ax.set_xticklabels(range(x_min, x_max+1, 10))
+    ax.set_yticks(range(y_min, y_max+1, 10))
+    ax.set_yticklabels(range(y_min, y_max+1, 10))
+
+    ax.set_xlim((x_min - padding, x_max + padding))
+    ax.set_ylim((y_min - padding, y_max + padding))
+    ax.set_aspect('equal', adjustable='box')
+    if full_plot:
+        plt.show()
+
+
+def plot_bgt_bag_and_cloudslice(tilecode, las_file, ahn_reader,
+                            building_file=None, tram_file=None,
+                            min_plane_height=4, max_plane_height=12,
+                            hide_noise=False):
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5.5))
+    plot_bag_bgt(tilecode, building_file, tram_file, title='BGT data', ax=ax1,
+             legend_below=True)
+    plot_cloud_slice(las_file, ahn_reader, min_plane_height=min_plane_height,
+                     max_plane_height=max_plane_height, hide_noise=hide_noise,
+                     title='LAS labels', ax=ax2, legend_below=True)
     ax2.set_yticklabels([])
     ax2.yaxis.label.set_visible(False)
     fig.suptitle(f'Tile {tilecode}', fontsize=14)

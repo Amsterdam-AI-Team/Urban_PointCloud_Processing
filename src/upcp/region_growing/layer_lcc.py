@@ -92,9 +92,9 @@ class LayerLCC(AbstractProcessor):
         mask[height_mask_ids[lcc_mask]] = True
         return mask
 
-    def get_label_mask(self, points, labels, mask, tilecode):
+    def get_labels(self, points, labels, mask, tilecode):
         """
-        Returns the label mask for the given pointcloud.
+        Returns the labels for the given pointcloud.
 
         Parameters
         ----------
@@ -109,8 +109,7 @@ class LayerLCC(AbstractProcessor):
 
         Returns
         -------
-        An array of shape (n_points,) with dtype=bool indicating which points
-        should be labelled according to this fuser.
+        An array of shape (n_points,) with the updated labels.
         """
         logger.info('LayerLCC ' +
                     f'(label={self.label}, {Labels.get_str(self.label)}))')
@@ -138,6 +137,9 @@ class LayerLCC(AbstractProcessor):
 
         label_mask[mask_copy] = layer_mask
         if self.reset_noise:
-            return label_mask & (mask | noise_mask)
+            label_mask = label_mask & (mask | noise_mask)
         else:
-            return label_mask & mask
+            label_mask = label_mask & mask
+
+        labels[label_mask] = self.label
+        return labels

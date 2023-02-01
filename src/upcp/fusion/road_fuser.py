@@ -47,9 +47,9 @@ class BGTRoadFuser(AbstractProcessor):
         self.offset = offset
         self.padding = padding
 
-    def get_label_mask(self, points, labels, mask, tilecode):
+    def get_labels(self, points, labels, mask, tilecode):
         """
-        Returns the label mask for the given pointcloud.
+        Returns the labels for the given pointcloud.
         Parameters
         ----------
         points : array of shape (n_points, 3)
@@ -62,8 +62,7 @@ class BGTRoadFuser(AbstractProcessor):
             The CycloMedia tile-code for the given pointcloud.
         Returns
         -------
-        An array of shape (n_points,) with dtype=bool indicating which points
-        should be labelled according to this fuser.
+        An array of shape (n_points,) with the updated labels.
         """
         logger.info('BGT road fuser ' +
                     f'(label={self.label}, {Labels.get_str(self.label)}).')
@@ -88,7 +87,9 @@ class BGTRoadFuser(AbstractProcessor):
             road_mask = road_mask | clip_mask
 
         logger.debug(f'{len(road_polygons)} road polygons labelled.')
+        logger.info(f'{np.count_nonzero(road_mask)} ground points relabelled.')
 
         label_mask[mask_ids[road_mask]] = True
+        labels[label_mask] = self.label
 
-        return label_mask
+        return labels

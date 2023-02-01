@@ -75,6 +75,32 @@ def parse_polygons(json_response, include_bbox=True):
     return parsed_content
 
 
+def parse_linestrings(json_response, include_bbox=False):
+    """
+    Parse the JSON content and transform it into a table structure.
+
+    Parameters
+    ----------
+    json_response : dict
+        JSON response from a WFS request.
+    include_bbox : bool (default: True)
+        Whether to include a bounding box for each poly.
+    """
+    parsed_content = []
+    name = '_'.join(json_response['name'].split('_')[2:])
+    for item in json_response['features']:
+        # name = item['properties']['bgt_functie']
+        linestring = item['geometry']['coordinates']
+
+        if include_bbox:
+            (x_min, y_min, x_max, y_max) = compute_bounding_box(np.array(linestring))
+            parsed_content.append([name, linestring, x_min, y_max, x_max, y_min])
+        else:
+            parsed_content.append([name, linestring])
+
+    return parsed_content
+
+
 def parse_points_bgtplus(json_response):
     """
     Parse the JSON content and transform it into a table structure.

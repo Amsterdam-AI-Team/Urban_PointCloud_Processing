@@ -87,9 +87,9 @@ class BGTStreetFurnitureFuser(AbstractProcessor):
         logger.debug(f'{object_count} {self.bgt_type} objects labelled.')
         return street_furniture_mask
 
-    def get_label_mask(self, points, labels, mask, tilecode):
+    def get_labels(self, points, labels, mask, tilecode):
         """
-        Returns the label mask for the given pointcloud.
+        Returns the labels for the given pointcloud.
 
         Parameters
         ----------
@@ -104,8 +104,7 @@ class BGTStreetFurnitureFuser(AbstractProcessor):
 
         Returns
         -------
-        An array of shape (n_points,) with dtype=bool indicating which points
-        should be labelled according to this fuser.
+        An array of shape (n_points,) with the updated labels.
         """
         logger.info('Street furniture fuser ' +
                     f'(label={self.label}, {Labels.get_str(self.label)}).')
@@ -133,5 +132,6 @@ class BGTStreetFurnitureFuser(AbstractProcessor):
                                  points[mask], ground_z, point_components,
                                  bgt_points, **self.params))
         label_mask[mask] = street_furniture_mask
+        labels[label_mask] = self.label
 
-        return label_mask
+        return labels

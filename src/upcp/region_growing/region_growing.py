@@ -140,9 +140,9 @@ class RegionGrowing(AbstractProcessor):
 
         return self.label_mask
 
-    def get_label_mask(self, points, labels, mask, tilecode):
+    def get_labels(self, points, labels, mask, tilecode):
         """
-        Returns the label mask for the given pointcloud.
+        Returns the labels for the given pointcloud.
 
         Parameters
         ----------
@@ -158,13 +158,13 @@ class RegionGrowing(AbstractProcessor):
 
         Returns
         -------
-        An array of shape (n_points,) with dtype=bool indicating which points
-        should be labelled according to this fuser.
+        An array of shape (n_points,) with the updated labels.
         """
         logger.info('KDTree based Region Growing ' +
                     f'(label={self.label}, {Labels.get_str(self.label)}).')
         self._set_mask(labels)
         self._convert_input_cloud(points)
         label_mask = self._region_growing()
+        labels[label_mask] = self.label
 
-        return label_mask
+        return labels

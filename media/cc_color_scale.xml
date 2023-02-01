@@ -20,6 +20,10 @@
             <step r="139" g="69" b="19" pos="0.08"/>
             <step r="255" g="0" b="127" pos="0.09"/>
             <step r="255" g="197" b="98" pos="0.1"/>
+            <step r="85" g="87" b="83" pos="0.11"/>
+            <step r="85" g="87" b="83" pos="0.12"/>
+            <step r="52" g="101" b="164" pos="0.13"/>
+            <step r="237" g="212" b="0" pos="0.14"/>
             <step r="255" g="255" b="255" pos="0.99"/>
             <step r="255" g="255" b="255" pos="1"/>
             <label val="0"/>
@@ -33,6 +37,10 @@
             <label val="8"/>
             <label val="9"/>
             <label val="10"/>
+            <label val="11"/>
+            <label val="12"/>
+            <label val="13"/>
+            <label val="14"/>
             <label val="99"/>
             <label val="100"/>
         </Data>

@@ -6,6 +6,7 @@ import pathlib
 import re
 import os
 import laspy
+from shapely.geometry import Polygon
 
 
 def get_tilecode_from_filename(filename):
@@ -50,6 +51,13 @@ def get_bbox_from_tile_code(tile_code, padding=0, width=50, height=50):
 
     return ((x_min - padding, y_min + height + padding),
             (x_min + height + padding, y_min - padding))
+
+def get_polygon_from_tile_code(tilecode, padding=0, width=50, height=50):
+
+    bbox = get_bbox_from_tile_code(tilecode, padding, width, height)
+    tile_polygon = Polygon([bbox[0],(bbox[0][0],bbox[1][1]), bbox[1],(bbox[1][0],bbox[0][1])])
+
+    return tile_polygon
 
 
 def get_bbox_from_las_file(laz_file, padding=0):

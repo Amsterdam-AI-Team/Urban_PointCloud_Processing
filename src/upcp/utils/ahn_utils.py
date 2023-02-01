@@ -399,6 +399,61 @@ def fill_gaps(ahn_tile, max_gap_size=50, gap_flag=np.nan, inplace=False):
             = int_values
         return None
 
+def fill_gaps_intuitive(ahn_tile):
+    """
+    Fill nans in the AHN ground surface by interpolation. First, linear interpolation is used.
+    The remaining gaps are filled using the z-value of nearest point. 
+    The AHN tile will be returned
+
+    Parameters
+    ----------
+    ahn_tile : dict
+        E.g., output of GeoTIFFReader.filter_tile(.).
+    inplace: bool (default: False)
+        Whether or not to modify the AHN tile in place.
+
+    Returns
+    -------
+    If inplace=false, a copy of the AHN tile with filled gaps is returned.
+    Else, None is returned.
+    """
+    # Copy ahn_tile
+    filled_ahn = copy.deepcopy(ahn_tile)
+
+    # Get the coodinates of gap pixels to consider.
+    gaps = np.isnan(filled_ahn['ground_surface'])
+    if 'artifact_surface' in ahn_tile.keys():
+        filled_ahn['ground_surface'][gaps] = filled_ahn['artifact_surface'][gaps]
+
+    # Get the coodinates of gap pixels to consider.
+    gaps = np.isnan(filled_ahn['ground_surface'])
+    gap_coords = np.argwhere(gaps)
+
+    # Get the interpolation values for the gaps.
+    x = np.arange(0, len(filled_ahn['x']))
+    y = np.arange(0, len(filled_ahn['y']))
+    xx, yy = np.meshgrid(x, y)
+    int_values = interpolate.griddata(
+                        points=(xx[~gaps], yy[~gaps]),
+                        values=filled_ahn['ground_surface'][~gaps].ravel(),
+                        xi=(gap_coords[:, 1], gap_coords[:, 0]),
+                        method='linear')
+
+    # Return the filled AHN tile.
+    filled_ahn['ground_surface'][gap_coords[:, 0], gap_coords[:, 1]] \
+            = int_values
+
+    # Get the interpolation values for the remaining gaps.
+    gaps = np.isnan(filled_ahn['ground_surface'])
+    gap_coords = np.argwhere(gaps)
+    int_values = interpolate.griddata(
+                        points=(xx[~gaps], yy[~gaps]),
+                        values=filled_ahn['ground_surface'][~gaps].ravel(),
+                        xi=(gap_coords[:, 1], gap_coords[:, 0]),
+                        method='nearest')
+
+    filled_ahn['ground_surface'][gap_coords[:, 0], gap_coords[:, 1]] = int_values
+    return filled_ahn
 
 def smoothen_edges(ahn_tile, thickness=1, gap_flag=np.nan, inplace=False):
     """

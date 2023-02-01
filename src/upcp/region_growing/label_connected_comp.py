@@ -134,7 +134,7 @@ class LabelConnectedComp(AbstractProcessor):
 
         return label_mask
 
-    def get_label_mask(self, points, labels, mask=None, tilecode=None):
+    def get_label_mask(self, points, labels, mask=None):
         """
         Returns the label mask for the given pointcloud.
 
@@ -148,8 +148,6 @@ class LabelConnectedComp(AbstractProcessor):
         mask : array of shape (n_points,) with dtype=bool
             Pre-mask used to label only a subset of the points. Can be
             overwritten by setting `exclude_labels` in the constructor.
-        tilecode : str
-            Ignored by this class.
 
         Returns
         -------
@@ -181,6 +179,30 @@ class LabelConnectedComp(AbstractProcessor):
         label_mask = self._fill_components()
 
         return label_mask
+
+    def get_labels(self, points, labels, mask=None, tilecode=None):
+        """
+        Returns the labels for the given pointcloud.
+
+        Parameters
+        ----------
+        points : array of shape (n_points, 3)
+            The point cloud <x, y, z>.
+        labels : array of shape (n_points,)
+            The labels corresponding to each point.
+        mask : array of shape (n_points,) with dtype=bool
+            Ignored by this class, use `exclude_labels` in the constructor
+            instead.
+        tilecode : str
+            Ignored by this class.
+
+        Returns
+        -------
+        An array of shape (n_points,) with the updated labels.
+        """
+        label_mask = self.get_label_mask(points, labels, mask)
+        labels[label_mask] = self.label
+        return labels
 
     def get_components(self, points, labels=None):
         """

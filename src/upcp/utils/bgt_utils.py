@@ -8,7 +8,7 @@ import logging
 import pandas as pd
 from pathlib import Path
 from abc import ABC, abstractmethod
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, LineString
 from shapely.ops import unary_union
 
 from ..utils.las_utils import get_bbox_from_tile_code
@@ -166,6 +166,37 @@ class BGTPolyReader(BGTReader):
         return poly_valid
 
 
+class BGTLineReader(BGTReader):
+    """
+    Data files are assumed to be in CSV format and contain two columns:
+    [bgt_type, linestring].
+    """
+
+    COLUMNS = ['bgt_type', 'linestring', 'x_min', 'y_max', 'x_max', 'y_min']
+
+    def filter_tile(self, tilecode, bgt_types=[], exclude_types=[], padding=0):
+        """
+        Return a list of lines found in the area represented by the given
+        CycloMedia tile-code.
+        """
+        ((bx_min, by_max), (bx_max, by_min)) =\
+            get_bbox_from_tile_code(tilecode, padding=padding)
+        tile_polygon = Polygon([(bx_min, by_max),(bx_max, by_max), (bx_max, by_min),(bx_min, by_min)])
+        type_str = ''
+        if len(bgt_types) >= 1:
+            type_str += '(bgt_type == @bgt_types) & '
+        if len(exclude_types) >= 1:
+            type_str += '(bgt_type != @exclude_types) & '
+        df = self.bgt_df.query(type_str +
+                               '(x_min < @bx_max) & (x_max > @bx_min)' +
+                               ' & (y_min < @by_max) & (y_max > @by_min)')
+
+        linestrings = [LineString(ast.literal_eval(linestring)) for linestring in df.linestring.values]
+        line_valid = [tile_polygon.intersection(line) for line in linestrings if tile_polygon.intersects(line)]
+
+        return line_valid
+
+
 def get_polygons(bgt_file, tilecode, padding=0, offset=0, merge=False):
     """Get the polygons from a bgt_file for a specific tilecode."""
     return BGTPolyReader(bgt_file=bgt_file).filter_tile(
@@ -176,3 +207,8 @@ def get_points(bgt_file, tilecode, padding=0, return_types=True):
     """Get the bgt point objects from a bgt_file for a specific tilecode."""
     return BGTPointReader(bgt_file=bgt_file).filter_tile(
                         tilecode, padding=padding, return_types=return_types)
+
+
+def get_linestrings(bgt_file, tilecode, padding=0):
+    """Get the bgt linestring objects from a bgt_file for a specific tilecode."""
+    return BGTLineReader(bgt_file=bgt_file).filter_tile(tilecode, padding=padding)

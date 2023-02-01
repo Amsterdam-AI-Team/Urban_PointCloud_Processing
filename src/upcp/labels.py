@@ -15,6 +15,10 @@ class Labels:
     CITY_BENCH = 8
     RUBBISH_BIN = 9
     ROAD = 10
+    CABLE = 11
+    LIGHT_CABLE = 12
+    TRAM_CABLE = 13
+    ARMATUUR = 14
     NOISE = 99
 
     STR_DICT = {0: 'Unlabelled',
@@ -28,6 +32,10 @@ class Labels:
                 8: 'City bench',
                 9: 'Rubbish bin',
                 10: 'Road',
+                11: 'Cable',
+                12: 'Light cable',
+                13: 'Tram cable',
+                14: 'Suspended streetlight',
                 99: 'Noise'}
 
     @staticmethod

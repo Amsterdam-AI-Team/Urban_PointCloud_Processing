@@ -21,9 +21,9 @@ class AbstractProcessor(ABC):
         super().__init__()
 
     @abstractmethod
-    def get_label_mask(self, points, labels, mask, tilecode):
+    def get_labels(self, points, labels, mask, tilecode):
         """
-        Returns the label mask for the given pointcloud.
+        Returns the labels for the given pointcloud.
 
         Parameters
         ----------
@@ -38,8 +38,7 @@ class AbstractProcessor(ABC):
 
         Returns
         -------
-        An array of shape (n_points,) with dtype=bool indicating which points
-        should be labelled according to this fuser.
+        An array of shape (n_points,) with the updated labels.
         """
         pass
 

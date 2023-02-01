@@ -43,9 +43,9 @@ class BGTBuildingFuser(AbstractProcessor):
         self.ahn_reader = ahn_reader
         self.ahn_eps = ahn_eps
 
-    def get_label_mask(self, points, labels, mask, tilecode):
+    def get_labels(self, points, labels, mask, tilecode):
         """
-        Returns the label mask for the given pointcloud.
+        Returns the labels for the given pointcloud.
 
         Parameters
         ----------
@@ -60,8 +60,7 @@ class BGTBuildingFuser(AbstractProcessor):
 
         Returns
         -------
-        An array of shape (n_points,) with dtype=bool indicating which points
-        should be labelled according to this fuser.
+        An array of shape (n_points,) with the updated labels.
         """
         logger.info('BGT building fuser ' +
                     f'(label={self.label}, {Labels.get_str(self.label)}).')
@@ -98,5 +97,6 @@ class BGTBuildingFuser(AbstractProcessor):
         logger.debug(f'{len(building_polygons)} building polygons labelled.')
 
         label_mask[mask_ids[building_mask]] = True
+        labels[label_mask] = self.label
 
-        return label_mask
+        return labels
