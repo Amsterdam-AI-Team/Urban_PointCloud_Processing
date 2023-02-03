@@ -56,14 +56,15 @@ class Labels:
         79: 'Other cable',
         80: 'City bench',
         81: 'Rubbish bin',
-        82: 'Letter box',
-        83: 'Parking meter',
-        84: 'EV charging station',
-        85: 'Fire hydrant',
-        86: 'Bicycle rack',
-        87: 'Terrace',
-        88: 'Hanging streetlight',
-        89: 'Other object',
+        82: 'Rubbish container',
+        83: 'Letter box',
+        84: 'Parking meter',
+        85: 'EV charging station',
+        86: 'Fire hydrant',
+        87: 'Bicycle rack',
+        88: 'Terrace',
+        89: 'Hanging streetlight',
+        98: 'Other object',
         99: 'Noise'
     }
 
@@ -80,7 +81,16 @@ class Labels:
         10: 1,
         11: 79,
         13: 70,
-        14: 88
+        14: 88,
+        15: 50,
+        16: 44,
+        17: 65,
+        18: 83,
+        19: 84,
+        20: 82,
+        21: 31,
+        22: 88,
+        99: 99
     }
 
     @staticmethod
