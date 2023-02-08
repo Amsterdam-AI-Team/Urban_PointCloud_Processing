@@ -73,7 +73,7 @@ class BGTBuildingFuser(AbstractProcessor):
                                     merge=True)
         if len(building_polygons) == 0:
             logger.debug('No buildings found for tile, skipping.')
-            return label_mask
+            return labels
 
         if mask is None:
             mask = np.ones((len(points),), dtype=bool)

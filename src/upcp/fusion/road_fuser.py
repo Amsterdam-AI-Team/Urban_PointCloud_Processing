@@ -75,7 +75,7 @@ class BGTRoadFuser(AbstractProcessor):
                                 merge=True)
         if len(road_polygons) == 0:
             logger.debug('No road parts found in tile, skipping.')
-            return label_mask
+            return labels
 
         # Already labelled ground points can be labelled as road.
         mask = labels == Labels.GROUND
