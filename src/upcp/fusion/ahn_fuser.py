@@ -151,7 +151,7 @@ class AHNFuser(AbstractProcessor):
                 tmp_labels[ground_mask] = self.label
                 ref_mask = self._refine_ground(
                                     points[mask], target_z, ground_mask,
-                                    tmp_labels, Labels.UNLABELLED)
+                                    tmp_labels, Labels.UNKNOWN)
                 ground_mask = ground_mask & ~ref_mask
             label_mask[mask] = ground_mask
         elif self.target == 'building':
