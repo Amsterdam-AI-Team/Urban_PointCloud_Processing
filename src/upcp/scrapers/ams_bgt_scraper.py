@@ -11,10 +11,11 @@ import requests
 
 from ..utils.math_utils import compute_bounding_box
 
-WFS_URL = 'https://map.data.amsterdam.nl/maps/bgtobjecten?'
+BGT_WFS_URL = 'https://map.data.amsterdam.nl/maps/bgtobjecten?'
+BAG_WFS_URL = 'https://map.data.amsterdam.nl/maps/bag?'
 
 
-def scrape_amsterdam_bgt(layer_name, bbox=None):
+def scrape_amsterdam_bgt(layer_name, bbox=None, use_bag=False):
     """
     Scrape BGT layer information from the WFS.
 
@@ -41,7 +42,10 @@ def scrape_amsterdam_bgt(layer_name, bbox=None):
 
     params = params + 'OUTPUTFORMAT=geojson'
 
-    response = requests.get(WFS_URL + params)
+    if use_bag:
+        response = requests.get(BAG_WFS_URL + params)
+    else:
+        response = requests.get(BGT_WFS_URL + params)
     try:
         return response.json()
     except ValueError:
