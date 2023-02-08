@@ -59,8 +59,7 @@ def compute_bounding_box(points):
 
 def convex_hull_poly(points):
     """Return convex hull as a shapely Polygon."""
-    hull = points[ConvexHull(points).vertices]
-    return Polygon(np.vstack((hull, hull[0])))
+    return Polygon(points[ConvexHull(points, qhull_options='QJ').vertices])
 
 
 def minimum_bounding_rectangle(points):

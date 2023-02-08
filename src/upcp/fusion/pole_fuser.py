@@ -254,7 +254,7 @@ class BGTPoleFuser(AbstractProcessor):
         if len(bgt_points) == 0:
             logger.debug(f'No {self.bgt_type} objects found in tile, ' +
                          ' skipping.')
-            return label_mask
+            return labels
 
         ahn_tile = self.ahn_reader.filter_tile(tilecode)
         fast_z = FastGridInterpolator(ahn_tile['x'], ahn_tile['y'],
