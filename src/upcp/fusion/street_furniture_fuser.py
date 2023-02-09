@@ -117,7 +117,7 @@ class BGTStreetFurnitureFuser(AbstractProcessor):
         if len(bgt_points) == 0:
             logger.debug(f'No {self.bgt_type} objects found in tile, ' +
                          ' skipping.')
-            return label_mask
+            return labels
 
         # Get the interpolated ground points of the tile
         ground_z = self.ahn_reader.interpolate(

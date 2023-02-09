@@ -114,7 +114,7 @@ class CarFuser(AbstractProcessor):
                     tilecode, exclude_types=self.exclude_types, merge=False)
         if len(road_polygons) == 0:
             logger.debug('No road parts found for tile, skipping.')
-            return label_mask
+            return labels
 
         # Get the interpolated ground points of the tile
         ground_z = self.ahn_reader.interpolate(

@@ -10,6 +10,7 @@ from ..region_growing import LabelConnectedComp
 from ..labels import Labels
 from ..utils import clip_utils
 from ..utils import math_utils
+from ..utils.alpha_shape_utils import alpha_shape
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +67,10 @@ class AHNFuser(AbstractProcessor):
             params['min_comp_size'] = 50
         if 'buffer' not in params:
             params['buffer'] = 0.05
+        if 'use_concave' not in params:
+            params['use_concave'] = True
+        if 'concave_alpha' not in params:
+            params['concave_alpha'] = 2.0
         return params
 
     def _refine_layer(self, points, points_z,
@@ -87,13 +92,20 @@ class AHNFuser(AbstractProcessor):
         for cc in cc_labels:
             # select points that belong to the cluster
             cc_mask = (point_components == cc)
-            # Compute convex hull and add a small buffer
-            poly = (math_utils
-                    .convex_hull_poly(points[label_ids[cc_mask], 0:2])
-                    .buffer(self.params['buffer']))
-            # Select ground points within poly
-            poly_mask = clip_utils.poly_clip(points[ground_mask], poly)
-            mask[ground_ids[poly_mask]] = True
+            if not self.params['use_concave']:
+                # Compute convex hull
+                polys = [math_utils.convex_hull_poly(
+                                            points[label_ids[cc_mask], 0:2])]
+            else:
+                # Compute concave hull
+                polys = alpha_shape(points[label_ids[cc_mask], 0:2],
+                                    alpha=self.params['concave_alpha'])
+            # Select ground points within poly(s)
+            for poly in polys:
+                poly_mask = clip_utils.poly_clip(
+                                        points[ground_mask],
+                                        poly.buffer(self.params['buffer']))
+                mask[ground_ids[poly_mask]] = True
         return mask
 
     def _refine_ground(self, points, points_z, ground_mask,
