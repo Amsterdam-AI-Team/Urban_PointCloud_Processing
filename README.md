@@ -85,7 +85,23 @@ This code has been tested with `Python >= 3.7` on `Linux` and `MacOS`, and shoul
 
     If you use the latter and want your code changes to take effect without re-installing the package, use the `--editable` flag for pip.
 
-**Additionally**, install `cccorelib` and `pycc` by following the [instructions on their GitHub page](https://github.com/tmontaigu/CloudCompare-PythonPlugin/blob/master/docs/building.rst#building-as-independent-wheels). Please note, these two packages are not available on the Python Package Index (PyPi).
+3. **Additionally**, install `cccorelib` and `pycc` by following the below or [on their GitHub page](https://github.com/tmontaigu/CloudCompare-PythonPlugin/blob/master/docs/building.rst#building-as-independent-wheels). Please note, these two packages are not available on the Python Package Index (PyPi).
+
+    Building these packages requires Qt.
+
+    ```bash
+    git checkout https://github.com/tmontaigu/CloudCompare-PythonPlugin.git
+    cd CloudCompare-PythonPlugin
+    pip install --upgrade pip  # Requires version >= 21.1
+    ```
+    ```bash
+    # For Mac OS
+    export CMAKE_PREFIX_PATH=/usr/local/opt/qt@5
+    ```
+    ```bash
+    pip install wrapper/cccorelib
+    pip install wrapper/pycc
+    ```
 
 ---
 
