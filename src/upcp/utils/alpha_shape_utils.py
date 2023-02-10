@@ -3,6 +3,7 @@
 """This module provides methods to generate a concave hull (alpha shape)."""
 
 import numpy as np
+import warnings
 import shapely.geometry as sg
 from scipy.spatial import Delaunay
 
@@ -179,9 +180,12 @@ def generate_poly_from_edges(edges, points):
         outer = polys.pop(biggest)
         inners = []
         for idx, poly in enumerate(polys):
-            if outer.contains(poly):
-                inners.append(idx)
-                outer = outer - poly
+            with warnings.catch_warnings(record=True) as w:
+                # TODO: prevent warning in the first place
+                if outer.contains(poly):
+                    inners.append(idx)
+                    if len(w) == 0:
+                        outer = outer - poly
         for index in sorted(inners, reverse=True):
             del polys[index]
         if type(outer) == sg.MultiPolygon:
