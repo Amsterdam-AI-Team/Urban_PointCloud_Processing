@@ -51,7 +51,7 @@ For a quick dive into this repository take a look at our [complete solution note
 
 ## Installation
 
-This code has been tested with `Python >= 3.7` on `Linux` and `MacOS`, and should likely work under Windows as well.
+This code has been tested with `Python >= 3.8` on `Linux` and `MacOS`.
 
 1.  To use this code in development mode simply clone the repository and install the dependencies.
 
@@ -85,7 +85,7 @@ This code has been tested with `Python >= 3.7` on `Linux` and `MacOS`, and shoul
 
     If you use the latter and want your code changes to take effect without re-installing the package, use the `--editable` flag for pip.
 
-3. **Additionally**, install `cccorelib` and `pycc` by following the below or [on their GitHub page](https://github.com/tmontaigu/CloudCompare-PythonPlugin/blob/master/docs/building.rst#building-as-independent-wheels). Please note, these two packages are not available on the Python Package Index (PyPi).
+3. **Additionally**, install `cccorelib` and `pycc` from the [CloudCompare-PythonPlugin](https://github.com/tmontaigu/CloudCompare-PythonPlugin) project by following the summary instructions below; for more details and Windows instructions see [their GitHub page](https://github.com/tmontaigu/CloudCompare-PythonPlugin/blob/master/docs/building.rst#building-as-independent-wheels). Please note, these two packages are not available on the Python Package Index (PyPi).
 
     Building these packages requires Qt.
 
