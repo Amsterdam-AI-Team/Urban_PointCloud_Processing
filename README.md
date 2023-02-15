@@ -51,7 +51,7 @@ For a quick dive into this repository take a look at our [complete solution note
 
 ## Installation
 
-This code has been tested with `Python >= 3.8` on `Linux` and `MacOS`, and should likely work under Windows as well.
+This code has been tested with `Python >= 3.8` on `Linux` and `MacOS`.
 
 1.  To use this code in development mode simply clone the repository and install the dependencies.
 
@@ -73,7 +73,7 @@ This code has been tested with `Python >= 3.8` on `Linux` and `MacOS`, and shoul
 
     ```bash
     # Install the latest release as Wheel
-    python -m pip install https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing/releases/download/v0.2/upcp-0.2-py3-none-any.whl
+    python -m pip install https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing/releases/download/v0.3/upcp-0.3-py3-none-any.whl
 
     # Alternatively, install the latest version from source
     python -m pip install git+https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing.git#egg=upcp
@@ -85,7 +85,23 @@ This code has been tested with `Python >= 3.8` on `Linux` and `MacOS`, and shoul
 
     If you use the latter and want your code changes to take effect without re-installing the package, use the `--editable` flag for pip.
 
-**Additionally**, install `cccorelib` and `pycc` by following the [instructions on their GitHub page](https://github.com/tmontaigu/CloudCompare-PythonPlugin/blob/master/docs/building.rst#building-as-independent-wheels). Please note, these two packages are not available on the Python Package Index (PyPi).
+3. **Additionally**, install `cccorelib` and `pycc` from the [CloudCompare-PythonPlugin](https://github.com/tmontaigu/CloudCompare-PythonPlugin) project by following the summary instructions below; for more details and Windows instructions see [their GitHub page](https://github.com/tmontaigu/CloudCompare-PythonPlugin/blob/master/docs/building.rst#building-as-independent-wheels). Please note, these two packages are not available on the Python Package Index (PyPi).
+
+    Building these packages requires Qt.
+
+    ```bash
+    git checkout https://github.com/tmontaigu/CloudCompare-PythonPlugin.git
+    cd CloudCompare-PythonPlugin
+    pip install --upgrade pip  # Requires version >= 21.1
+    ```
+    ```bash
+    # For Mac OS
+    export CMAKE_PREFIX_PATH=/usr/local/opt/qt@5
+    ```
+    ```bash
+    pip install wrapper/cccorelib
+    pip install wrapper/pycc
+    ```
 
 ---
 
@@ -93,7 +109,7 @@ This code has been tested with `Python >= 3.8` on `Linux` and `MacOS`, and shoul
 
 We provide tutorial [notebooks](notebooks) that demonstrate how the tools can be used.
 
-For visualisation of the resulting labelled point clouds we suggest [CloudCompare](https://www.danielgm.net/cc/). Simply open the labelled .laz in CloudCompare, select the cloud, and set `Colors` to the custom `Scalar Field` named `label`. For best results, use our [custom "AMS" color scale](https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing/raw/main/media/cc_color_scale.xml), and set "steps" to 101.
+For visualisation of the resulting labelled point clouds we suggest [CloudCompare](https://www.danielgm.net/cc/). Simply open the labelled .laz in CloudCompare, select the cloud, and set `Colors` to the custom `Scalar Field` named `label`. For best results, use our [custom "AMS" color scale](https://github.com/Amsterdam-AI-Team/Urban_PointCloud_Processing/raw/main/media/cc_color_scale.xml).
 
 ---
 

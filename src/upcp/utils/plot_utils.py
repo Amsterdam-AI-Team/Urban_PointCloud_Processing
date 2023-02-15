@@ -33,12 +33,12 @@ bgt_colors = {'boom': 'green',
               'wegdeel': 'lightgrey',
               'bank': 'darkviolet',
               'afvalbak': 'pink'}
-cloud_colors = {'Unlabelled': 'lightgrey',
+cloud_colors = {'Unknown': 'lightgrey',
                 'Ground': 'peru',
                 'Road': 'sandybrown',
                 'Building': 'lightblue',
                 'Tree': 'green',
-                'Street light': 'orange',
+                'Streetlight': 'orange',
                 'Traffic sign': 'crimson',
                 'Traffic light': 'red',
                 'City bench': 'darkviolet',
@@ -204,7 +204,7 @@ def plot_bgt_and_cloudslice(tilecode, las_file, ahn_reader,
 
 def plot_bag_bgt(tilecode, building_file=None, tram_file=None, ax=None, title=None, show_legend=True,
              legend_below=False, padding = 2.5, offset=0):
-    
+
     full_plot = False
     if ax is None:
         width = 7 if show_legend else 5
