@@ -3,6 +3,7 @@
 """This module provides methods to generate a concave hull (alpha shape)."""
 
 import numpy as np
+import warnings
 import shapely.geometry as sg
 from scipy.spatial import Delaunay
 
@@ -78,10 +79,11 @@ def get_alpha_shape_edges(points, alpha, only_outer=True):
         b = np.sqrt((pb[0] - pc[0]) ** 2 + (pb[1] - pc[1]) ** 2)
         c = np.sqrt((pc[0] - pa[0]) ** 2 + (pc[1] - pa[1]) ** 2)
         s = (a + b + c) / 2.0
-        area = np.sqrt(s * (s - a) * (s - b) * (s - c))
-        if area == 0:
+        int_var = s * (s - a) * (s - b) * (s - c)
+        if int_var <= 0:
             # TODO something more clever?
             continue
+        area = np.sqrt(int_var)
         circum_r = a * b * c / (4.0 * area)
         if circum_r < (1 / alpha):
             add_edge(edges, ia, ib)
@@ -164,7 +166,11 @@ def boundary_to_poly(boundary, points):
         ys.append(points[i, 1])
     xs.append(points[j, 0])
     ys.append(points[j, 1])
-    return sg.Polygon([[x, y] for x, y in zip(xs, ys)])
+    poly = sg.Polygon([[x, y] for x, y in zip(xs, ys)])
+    if not poly.is_valid:
+        # TODO: temp fix for any left-over self-intersections
+        poly = poly.buffer(0)
+    return poly
 
 
 # Own work
@@ -174,9 +180,12 @@ def generate_poly_from_edges(edges, points):
         outer = polys.pop(biggest)
         inners = []
         for idx, poly in enumerate(polys):
-            if outer.contains(poly):
-                inners.append(idx)
-                outer = outer - poly
+            with warnings.catch_warnings(record=True) as w:
+                # TODO: prevent warning in the first place
+                if outer.contains(poly):
+                    inners.append(idx)
+                    if len(w) == 0:
+                        outer = outer - poly
         for index in sorted(inners, reverse=True):
             del polys[index]
         if type(outer) == sg.MultiPolygon:
@@ -185,7 +194,8 @@ def generate_poly_from_edges(edges, points):
             return [outer]
 
     boundary_lst = stitch_boundaries(edges)
-    polys = [boundary_to_poly(b, points) for b in boundary_lst]
+    polys = [boundary_to_poly(b, points) for b in boundary_lst
+             if len(b) >= 3]
     outers = []
     while len(polys) > 0:
         outers.extend(get_poly_with_hole(polys))

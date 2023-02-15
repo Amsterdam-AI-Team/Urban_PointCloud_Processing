@@ -29,7 +29,8 @@ class CarFuser(AbstractProcessor):
 
     def __init__(self, label, ahn_reader, bgt_reader,
                  grid_size=0.05, min_component_size=5000,
-                 overlap_perc=20, params={}, exclude_types=["fietspad"]):
+                 overlap_perc=20, params={},
+                 exclude_types=["fietspad", "voetpad"]):
         super().__init__(label)
         self.ahn_reader = ahn_reader
         self.bgt_reader = bgt_reader
@@ -37,6 +38,7 @@ class CarFuser(AbstractProcessor):
         self.min_component_size = min_component_size
         self.overlap_perc = overlap_perc
         self.params = params
+        # TODO: work with include list instead of exclude
         self.exclude_types = exclude_types
 
     def _label_car_like_components(self, points, ground_z, point_components,

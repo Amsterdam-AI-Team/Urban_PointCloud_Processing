@@ -205,11 +205,15 @@ def poly_clip(points, poly):
     -------
     A boolean mask with True entries for all points within the polygon.
     """
+    clip_mask = np.zeros((len(points),), dtype=bool)
+
     # Convert to numpy to work with numba jit in nopython mode.
     exterior = np.array(poly.exterior.coords)
     interiors = [np.array(interior.coords) for interior in poly.interiors]
 
-    clip_mask = np.zeros((len(points),), dtype=bool)
+    if len(exterior) < 3:
+        # Polygon has no interior.
+        return clip_mask
 
     # Clip exterior to include points.
     bbox_mask = rectangle_clip(
@@ -221,6 +225,9 @@ def poly_clip(points, poly):
 
     # Clip interior(s) to exclude points.
     for interior in interiors:
+        if len(interior) < 3:
+            # Polygon has no interior.
+            continue
         bbox_mask = rectangle_clip(
                         points, math_utils.compute_bounding_box(interior))
         interior_mask = is_inside(points[bbox_mask, 0], points[bbox_mask, 1],
